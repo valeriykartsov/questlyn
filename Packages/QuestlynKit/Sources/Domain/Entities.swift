@@ -25,6 +25,8 @@ public struct HeroAppearance: Hashable, Codable, Sendable {
     /// Образ героя (02, 10.11.2026): выбирается на шаге «Класс», меняется в настройках. На начисления не влияет.
     public enum Outfit: String, CaseIterable, Codable, Sendable {
         case mage, warrior, archer, assassin, baller, coder
+        /// Добавлены 11.11.2026 (холст 8.10).
+        case sage, illusionist, master
 
         public var title: String {
             switch self {
@@ -34,6 +36,9 @@ public struct HeroAppearance: Hashable, Codable, Sendable {
             case .assassin: "Ассасин"
             case .baller: "Баскетболист"
             case .coder: "Программист"
+            case .sage: "Мудрец"
+            case .illusionist: "Иллюзионист"
+            case .master: "Мастер"
             }
         }
     }

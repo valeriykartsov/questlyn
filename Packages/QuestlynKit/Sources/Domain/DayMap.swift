@@ -171,3 +171,75 @@ public enum DayMapBuilder {
                       weather: Weather.from(dayMoods.last?.mood, on: date), season: Season.of(date), heroHour: heroHour)
     }
 }
+
+// MARK: - Неделя на карте (02 от 11.11.2026)
+
+/// Привал — сон на дороге: интервал и длительность. Ночь без данных — окно сна с пометкой.
+public struct SleepCamp: Hashable, Sendable {
+    public var wakeDate: LocalDate
+    public var start: Date
+    public var end: Date
+    public var minutes: Int
+    /// nil — данных о сне нет, привал стоит в окне сна.
+    public var source: SleepSource?
+
+    public init(wakeDate: LocalDate, start: Date, end: Date, minutes: Int, source: SleepSource?) {
+        self.wakeDate = wakeDate
+        self.start = start
+        self.end = end
+        self.minutes = minutes
+        self.source = source
+    }
+}
+
+public enum SleepCampBuilder {
+    /// Привалы из ночей проекции HP и MP. Ручной ввод знает только длительность — он заканчивается в конце окна сна.
+    public static func camps(from log: [VitalsLogEntry], window: SleepWindow, timeZone: TimeZone) -> [SleepCamp] {
+        log.compactMap { entry -> SleepCamp? in
+            guard case let .night(night) = entry.kind else { return nil }
+            let windowEnd = VitalsCalculator.date(night.wakeDate, window.end, timeZone: timeZone)
+            if let session = night.session {
+                if let start = session.startedAt, let end = session.endedAt {
+                    return SleepCamp(wakeDate: night.wakeDate, start: start, end: end, minutes: session.durationMinutes, source: session.source)
+                }
+                return SleepCamp(wakeDate: night.wakeDate, start: windowEnd - Double(session.durationMinutes) * 60, end: windowEnd,
+                                 minutes: session.durationMinutes, source: session.source)
+            }
+            let startDay = window.start > window.end ? night.wakeDate.adding(days: -1) : night.wakeDate
+            let start = VitalsCalculator.date(startDay, window.start, timeZone: timeZone)
+            return SleepCamp(wakeDate: night.wakeDate, start: start, end: windowEnd,
+                             minutes: Int((windowEnd.timeIntervalSince(start) / 60).rounded()), source: nil)
+        }
+    }
+}
+
+/// Неделя на карте: семь дней с понедельника и привалы сна.
+public struct WeekMap: Hashable, Sendable {
+    public var start: LocalDate
+    public var days: [DayMap]
+    public var camps: [SleepCamp]
+    /// Час недели героя (0…168), если «сейчас» внутри недели.
+    public var heroHour: Double?
+
+    public static let hours = 168.0
+
+    public init(start: LocalDate, days: [DayMap], camps: [SleepCamp], heroHour: Double?) {
+        self.start = start
+        self.days = days
+        self.camps = camps
+        self.heroHour = heroHour
+    }
+
+    /// Час недели для момента (может выйти за 0…168).
+    public static func hour(of moment: Date, weekStart: LocalDate, timeZone: TimeZone) -> Double {
+        moment.timeIntervalSince(VitalsCalculator.date(weekStart, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)) / 3600
+    }
+
+    public static func build(weekStart: LocalDate, days: [DayMap], camps: [SleepCamp], now: Date, timeZone: TimeZone) -> WeekMap {
+        let end = weekStart.adding(days: 7)
+        let inWeek = camps.filter { $0.end > VitalsCalculator.date(weekStart, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+            && $0.start < VitalsCalculator.date(end, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone) }
+        let now = hour(of: now, weekStart: weekStart, timeZone: timeZone)
+        return WeekMap(start: weekStart, days: days, camps: inWeek, heroHour: (0..<hours).contains(now) ? now : nil)
+    }
+}

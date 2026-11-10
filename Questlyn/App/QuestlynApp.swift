@@ -24,6 +24,9 @@ struct QuestlynApp: App {
 /// Нет героя — онбординг, иначе вкладки.
 struct RootView: View {
     @Bindable var model: AppModel
+    @AppStorage("appTheme") private var theme: AppTheme = .system
+    /// Размеры шрифтов считаются через UIFontMetrics — при смене размера текста пересобираем экраны.
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     enum AppTab: String { case today, journal, hero, calendar }
 
@@ -38,13 +41,14 @@ struct RootView: View {
     var body: some View {
         Group {
             #if DEBUG
-            // `-QuestlynPreview onboardingClass | appearance | health | checkin | map` — экраны, до которых в симуляторе не дойти без нажатий.
+            // `-QuestlynPreview onboardingClass | appearance | health | checkin | map | settings` — экраны, до которых в симуляторе не дойти без нажатий.
             if let preview = UserDefaults.standard.string(forKey: "QuestlynPreview"), model.isLoaded {
                 switch preview {
                 case "appearance": NavigationStack { AppearanceEditorView(model: model) }
                 case "health": NavigationStack { HealthSettingsView(model: model) }
                 case "checkin": CheckInView(model: model)
                 case "map": MapOverviewView(model: model)
+                case "settings": SettingsView(model: model)
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
             } else { content }
@@ -52,7 +56,12 @@ struct RootView: View {
             content
             #endif
         }
-        .task { await model.reload() }
+        .id(typeSize)
+        .preferredColorScheme(theme.scheme)
+        .task {
+            await model.reload()
+            await model.refreshBackups(createIfNeeded: true)
+        }
         .alert("Не получилось", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }

@@ -170,11 +170,11 @@ enum PixelMapRenderer {
         }
     }
 
-    private static func heroRows(_ appearance: HeroAppearance) -> [[Character]] {
+    static func heroRows(_ appearance: HeroAppearance) -> [[Character]] {
         appearance.outfit.spriteRows.enumerated().filter { $0.offset % 2 == 0 }.map { Array($0.element).enumerated().filter { $0.offset % 2 == 0 }.map(\.element) }
     }
 
-    private static func drawHero(_ buffer: inout PixelBuffer, appearance: HeroAppearance, accent: UInt32, centerX: Int, feetY: Int) {
+    static func drawHero(_ buffer: inout PixelBuffer, appearance: HeroAppearance, accent: UInt32, centerX: Int, feetY: Int) {
         let palette = HeroPalette.colors(for: appearance, accent: accent)
         let rows = heroRows(appearance)
         for (ry, row) in rows.enumerated() {
@@ -184,7 +184,7 @@ enum PixelMapRenderer {
         }
     }
 
-    private static func flag(_ buffer: inout PixelBuffer, x: Int, baseY: Int, height: Int, color: UInt32) {
+    static func flag(_ buffer: inout PixelBuffer, x: Int, baseY: Int, height: Int, color: UInt32) {
         for k in 0..<height { buffer.set(x, baseY - k, MapStyle.pole) }
         for row in 0..<3 {
             for c in 0..<(4 - row) { buffer.set(x + 1 + c, baseY - height + 1 + row, color) }

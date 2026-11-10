@@ -69,6 +69,15 @@ enum Format {
         return "\(n) \(word)"
     }
 
+    /// «Ср, 11 · 14:20» — точка ползунка на неделе.
+    static func weekPosition(_ hour: Double, start: LocalDate) -> String {
+        let clamped = min(max(hour, 0), 167.99)
+        let day = start.adding(days: Int(clamped / 24))
+        let minutes = Int((clamped.truncatingRemainder(dividingBy: 24) * 60).rounded(.down))
+        let name = day.date?.formatted(.dateTime.weekday(.abbreviated).day().locale(ru)) ?? day.description
+        return "\(name) · " + String(format: "%02d:%02d", minutes / 60, minutes % 60)
+    }
+
     /// «+105», «−4» — целые HP и MP со знаком.
     static func signedWhole(_ value: Double) -> String {
         let whole = Int(value.rounded())

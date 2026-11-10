@@ -11,10 +11,64 @@ final class AppModel {
     var errorMessage: String?
 
     private let store: any QuestlynStore
+    private let backups: BackupManager?
     private var timeZone: TimeZone { .current }
 
-    init(store: any QuestlynStore) {
+    init(store: any QuestlynStore, backups: BackupManager? = nil) {
         self.store = store
+        self.backups = backups
+    }
+
+    // MARK: Резервная копия и экспорт — этап 7
+
+    private(set) var backupFiles: [BackupFile] = []
+    private(set) var backupLocation: BackupLocation?
+    private(set) var isBackingUp = false
+
+    /// Автокопия раз в сутки и список копий — в фоне, iCloud может отвечать медленно.
+    func refreshBackups(createIfNeeded: Bool) async {
+        guard let backups else { return }
+        let result = await Task.detached(priority: .utility) { () -> ([BackupFile], BackupLocation?) in
+            if createIfNeeded { backups.backupIfNeeded(now: .now) }
+            guard let (folder, location) = BackupManager.folder() else { return ([], nil) }
+            return (BackupManager.list(in: folder), location)
+        }.value
+        backupFiles = result.0
+        backupLocation = result.1
+    }
+
+    func backupNow() async {
+        guard let backups else { return }
+        isBackingUp = true
+        defer { isBackingUp = false }
+        await run { [self] in
+            try await Task.detached(priority: .userInitiated) { _ = try backups.backup(now: .now) }.value
+            await refreshBackups(createIfNeeded: false)
+        }
+    }
+
+    func restore(_ file: BackupFile) async -> Bool {
+        guard let backups else { return false }
+        return await run { [self] in
+            try await Task.detached(priority: .userInitiated) { try backups.restore(file) }.value
+            chronicle = []
+            await reload()
+        }
+    }
+
+    /// Файл экспорта во временной папке — для системного меню «Поделиться».
+    func exportFile() async -> URL? {
+        var url: URL?
+        await run { [self] in
+            let data = try await ExportService(store: store).json(now: .now)
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd"
+            let file = FileManager.default.temporaryDirectory.appending(path: "questlyn-export-\(formatter.string(from: .now)).json")
+            try data.write(to: file, options: .atomic)
+            url = file
+        }
+        return url
     }
 
     var hero: Hero? { overview?.hero }
@@ -129,6 +183,13 @@ final class AppModel {
                      isDone: item.isCompleted)
         }
         return DayMapBuilder.build(date: date, events: events, quests: quests, moods: overview?.moods ?? [], now: .now, timeZone: timeZone)
+    }
+
+    /// Неделя на карте (02 от 11.11.2026): семь дней с понедельника и привалы сна.
+    func weekMap(start: LocalDate) -> WeekMap {
+        let days = (0..<7).map { dayMap(for: start.adding(days: $0)) }
+        let camps = SleepCampBuilder.camps(from: vitals?.log ?? [], window: vitalSettings.sleepWindow, timeZone: timeZone)
+        return WeekMap.build(weekStart: start, days: days, camps: camps, now: .now, timeZone: timeZone)
     }
 
     // MARK: Летопись — этап 5

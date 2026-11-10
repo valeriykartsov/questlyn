@@ -83,7 +83,7 @@ struct ProfessionPickerStep: View {
                 Label("Своя профессия", systemImage: "plus")
                     .font(QFont.text(15, weight: .semibold))
                     .frame(maxWidth: .infinity, minHeight: 48)
-                    .overlay(RoundedRectangle(cornerRadius: QRadius.card).strokeBorder(Color(hex: 0xB8A98A), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                    .overlay(RoundedRectangle(cornerRadius: QRadius.card).strokeBorder(QColor.dash, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
             }
             .buttonStyle(.plain)
             .disabled(setup.choices.count >= 3)
@@ -245,11 +245,11 @@ struct ProfessionAttributesStep: View {
                 Text("**FOC** и **DIS** не выбираются: они растут от квестов и привычек.")
             }
             .font(QFont.text(13))
-            .foregroundStyle(Color(hex: 0x5C3410))
+            .foregroundStyle(QColor.warmInk)
             .padding(.horizontal, QSpacing.xl)
             .padding(.vertical, QSpacing.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: 0xF1E3D3), in: RoundedRectangle(cornerRadius: QRadius.card))
+            .background(QColor.warmFill, in: RoundedRectangle(cornerRadius: QRadius.card))
         }
     }
 }
@@ -292,7 +292,7 @@ struct ClassStep: View {
                             .font(QFont.text(12, weight: .bold))
                             .padding(.horizontal, QSpacing.m).padding(.vertical, QSpacing.xxs)
                             .foregroundStyle(shared ? QColor.sheet : QColor.ink)
-                            .background(shared ? QColor.ink : Color(hex: 0xE6E8EE), in: Capsule())
+                            .background(shared ? QColor.ink : QColor.coolFill, in: Capsule())
                     }
                 }
                 if showsBonus, !setup.startBonus.isEmpty {
