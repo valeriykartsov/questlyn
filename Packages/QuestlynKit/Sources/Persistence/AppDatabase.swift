@@ -13,7 +13,11 @@ public final class AppDatabase: Sendable {
     /// Файл БД на устройстве. App Group — задел под виджеты и watchOS (02).
     /// Если App Group недоступен (нет entitlement или подписи), БД лежит в Application Support.
     public static func onDisk(appGroupIdentifier: String?) throws -> AppDatabase {
-        let directory = try databaseDirectory(appGroupIdentifier: appGroupIdentifier)
+        try onDisk(at: databaseDirectory(appGroupIdentifier: appGroupIdentifier))
+    }
+
+    /// БД в указанной папке — для тестов перезапуска.
+    static func onDisk(at directory: URL) throws -> AppDatabase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appending(path: "questlyn.sqlite")
         var configuration = Configuration()

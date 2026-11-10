@@ -11,6 +11,19 @@ public enum Attribute: String, CaseIterable, Codable, Sendable {
     /// Аббревиатура для интерфейса и хранения.
     public var code: String { rawValue }
 
+    /// Название в интерфейсе (макеты онбординга, 02: MNT — «Ментальность»).
+    public var title: String {
+        switch self {
+        case .strength: "Сила"
+        case .endurance: "Выносливость"
+        case .intelligence: "Интеллект"
+        case .mentality: "Ментальность"
+        case .charisma: "Харизма"
+        case .focus: "Фокус"
+        case .discipline: "Дисциплина"
+        }
+    }
+
     /// FOC и DIS не выбираются в профессии (02).
     public var isSelectableForProfession: Bool {
         switch self {

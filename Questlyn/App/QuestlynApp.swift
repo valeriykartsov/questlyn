@@ -1,9 +1,8 @@
 import SwiftUI
-import Persistence
 
 @main
 struct QuestlynApp: App {
-    @State private var environment: AppEnvironment
+    @State private var environment: Result<AppModel, Error>
 
     init() {
         QFont.registerBundledFonts()
@@ -13,11 +12,41 @@ struct QuestlynApp: App {
     var body: some Scene {
         WindowGroup {
             switch environment {
-            case .ready(let dependencies):
-                TodayView(model: TodayModel(service: dependencies.todayService))
-            case .failed(let message):
-                StartupErrorView(message: message)
+            case .success(let model):
+                RootView(model: model)
+            case .failure(let error):
+                StartupErrorView(message: error.localizedDescription)
             }
+        }
+    }
+}
+
+/// Нет героя — онбординг, иначе вкладки.
+struct RootView: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        Group {
+            if !model.isLoaded {
+                QColor.paper.ignoresSafeArea()
+            } else if model.hero == nil {
+                OnboardingView(model: model)
+            } else {
+                TabView {
+                    Tab("Сегодня", systemImage: "sun.max") { TodayView(model: model) }
+                    Tab("Герой", systemImage: "person.crop.circle") { HeroView(model: model) }
+                }
+                .tint(QColor.amber)
+            }
+        }
+        .task { await model.reload() }
+        .alert("Не получилось", isPresented: Binding(
+            get: { model.errorMessage != nil },
+            set: { if !$0 { model.errorMessage = nil } }
+        )) {
+            Button("Понятно", role: .cancel) {}
+        } message: {
+            Text(model.errorMessage ?? "")
         }
     }
 }
