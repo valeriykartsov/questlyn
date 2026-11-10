@@ -95,6 +95,21 @@ struct InfoRow: View {
 
 extension View {
     /// Фон бумаги и цвет чернил для экрана.
+    /// Клавиатуру можно свернуть: прокруткой и кнопкой «Готово» над клавиатурой.
+    func keyboardDismissal() -> some View {
+        self
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Готово") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+    }
+
     func paperScreen() -> some View {
         self
             .scrollContentBackground(.hidden)

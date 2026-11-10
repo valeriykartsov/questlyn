@@ -360,3 +360,55 @@ struct ActivityRecord: QuestlynRecord {
                         classSnapshot: classSnapshot, deletedAt: deletedAt)
     }
 }
+
+struct SleepSessionRecord: QuestlynRecord {
+    static let databaseTableName = "sleepSession"
+    var id: UUID
+    var wakeDate: String
+    var durationMinutes: Int
+    var bedtimeDeviationMinutes: Int?
+    var startedAt: Date?
+    var endedAt: Date?
+    var source: String
+    var timezoneId: String
+    var createdAt: Date
+
+    init(_ s: SleepSession) {
+        id = s.id
+        wakeDate = s.wakeDate.description
+        durationMinutes = s.durationMinutes
+        bedtimeDeviationMinutes = s.bedtimeDeviationMinutes
+        startedAt = s.startedAt
+        endedAt = s.endedAt
+        source = s.source.rawValue
+        timezoneId = s.timezoneId
+        createdAt = s.createdAt
+    }
+
+    var domain: SleepSession? {
+        guard let date = LocalDate(string: wakeDate), let source = SleepSource(rawValue: source) else { return nil }
+        return SleepSession(id: id, wakeDate: date, durationMinutes: durationMinutes, bedtimeDeviationMinutes: bedtimeDeviationMinutes,
+                            startedAt: startedAt, endedAt: endedAt, source: source, timezoneId: timezoneId, createdAt: createdAt)
+    }
+}
+
+struct StepDayRecord: QuestlynRecord {
+    static let databaseTableName = "stepDay"
+    var date: String
+    var steps: Int
+    var updatedAt: Date
+
+    init(_ d: StepDay) {
+        date = d.date.description
+        steps = d.steps
+        updatedAt = d.updatedAt
+    }
+
+    var domain: StepDay? { LocalDate(string: date).map { StepDay(date: $0, steps: steps, updatedAt: updatedAt) } }
+}
+
+struct SettingRecord: QuestlynRecord {
+    static let databaseTableName = "setting"
+    var key: String
+    var value: String
+}

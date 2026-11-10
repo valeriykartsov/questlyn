@@ -38,10 +38,11 @@ struct RootView: View {
     var body: some View {
         Group {
             #if DEBUG
-            // `-QuestlynPreview onboardingClass | appearance` — экраны, до которых в симуляторе не дойти без нажатий.
+            // `-QuestlynPreview onboardingClass | appearance | health` — экраны, до которых в симуляторе не дойти без нажатий.
             if let preview = UserDefaults.standard.string(forKey: "QuestlynPreview"), model.isLoaded {
                 switch preview {
                 case "appearance": NavigationStack { AppearanceEditorView(model: model) }
+                case "health": NavigationStack { HealthSettingsView(model: model) }
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
             } else { content }

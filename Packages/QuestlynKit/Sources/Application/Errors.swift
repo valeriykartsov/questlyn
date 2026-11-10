@@ -4,6 +4,7 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case unknownCatalogItem(String)
     case heroAlreadyExists
     case heroNotFound
+    case invalidStepGoal
     case questNotFound
     case skillNotFound
     case professionNotFound
@@ -33,6 +34,7 @@ extension QuestlynError: CustomStringConvertible {
         case .unknownCatalogItem(let id): "Профессии «\(id)» нет в каталоге."
         case .heroAlreadyExists: "Герой уже создан."
         case .heroNotFound: "Герой не найден."
+        case .invalidStepGoal: "Норма шагов — от 500 до 30 000."
         case .questNotFound: "Квест не найден."
         case .skillNotFound: "Навык не найден."
         case .professionNotFound: "Профессия не найдена."

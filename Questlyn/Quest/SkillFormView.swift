@@ -16,16 +16,17 @@ struct SkillFormView: View {
         NavigationStack {
             Form {
                 Section("Навык") {
-                    TextField("Например, Отчётность", text: $title)
+                    TextField("Например, Отчётность", text: $title, prompt: Text("Например, Отчётность").foregroundStyle(QColor.placeholder))
                         .font(QFont.text(17))
                 }
                 .listRowBackground(QColor.sheet)
                 Section {
                     Picker("Профессия", selection: $professionId) {
                         ForEach(model.activeProfessions) { profession in
-                            VStack(alignment: .leading) {
-                                Text(profession.title)
+                            VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                                Text(profession.title).font(QFont.text(16)).foregroundStyle(QColor.ink)
                                 Text(profession.attributes.map(\.code).joined(separator: " · "))
+                                    .font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
                             }
                             .tag(UUID?.some(profession.id))
                         }
@@ -49,6 +50,7 @@ struct SkillFormView: View {
             }
             .tint(QColor.amber)
             .paperScreen()
+            .keyboardDismissal()
             .navigationTitle("Новый навык")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

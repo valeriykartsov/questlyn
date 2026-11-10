@@ -7,6 +7,7 @@ enum Migrations {
     static let honestProgress = "v3_honestProgress"
     static let activities = "v4_activities"
     static let heroOutfit = "v5_heroOutfit"
+    static let vitals = "v6_vitals"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -200,6 +201,35 @@ enum Migrations {
             }
         }
 
+        // Этап 4: сон, шаги и настройки «Здоровья героя» — факты для HP и MP.
+        migrator.registerMigration(vitals) { db in
+            try db.create(table: "sleepSession") { t in
+                t.primaryKey("id", .text)
+                t.column("wakeDate", .text).notNull().indexed()
+                t.column("durationMinutes", .integer).notNull().check { $0 > 0 && $0 <= 1440 }
+                t.column("bedtimeDeviationMinutes", .integer)
+                t.column("startedAt", .datetime)
+                t.column("endedAt", .datetime)
+                t.column("source", .text).notNull().check { [SleepSourceValue.manual, SleepSourceValue.health].contains($0) }
+                t.column("timezoneId", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "stepDay") { t in
+                t.primaryKey("date", .text)
+                t.column("steps", .integer).notNull().check { $0 >= 0 }
+                t.column("updatedAt", .datetime).notNull()
+            }
+            try db.create(table: "setting") { t in
+                t.primaryKey("key", .text)
+                t.column("value", .text).notNull()
+            }
+        }
+
         return migrator
     }
+}
+
+private enum SleepSourceValue {
+    static let manual = "manual"
+    static let health = "health"
 }

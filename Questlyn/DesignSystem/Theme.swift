@@ -17,6 +17,8 @@ enum QColor {
     static let line = Color(hex: 0xE3D9C6)
     /// Граница кнопок и полей.
     static let lineStrong = Color(hex: 0xC9BCA2)
+    /// Подсказка в пустом поле ввода: заметно светлее текста, но читается на «бумаге».
+    static let placeholder = Color(hex: 0x7A8091)
     /// Подложка полос прогресса.
     static let track = Color(hex: 0xE9E1D0)
     /// Янтарь — акцент.

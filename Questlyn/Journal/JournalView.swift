@@ -65,6 +65,7 @@ struct JournalView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .paperScreen()
+            .keyboardDismissal()
         .overlay(alignment: .bottomTrailing) { AddButton { isAdding = true } }
         .refreshable { await model.reload() }
         .sheet(isPresented: $isAdding) { AddFlowView(model: model) }
@@ -106,7 +107,7 @@ struct JournalView: View {
     private var searchField: some View {
         HStack(spacing: QSpacing.m) {
             Image(systemName: "magnifyingglass").foregroundStyle(QColor.inkSecondary)
-            TextField("Поиск по названию", text: $search)
+            TextField("Поиск по названию", text: $search, prompt: Text("Поиск по названию").foregroundStyle(QColor.placeholder))
                 .font(QFont.text(15))
                 .focused($searchFocused)
                 .submitLabel(.search)
