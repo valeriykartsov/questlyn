@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// Экран «Сегодня» (макет TodayV2 без карты и настроения — этап 6).
+/// Экран «Сегодня» (макет TodayV2, миниатюра дня — холст 8.9).
 struct TodayView: View {
     let model: AppModel
 
@@ -11,6 +11,8 @@ struct TodayView: View {
     @State private var openedHabit: UUID?
     @State private var report: CompletionReport?
     @State private var isShowingMorning = false
+    @State private var isCheckingIn = false
+    @State private var isShowingMap = false
     /// Утро показываем сами один раз в день; дальше — по кнопке «Как спали?».
     @AppStorage("morningShownDate") private var morningShownDate = ""
 
@@ -20,7 +22,9 @@ struct TodayView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.l) {
                 header
+                DayStripCard(model: model) { isShowingMap = true }
                 rankCard
+                WeatherCard(model: model) { isCheckingIn = true }
                 if let vitals = model.vitals {
                     VitalsCard(vitals: vitals, askSleep: model.needsSleepAnswer ? { isShowingMorning = true } : nil)
                 }
@@ -49,6 +53,9 @@ struct TodayView: View {
             RewardView(model: model, report: report)
         }
         .sheet(isPresented: $isShowingMorning) { MorningView(model: model) }
+        .sheet(isPresented: $isCheckingIn) { CheckInView(model: model) }
+        .fullScreenCover(isPresented: $isShowingMap) { MapOverviewView(model: model) }
+        .onAppear { model.loadAgenda() }
         .onAppear(perform: presentMorningIfNeeded)
         .onChange(of: model.overview?.date) { presentMorningIfNeeded() }
         .onChange(of: model.overview?.hasSleepToday) { presentMorningIfNeeded() }

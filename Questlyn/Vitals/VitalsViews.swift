@@ -15,6 +15,11 @@ struct VitalsCard: View {
                 meter("HP", title: "здоровье", value: vitals.hp, max: vitals.maxHP, color: QColor.hp, source: "STR + END · сон")
                 meter("MP", title: "мана", value: vitals.mp, max: vitals.maxMP, color: QColor.mp, source: "INT + MNT + CHR · сон")
             }
+            if let hangover = vitals.hangover, vitals.intelligenceRemoved > 0 {
+                Text("Похмелье: INT \(vitals.intelligenceLevel) → \(vitals.effectiveIntelligence) · MaxMP −\(vitals.intelligenceRemoved * 5) · до \(hangover.until.formatted(date: .omitted, time: .shortened))")
+                    .font(QFont.text(12, weight: .semibold))
+                    .foregroundStyle(QColor.debuffINT)
+            }
             if let status = statusText {
                 Text(status)
                     .font(QFont.text(12))
@@ -248,6 +253,8 @@ struct HealthSettingsView: View {
     let model: AppModel
     @State private var settings: VitalSettings
     @State private var isConnecting = false
+    @State private var newHabit = ""
+    @State private var newHabitPercent = 5
 
     init(model: AppModel) {
         self.model = model
@@ -278,6 +285,33 @@ struct HealthSettingsView: View {
             .listRowBackground(QColor.sheet)
 
             Section {
+                ForEach(model.overview?.customHarmHabits ?? []) { habit in
+                    LabeledContent(habit.title, value: "−\(habit.damagePercent)% HP")
+                        .swipeActions {
+                            Button("Удалить", role: .destructive) { Task { await model.archiveHarmHabit(habit.id) } }
+                        }
+                }
+                HStack {
+                    TextField("Своя привычка", text: $newHabit, prompt: Text("Своя привычка").foregroundStyle(QColor.placeholder))
+                    Picker("Сила", selection: $newHabitPercent) {
+                        ForEach(CustomHarmHabit.allowedPercents, id: \.self) { Text("−\($0)%").tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    Button("Добавить") {
+                        let title = newHabit
+                        Task { if await model.createHarmHabit(title: title, percent: newHabitPercent) { newHabit = "" } }
+                    }
+                    .disabled(newHabit.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            } header: {
+                Text("Свои вредные привычки")
+            } footer: {
+                Text("Курение (−3%), фастфуд и кофеин после 16:00 (−5%), алкоголь (дебаф INT) уже есть в листе «Как вы?». Удалённая привычка остаётся в Летописи.")
+            }
+            .listRowBackground(QColor.sheet)
+
+            Section {
                 if model.isHealthConnected {
                     Label("Подключено: сон и шаги", systemImage: "checkmark.circle.fill").foregroundStyle(QColor.forest)
                 } else {
@@ -292,14 +326,22 @@ struct HealthSettingsView: View {
                     }
                     .disabled(isConnecting || !model.isHealthAvailable)
                 }
+                Toggle(isOn: Binding(get: { model.writesStateOfMind }, set: { on in
+                    if on { Task { await model.enableStateOfMind() } } else { model.writesStateOfMind = false }
+                })) {
+                    Label("Записывать настроение", systemImage: "face.smiling")
+                }
+                .tint(QColor.forest)
+                .disabled(!model.isHealthAvailable)
             } header: {
-                Text("Apple Health · только чтение")
+                Text("Apple Health")
             } footer: {
-                Text("Sleep Analysis — восстановление HP и MP, шаги — норма активности. Данные не покидают устройство. Доступ можно изменить в приложении «Здоровье».")
+                Text("Читаются Sleep Analysis (восстановление HP и MP) и шаги (норма активности). Настроение записывается в State of Mind, только если включено. Данные не покидают устройство; доступ меняется в приложении «Здоровье».")
             }
             .listRowBackground(QColor.sheet)
         }
         .paperScreen()
+        .keyboardDismissal()
         .navigationTitle("Здоровье героя")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: settings) { _, new in

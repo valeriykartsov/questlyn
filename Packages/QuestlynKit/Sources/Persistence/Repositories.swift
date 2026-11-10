@@ -367,6 +367,54 @@ public struct GRDBStore: QuestlynStore {
         try await writer.read { db in try ActivityRecord.order(Column("startedAt")).fetchAll(db).compactMap(\.domain) }
     }
 
+    // MARK: Wellbeing
+
+    public func moodEntries() async throws -> [MoodEntry] {
+        try await writer.read { db in try MoodEntryRecord.order(Column("at")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func record(_ mood: MoodEntry) async throws {
+        try await writer.write { db in
+            if mood.isDaySummary {
+                try db.execute(sql: "UPDATE moodEntry SET isDaySummary = 0 WHERE localDate = ? AND deletedAt IS NULL",
+                               arguments: [mood.localDate.description])
+            }
+            try MoodEntryRecord(mood).insert(db)
+        }
+    }
+
+    public func deleteMood(id: UUID, at date: Date) async throws {
+        try await writer.write { db in
+            guard var record = try MoodEntryRecord.fetchOne(db, key: id.uuidString.lowercased()), record.deletedAt == nil else { return }
+            record.deletedAt = date
+            try record.update(db)
+        }
+    }
+
+    public func harmEntries() async throws -> [HarmEntry] {
+        try await writer.read { db in try HarmEntryRecord.order(Column("at")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func record(_ harms: [HarmEntry]) async throws {
+        try await writer.write { db in for harm in harms { try HarmEntryRecord(harm).insert(db) } }
+    }
+
+    public func deleteHarm(id: UUID, at date: Date) async throws {
+        try await writer.write { db in
+            guard var record = try HarmEntryRecord.fetchOne(db, key: id.uuidString.lowercased()), record.deletedAt == nil else { return }
+            record.deletedAt = date
+            try record.update(db)
+        }
+    }
+
+    public func customHarmHabits() async throws -> [CustomHarmHabit] {
+        try await writer.read { db in try CustomHarmHabitRecord.order(Column("createdAt")).fetchAll(db).map(\.domain) }
+    }
+
+    public func save(_ habit: CustomHarmHabit) async throws {
+        try await writer.write { db in try CustomHarmHabitRecord(habit).save(db) }
+    }
+
     // MARK: Reset
 
     public func eraseAll() async throws {

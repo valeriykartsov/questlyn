@@ -11,12 +11,12 @@ struct DatabaseTests {
 
     @Test func migrationCreatesSchema() throws {
         try database.writer.read { db in
-            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant", "epic", "habit", "habitOccurrence", "skillMastery", "activity", "sleepSession", "stepDay", "setting", "chronicleEntry"] {
+            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant", "epic", "habit", "habitOccurrence", "skillMastery", "activity", "sleepSession", "stepDay", "setting", "chronicleEntry", "moodEntry", "harmEntry", "customHarmHabit"] {
                 let exists = try db.tableExists(table)
                 #expect(exists, "нет таблицы \(table)")
             }
         }
-        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics, Migrations.honestProgress, Migrations.activities, Migrations.heroOutfit, Migrations.vitals, Migrations.chronicle])
+        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics, Migrations.honestProgress, Migrations.activities, Migrations.heroOutfit, Migrations.vitals, Migrations.chronicle, Migrations.wellbeing])
     }
 
     @Test func questsForDateAreOrderedByTimeThenCreation() async throws {

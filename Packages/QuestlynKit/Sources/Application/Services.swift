@@ -347,6 +347,15 @@ public struct TodayOverview: Sendable, Equatable {
     public var vitalSettings: VitalSettings = .default
     /// Ночь пробуждения сегодня уже внесена (вручную или из Apple Health).
     public var hasSleepToday = false
+    /// Последняя отметка настроения за сегодня и погода по ней (02, «Карта дня»).
+    public var lastMood: MoodEntry?
+    public var weather: Weather = .clear
+    /// Свои вредные привычки для листа «Как вы?».
+    public var customHarmHabits: [CustomHarmHabit] = []
+    /// Отметки здоровья за сегодня — для удаления ошибочных.
+    public var todayHarms: [HarmEntry] = []
+    /// Отметки настроения (без удалённых) — флажки и погода на карте дня.
+    public var moods: [MoodEntry] = []
 }
 
 /// Сборка «Сегодня» и «Героя» (BACKLOG 1.5, 1.8).
@@ -419,6 +428,8 @@ public struct TodayService: Sendable {
         let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
         let settings = try await store.vitalSettings()
         let sleeps = try await store.sleepSessions()
+        let moods = try await store.moodEntries().filter { $0.deletedAt == nil }
+        let lastMood = moods.last { $0.localDate == date }
         var vitals: VitalsState?
         if let hero {
             vitals = try await VitalsService(store: store).state(hero: hero, journal: journal, sleeps: sleeps, settings: settings,
@@ -427,6 +438,10 @@ public struct TodayService: Sendable {
         return TodayOverview(date: date, hero: hero, professions: professions, skills: skills, items: items, progress: progress,
                              habits: habits, epics: epics, journal: journal, lastDiscipline: lastDiscipline, masteries: masteries,
                              activities: try await store.activities(from: date, through: date),
-                             vitals: vitals, vitalSettings: settings, hasSleepToday: sleeps.contains { $0.wakeDate == date })
+                             vitals: vitals, vitalSettings: settings, hasSleepToday: sleeps.contains { $0.wakeDate == date },
+                             lastMood: lastMood, weather: Weather.from(lastMood?.mood, on: date),
+                             customHarmHabits: try await store.customHarmHabits().filter(\.isActive),
+                             todayHarms: try await store.harmEntries().filter { $0.isActive && $0.localDate == date },
+                             moods: moods)
     }
 }

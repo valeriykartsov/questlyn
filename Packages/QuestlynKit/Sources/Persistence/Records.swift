@@ -446,3 +446,85 @@ struct ChronicleEntryRecord: QuestlynRecord {
                               recalculatedBy: recalculatedBy.map(RuleVersion.init(rawValue:)))
     }
 }
+
+struct MoodEntryRecord: QuestlynRecord {
+    static let databaseTableName = "moodEntry"
+    var id: UUID
+    var mood: String
+    var note: String?
+    var isDaySummary: Bool
+    var at: Date
+    var localDate: String
+    var timezoneId: String
+    var deletedAt: Date?
+
+    init(_ m: MoodEntry) {
+        id = m.id
+        mood = m.mood.rawValue
+        note = m.note
+        isDaySummary = m.isDaySummary
+        at = m.at
+        localDate = m.localDate.description
+        timezoneId = m.timezoneId
+        deletedAt = m.deletedAt
+    }
+
+    var domain: MoodEntry? {
+        guard let mood = Mood(rawValue: mood), let date = LocalDate(string: localDate) else { return nil }
+        return MoodEntry(id: id, mood: mood, note: note, isDaySummary: isDaySummary, at: at, localDate: date,
+                         timezoneId: timezoneId, deletedAt: deletedAt)
+    }
+}
+
+struct CustomHarmHabitRecord: QuestlynRecord {
+    static let databaseTableName = "customHarmHabit"
+    var id: UUID
+    var title: String
+    var damagePercent: Int
+    var isActive: Bool
+    var createdAt: Date
+
+    init(_ h: CustomHarmHabit) {
+        id = h.id
+        title = h.title
+        damagePercent = h.damagePercent
+        isActive = h.isActive
+        createdAt = h.createdAt
+    }
+
+    var domain: CustomHarmHabit { CustomHarmHabit(id: id, title: title, damagePercent: damagePercent, isActive: isActive, createdAt: createdAt) }
+}
+
+struct HarmEntryRecord: QuestlynRecord {
+    static let databaseTableName = "harmEntry"
+    var id: UUID
+    var kind: String
+    var customHabitId: UUID?
+    var title: String
+    var damagePercent: Int
+    var alcohol: String?
+    var at: Date
+    var localDate: String
+    var timezoneId: String
+    var deletedAt: Date?
+
+    init(_ h: HarmEntry) {
+        id = h.id
+        kind = h.kind.rawValue
+        customHabitId = h.customHabitId
+        title = h.title
+        damagePercent = h.damagePercent
+        alcohol = h.alcohol?.rawValue
+        at = h.at
+        localDate = h.localDate.description
+        timezoneId = h.timezoneId
+        deletedAt = h.deletedAt
+    }
+
+    var domain: HarmEntry? {
+        guard let kind = HarmKind(rawValue: kind), let date = LocalDate(string: localDate) else { return nil }
+        return HarmEntry(id: id, kind: kind, customHabitId: customHabitId, title: title, damagePercent: damagePercent,
+                         alcohol: alcohol.flatMap(AlcoholDegree.init(rawValue:)), at: at, localDate: date,
+                         timezoneId: timezoneId, deletedAt: deletedAt)
+    }
+}
