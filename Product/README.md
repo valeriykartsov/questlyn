@@ -32,4 +32,5 @@ must happen before public release and commercial branding commitments.
 - [04_MVP_AND_DELIVERY_PLAN.md](04_MVP_AND_DELIVERY_PLAN.md) — состав MVP и этапы
 - [05_DESIGN_BRIEF.md](05_DESIGN_BRIEF.md) — дизайн-бриф
 - [06_OPEN_QUESTIONS_AND_RISKS.md](06_OPEN_QUESTIONS_AND_RISKS.md) — открытые вопросы, риски, бэклог идей
-- [07_FORMULAS.md](07_FORMULAS.md) — формулы прогрессии (Rule Set v1, утверждён)
+- [07_FORMULAS.md](07_FORMULAS.md) — формулы прогрессии (Rule Set v1.1, утверждён)
+- [08_VITALS_AND_CHRONICLE.md](08_VITALS_AND_CHRONICLE.md) — HP, MP и Летопись героя (предложение, требует согласования)
