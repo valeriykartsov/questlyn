@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// «Герой» (макет HeroV2 без HP/MP): пиксельный герой, ранг, атрибуты, профессии.
+/// «Герой» (макет HeroV2): пиксельный герой, HP и MP, ранг, атрибуты, профессии.
 struct HeroView: View {
     let model: AppModel
     @State private var isCreatingSkill = false
@@ -17,6 +17,7 @@ struct HeroView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.l) {
                 header
+                if let vitals = model.vitals { VitalsCard(vitals: vitals, showsSources: true) }
                 rank
                 attributes
                 professions

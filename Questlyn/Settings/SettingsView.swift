@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// «Настройки» (макет Settings): внешность героя и сброс данных; здоровье героя, тема и бэкап — этапы 4 и 7.
+/// «Настройки» (макет Settings): внешность и здоровье героя, сброс данных; тема и бэкап — этап 7.
 struct SettingsView: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -29,10 +29,19 @@ struct SettingsView: View {
                             Label("Внешность и образ", systemImage: "person.crop.square")
                         }
                     }
+                    NavigationLink {
+                        HealthSettingsView(model: model)
+                    } label: {
+                        LabeledContent {
+                            Text("\(model.vitalSettings.sleepWindow.start)–\(model.vitalSettings.sleepWindow.end)")
+                        } label: {
+                            Label("Здоровье героя", systemImage: "heart")
+                        }
+                    }
                 } header: {
                     Text("Герой")
                 } footer: {
-                    Text("Образ, волосы и кожа. На атрибуты и прогресс не влияют.")
+                    Text("Внешность не влияет на прогресс. Режим сна и норма шагов задают восстановление HP и MP.")
                 }
                 .listRowBackground(QColor.sheet)
 

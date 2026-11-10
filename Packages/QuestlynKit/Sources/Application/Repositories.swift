@@ -77,10 +77,23 @@ public protocol ActivityRepository: Sendable {
     func deleteActivity(id: UUID, at date: Date) async throws
 }
 
+public protocol VitalsRepository: Sendable {
+    func sleepSessions() async throws -> [SleepSession]
+    /// Ручной ввод за ночь заменяет прежний ручной ввод за ту же дату.
+    func saveManualSleep(_ session: SleepSession) async throws
+    func deleteSleep(id: UUID) async throws
+    /// Записи сна из HealthKit за даты пробуждения заменяются целиком.
+    func replaceHealthSleep(_ sessions: [SleepSession], wakeDates: [LocalDate]) async throws
+    func stepDays() async throws -> [StepDay]
+    func save(_ steps: [StepDay]) async throws
+    func vitalSettings() async throws -> VitalSettings
+    func save(_ settings: VitalSettings) async throws
+}
+
 public protocol ResetRepository: Sendable {
     /// Удалить все данные и создать пустую схему заново.
     func eraseAll() async throws
 }
 
 public typealias QuestlynStore = HeroRepository & SkillRepository & QuestRepository & CompletionRepository & GrantRepository
-    & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository & ActivityRepository
+    & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository & ActivityRepository & VitalsRepository

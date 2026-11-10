@@ -342,6 +342,11 @@ public struct TodayOverview: Sendable, Equatable {
     public var masteries: [UUID: Int]
     /// Активности сегодня.
     public var activities: [Activity]
+    /// HP и MP на сейчас (08); nil — героя ещё нет.
+    public var vitals: VitalsState?
+    public var vitalSettings: VitalSettings = .default
+    /// Ночь пробуждения сегодня уже внесена (вручную или из Apple Health).
+    public var hasSleepToday = false
 }
 
 /// Сборка «Сегодня» и «Героя» (BACKLOG 1.5, 1.8).
@@ -412,8 +417,16 @@ public struct TodayService: Sendable {
         }
         let lastWeek = date.weekStart.adding(days: -7)
         let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
+        let settings = try await store.vitalSettings()
+        let sleeps = try await store.sleepSessions()
+        var vitals: VitalsState?
+        if let hero {
+            vitals = try await VitalsService(store: store).state(hero: hero, journal: journal, sleeps: sleeps, settings: settings,
+                                                                 grants: progress.grants, now: now, timeZone: timeZone)
+        }
         return TodayOverview(date: date, hero: hero, professions: professions, skills: skills, items: items, progress: progress,
                              habits: habits, epics: epics, journal: journal, lastDiscipline: lastDiscipline, masteries: masteries,
-                             activities: try await store.activities(from: date, through: date))
+                             activities: try await store.activities(from: date, through: date),
+                             vitals: vitals, vitalSettings: settings, hasSleepToday: sleeps.contains { $0.wakeDate == date })
     }
 }

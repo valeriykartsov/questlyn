@@ -49,10 +49,10 @@ struct QuestFormView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Что нужно сделать", text: $draft.title, axis: .vertical)
+                TextField("Что нужно сделать", text: $draft.title, prompt: Text("Что нужно сделать").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(17, weight: .semibold))
                     .focused($titleFocused)
-                TextField("Описание · необязательно", text: $draft.details, axis: .vertical)
+                TextField("Описание · необязательно", text: $draft.details, prompt: Text("Описание · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(15))
                     .lineLimit(2...6)
             }
@@ -120,6 +120,7 @@ struct QuestFormView: View {
         }
         .tint(QColor.amber)
         .paperScreen()
+            .keyboardDismissal()
         .navigationTitle(editing == nil ? "Новый квест" : "Изменить квест")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

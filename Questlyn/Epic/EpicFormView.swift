@@ -18,9 +18,9 @@ struct EpicFormView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Большая цель", text: $title, axis: .vertical)
+                TextField("Большая цель", text: $title, prompt: Text("Большая цель").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(17, weight: .semibold))
-                TextField("Описание · необязательно", text: $details, axis: .vertical)
+                TextField("Описание · необязательно", text: $details, prompt: Text("Описание · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(15)).lineLimit(2...6)
             }
             .listRowBackground(QColor.sheet)
@@ -36,7 +36,7 @@ struct EpicFormView: View {
 
             Section {
                 ForEach(steps.indices, id: \.self) { index in
-                    TextField("Шаг \(index + 1)", text: $steps[index])
+                    TextField("Шаг \(index + 1)", text: $steps[index], prompt: Text("Шаг \(index + 1)").foregroundStyle(QColor.placeholder))
                 }
                 .onDelete { steps.remove(atOffsets: $0) }
                 Button("Добавить шаг") { steps.append("") }.foregroundStyle(QColor.amberDeep)
@@ -49,6 +49,7 @@ struct EpicFormView: View {
         }
         .tint(QColor.amber)
         .paperScreen()
+            .keyboardDismissal()
         .navigationTitle("Новый Epic")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

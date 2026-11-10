@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// Экран «Сегодня» этапа 1 (макет TodayV2 без карты, HP/MP и привычек — они на этапах 2, 4, 6).
+/// Экран «Сегодня» (макет TodayV2 без карты и настроения — этап 6).
 struct TodayView: View {
     let model: AppModel
 
@@ -10,6 +10,9 @@ struct TodayView: View {
     @State private var openedQuest: Quest?
     @State private var openedHabit: UUID?
     @State private var report: CompletionReport?
+    @State private var isShowingMorning = false
+    /// Утро показываем сами один раз в день; дальше — по кнопке «Как спали?».
+    @AppStorage("morningShownDate") private var morningShownDate = ""
 
     private var items: [TodayItem] { model.overview?.items ?? [] }
 
@@ -18,6 +21,9 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: QSpacing.l) {
                 header
                 rankCard
+                if let vitals = model.vitals {
+                    VitalsCard(vitals: vitals, askSleep: model.needsSleepAnswer ? { isShowingMorning = true } : nil)
+                }
                 AttributeStrip(progress: model.progress)
                 habitsSection
                 activitySection
@@ -42,6 +48,20 @@ struct TodayView: View {
         .fullScreenCover(item: $report) { report in
             RewardView(model: model, report: report)
         }
+        .sheet(isPresented: $isShowingMorning) { MorningView(model: model) }
+        .onAppear(perform: presentMorningIfNeeded)
+        .onChange(of: model.overview?.date) { presentMorningIfNeeded() }
+        .onChange(of: model.overview?.hasSleepToday) { presentMorningIfNeeded() }
+    }
+
+    private func presentMorningIfNeeded() {
+        guard let overview = model.overview, model.hero != nil else { return }
+        let today = overview.date.description
+        guard morningShownDate != today else { return }
+        let fromHealth = overview.hasSleepToday && model.vitals?.lastNight?.session?.source == .health
+        guard model.needsSleepAnswer || fromHealth else { return }
+        morningShownDate = today
+        isShowingMorning = true
     }
 
     private var header: some View {

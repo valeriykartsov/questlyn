@@ -33,6 +33,7 @@ struct ProfessionEditorView: View {
                 .padding(QSpacing.screen)
             }
             .paperScreen()
+            .keyboardDismissal()
             .navigationTitle("Профессии и класс")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

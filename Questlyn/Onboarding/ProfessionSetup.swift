@@ -64,7 +64,7 @@ struct ProfessionPickerStep: View {
         VStack(alignment: .leading, spacing: QSpacing.m) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundStyle(QColor.inkSecondary)
-                TextField("Поиск профессии", text: $search).font(QFont.text(15))
+                TextField("Поиск профессии", text: $search, prompt: Text("Поиск профессии").foregroundStyle(QColor.placeholder)).font(QFont.text(15))
             }
             .padding(.horizontal, QSpacing.xl)
             .frame(height: 44)
@@ -143,7 +143,7 @@ struct CustomProfessionForm: View {
         NavigationStack {
             Form {
                 Section("Профессия") {
-                    TextField("Например, Музыкант", text: $title).font(QFont.text(17))
+                    TextField("Например, Музыкант", text: $title, prompt: Text("Например, Музыкант").foregroundStyle(QColor.placeholder)).font(QFont.text(17))
                 }
                 .listRowBackground(QColor.sheet)
                 Section {
@@ -157,6 +157,7 @@ struct CustomProfessionForm: View {
             }
             .tint(QColor.amber)
             .paperScreen()
+            .keyboardDismissal()
             .navigationTitle("Своя профессия")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -262,7 +263,7 @@ struct ClassStep: View {
         VStack(alignment: .leading, spacing: QSpacing.l) {
             VStack(alignment: .leading, spacing: QSpacing.s) {
                 CapsHeader(title: "Название класса")
-                TextField(setup.defaultClassTitle, text: $setup.classTitle)
+                TextField(setup.defaultClassTitle, text: $setup.classTitle, prompt: Text(setup.defaultClassTitle).foregroundStyle(QColor.placeholder))
                     .font(QFont.text(17, weight: .semibold))
                     .padding(.horizontal, QSpacing.xl)
                     .frame(height: 52)

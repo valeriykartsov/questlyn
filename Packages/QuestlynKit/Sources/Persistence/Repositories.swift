@@ -294,6 +294,57 @@ public struct GRDBStore: QuestlynStore {
         try ProgressGrantRecord.filter(Column("sourceType") == GrantSourceType.activity.rawValue && Column("sourceId") == key).deleteAll(db)
     }
 
+    // MARK: Vitals
+
+    public func sleepSessions() async throws -> [SleepSession] {
+        try await writer.read { db in try SleepSessionRecord.order(Column("wakeDate")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func saveManualSleep(_ session: SleepSession) async throws {
+        try await writer.write { db in
+            try SleepSessionRecord
+                .filter(Column("source") == SleepSource.manual.rawValue && Column("wakeDate") == session.wakeDate.description)
+                .deleteAll(db)
+            try SleepSessionRecord(session).insert(db)
+        }
+    }
+
+    public func deleteSleep(id: UUID) async throws {
+        try await writer.write { db in _ = try SleepSessionRecord.deleteOne(db, key: id.uuidString.lowercased()) }
+    }
+
+    public func replaceHealthSleep(_ sessions: [SleepSession], wakeDates: [LocalDate]) async throws {
+        try await writer.write { db in
+            try SleepSessionRecord
+                .filter(Column("source") == SleepSource.health.rawValue && wakeDates.map(\.description).contains(Column("wakeDate")))
+                .deleteAll(db)
+            for session in sessions { try SleepSessionRecord(session).insert(db) }
+        }
+    }
+
+    public func stepDays() async throws -> [StepDay] {
+        try await writer.read { db in try StepDayRecord.order(Column("date")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func save(_ steps: [StepDay]) async throws {
+        try await writer.write { db in for day in steps { try StepDayRecord(day).save(db) } }
+    }
+
+    private static let settingsKey = "vitalSettings"
+
+    public func vitalSettings() async throws -> VitalSettings {
+        try await writer.read { db in
+            guard let record = try SettingRecord.fetchOne(db, key: Self.settingsKey),
+                  let settings = try? JSONDecoder().decode(VitalSettings.self, from: Data(record.value.utf8)) else { return .default }
+            return settings
+        }
+    }
+
+    public func save(_ settings: VitalSettings) async throws {
+        let json = String(decoding: try JSONEncoder().encode(settings), as: UTF8.self)
+        try await writer.write { db in try SettingRecord(key: Self.settingsKey, value: json).save(db) }
+    }
+
     // MARK: Reset
 
     public func eraseAll() async throws {

@@ -37,9 +37,9 @@ struct HabitFormView: View {
     var body: some View {
         Form {
             Section {
-                TextField(kind == .daily ? "Что повторять" : "Что сделать за неделю", text: $draft.title, axis: .vertical)
+                TextField(kind == .daily ? "Что повторять" : "Что сделать за неделю", text: $draft.title, prompt: Text(kind == .daily ? "Что повторять" : "Что сделать за неделю").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(17, weight: .semibold))
-                TextField("Описание · необязательно", text: $draft.details, axis: .vertical)
+                TextField("Описание · необязательно", text: $draft.details, prompt: Text("Описание · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(15))
                     .lineLimit(2...6)
             }
@@ -116,6 +116,7 @@ struct HabitFormView: View {
         }
         .tint(QColor.amber)
         .paperScreen()
+            .keyboardDismissal()
         .navigationTitle(editing == nil ? (kind == .daily ? "Ежедневный квест" : "Недельный квест") : "Изменить")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

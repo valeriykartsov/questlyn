@@ -25,8 +25,55 @@ final class AppModel {
     func skill(id: UUID?) -> Skill? { skills.first { $0.id == id } }
     func profession(id: UUID?) -> Profession? { overview?.professions.first { $0.id == id } }
 
+    // MARK: Состояние героя — этап 4
+
+    var vitals: VitalsState? { overview?.vitals }
+    var vitalSettings: VitalSettings { overview?.vitalSettings ?? .default }
+
+    private let health = HealthKitSource()
+    private static let healthConnectedKey = "healthConnected"
+    /// Пользователь подключал Apple Health — синхронизируем при каждом обновлении.
+    var isHealthConnected: Bool {
+        get { access(keyPath: \.isHealthConnected); return UserDefaults.standard.bool(forKey: Self.healthConnectedKey) }
+        set { withMutation(keyPath: \.isHealthConnected) { UserDefaults.standard.set(newValue, forKey: Self.healthConnectedKey) } }
+    }
+    var isHealthAvailable: Bool { health.isAvailable }
+
+    /// Пора спросить «Как спали?»: окно сна закончилось, ночь не внесена.
+    var needsSleepAnswer: Bool {
+        guard hero != nil, let overview, !overview.hasSleepToday else { return false }
+        return Date.now >= VitalsCalculator.date(overview.date, overview.vitalSettings.sleepWindow.end, timeZone: timeZone)
+    }
+
+    func connectHealth() async {
+        await run { [self] in
+            try await health.requestAuthorization()
+            isHealthConnected = true
+            try await HealthSyncService(store: store, source: health).sync(now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    func recordSleep(duration: ManualSleepDuration, bedtime: ManualBedtime) async -> Bool {
+        await run { [self] in
+            try await SleepService(store: store).recordManual(duration: duration, bedtime: bedtime, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    func updateVitalSettings(_ settings: VitalSettings) async -> Bool {
+        await run { [self] in
+            try await VitalsService(store: store).updateSettings(settings)
+            await reload()
+        }
+    }
+
     func reload() async {
         await run { [self] in
+            if isHealthConnected, hero != nil || overview == nil {
+                // Ошибка Apple Health не мешает открыть приложение: данные просто не обновятся.
+                try? await HealthSyncService(store: store, source: health).sync(now: .now, timeZone: timeZone)
+            }
             overview = try await TodayService(store: store).overview(now: .now, timeZone: timeZone)
         }
         isLoaded = true

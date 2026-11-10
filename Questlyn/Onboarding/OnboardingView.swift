@@ -49,6 +49,7 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 20)
         .paperScreen()
+            .keyboardDismissal()
         .onAppear {
             guard debugClassStep, setup.choices.isEmpty else { return }
             name = "Арин"
@@ -103,7 +104,7 @@ struct OnboardingView: View {
             HeroStage(appearance: appearance, accent: accent, scale: 3, height: 200)
             VStack(alignment: .leading, spacing: QSpacing.s) {
                 CapsHeader(title: "Имя героя")
-                TextField("Например, Странник", text: $name)
+                TextField("Например, Странник", text: $name, prompt: Text("Например, Странник").foregroundStyle(QColor.placeholder))
                     .font(QFont.text(17, weight: .medium))
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
