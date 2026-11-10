@@ -81,9 +81,8 @@ struct EpicDetailView: View {
             if items.isEmpty {
                 Text(emptyText).font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
+                VStack(spacing: QSpacing.s) {
+                    ForEach(items) { item in
                         QuestRow(item: item, today: model.today, profession: model.profession(id: item.skill?.professionId)) {
                             Task {
                                 if item.isCompleted { await model.undo(questId: item.quest.id) }
@@ -92,7 +91,6 @@ struct EpicDetailView: View {
                         } open: { openedQuest = item.quest }
                     }
                 }
-                .sheetCard()
             }
         }
     }

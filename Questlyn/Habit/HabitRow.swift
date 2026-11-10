@@ -2,59 +2,48 @@ import SwiftUI
 import Domain
 import Application
 
-/// Строка Daily / Weekly: отметка за сегодня, название, прогресс недели.
+/// Строка Daily / Weekly на «Сегодня» (макет TodayV2): карточка 44 pt, квадратная отметка
+/// (у недельного — пунктир), справа код основного атрибута профессии навыка.
 struct HabitRow: View {
     let status: HabitStatus
+    var attribute: Attribute?
     let toggle: () -> Void
     let open: () -> Void
 
     var body: some View {
         HStack(spacing: QSpacing.l) {
             Button(action: toggle) {
-                Image(systemName: status.doneToday ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 26))
-                    .foregroundStyle(status.doneToday ? QColor.forest : QColor.lineStrong)
+                QCheckbox(isOn: status.doneToday, dashed: status.habit.kind == .weekly)
                     .frame(width: 32, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(status.doneToday ? "Снять отметку за сегодня" : "Отметить за сегодня")
 
             Button(action: open) {
-                HStack {
-                    VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                HStack(spacing: QSpacing.l) {
+                    VStack(alignment: .leading, spacing: 0) {
                         Text(status.habit.title)
-                            .font(QFont.text(15, weight: .semibold))
-                            .foregroundStyle(QColor.ink)
+                            .font(QFont.text(15))
+                            .strikethrough(status.doneToday && status.habit.kind == .daily, color: QColor.inkSecondary)
+                            .foregroundStyle(status.doneToday && status.habit.kind == .daily ? QColor.inkSecondary : QColor.ink)
                             .multilineTextAlignment(.leading)
-                        Text(subtitle)
-                            .font(QFont.text(12))
-                            .foregroundStyle(QColor.inkSecondary)
+                        if status.habit.kind == .weekly {
+                            Text("На неделе · \(status.weekDone) из \(status.weekPlanned)")
+                                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        }
                     }
-                    Spacer()
-                    if status.habit.kind == .weekly {
-                        Text("\(status.weekDone)/\(status.weekPlanned)")
-                            .font(QFont.text(13, weight: .bold))
-                            .monospacedDigit()
-                            .foregroundStyle(status.weekDone >= status.weekPlanned ? QColor.forest : QColor.inkSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if let attribute {
+                        Text(attribute.code).font(QFont.text(12, weight: .semibold)).foregroundStyle(attribute.accent)
                     }
                 }
+                .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, QSpacing.l)
-        .padding(.vertical, QSpacing.s)
-    }
-
-    private var subtitle: String {
-        var parts: [String] = []
-        switch status.habit.kind {
-        case .daily:
-            if let time = status.habit.time { parts.append(time.description) }
-        case .weekly:
-            parts.append("На неделе · \(status.weekDone) из \(status.weekPlanned)")
-        }
-        if let skill = status.skill { parts.append(skill.title) }
-        return parts.isEmpty ? "Без навыка" : parts.joined(separator: " · ")
+        .padding(.leading, QSpacing.xs)
+        .padding(.trailing, QSpacing.l)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 }

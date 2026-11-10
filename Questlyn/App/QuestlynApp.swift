@@ -25,6 +25,16 @@ struct QuestlynApp: App {
 struct RootView: View {
     @Bindable var model: AppModel
 
+    enum AppTab: String { case today, journal, hero }
+
+    /// В отладке вкладку можно задать аргументом запуска `-QuestlynTab journal` — для проверки экранов в симуляторе.
+    @State private var tab: AppTab = {
+        #if DEBUG
+        if let value = UserDefaults.standard.string(forKey: "QuestlynTab"), let tab = AppTab(rawValue: value) { return tab }
+        #endif
+        return .today
+    }()
+
     var body: some View {
         Group {
             if !model.isLoaded {
@@ -32,10 +42,10 @@ struct RootView: View {
             } else if model.hero == nil {
                 OnboardingView(model: model)
             } else {
-                TabView {
-                    Tab("Сегодня", systemImage: "sun.max") { TodayView(model: model) }
-                    Tab("Журнал", systemImage: "book.closed") { JournalView(model: model) }
-                    Tab("Герой", systemImage: "person.crop.circle") { HeroView(model: model) }
+                TabView(selection: $tab) {
+                    Tab("Сегодня", systemImage: "sun.max", value: AppTab.today) { TodayView(model: model) }
+                    Tab("Журнал", systemImage: "book.closed", value: AppTab.journal) { JournalView(model: model) }
+                    Tab("Герой", systemImage: "person.crop.circle", value: AppTab.hero) { HeroView(model: model) }
                 }
                 .tint(QColor.amber)
             }

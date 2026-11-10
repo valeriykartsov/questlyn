@@ -45,25 +45,28 @@ struct JournalView: View {
             .sorted { ($0.completion?.completedAt ?? .distantPast) > ($1.completion?.completedAt ?? .distantPast) }
     }
 
+    @State private var isSearching = false
+    @FocusState private var searchFocused: Bool
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: QSpacing.l) {
-                    filterBar
-                    if filter == .all || filter == .daily { dailySection }
-                    if filter == .all || filter == .weekly { weeklySection }
-                    if filter == .all || filter == .epic { epicSection }
-                    if filter == .all || filter == .quests { questSection }
-                }
-                .padding(.horizontal, QSpacing.screen)
-                .padding(.bottom, 96)
+        ScrollView {
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                header
+                if isSearching { searchField }
+                filterBar
+                if filter == .all || filter == .daily { dailySection }
+                if filter == .all || filter == .weekly { weeklySection }
+                if filter == .all || filter == .epic { epicSection }
+                if filter == .all || filter == .quests { questSection }
             }
-            .paperScreen()
-            .navigationTitle("Журнал квестов")
-            .searchable(text: $search, prompt: "Поиск по названию")
-            .overlay(alignment: .bottomTrailing) { AddButton { isAdding = true } }
-            .refreshable { await model.reload() }
+            .padding(.horizontal, QSpacing.screen)
+            .padding(.top, QSpacing.l)
+            .padding(.bottom, 96)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .paperScreen()
+        .overlay(alignment: .bottomTrailing) { AddButton { isAdding = true } }
+        .refreshable { await model.reload() }
         .sheet(isPresented: $isAdding) { AddFlowView(model: model) }
         .sheet(item: $openedQuest) { QuestDetailView(model: model, questId: $0.id) { report = $0 } }
         .sheet(item: Binding(get: { openedHabit.map(IdentifiedID.init) }, set: { openedHabit = $0?.id })) {
@@ -75,137 +78,258 @@ struct JournalView: View {
         .fullScreenCover(item: $report) { RewardView(model: model, report: $0) }
     }
 
-    private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: QSpacing.s) {
-                ForEach(Filter.allCases) { item in
-                    Button(item.rawValue) { filter = item }
-                        .font(QFont.text(14, weight: .semibold))
-                        .padding(.horizontal, QSpacing.xl)
-                        .frame(height: 34)
-                        .foregroundStyle(filter == item ? QColor.sheet : QColor.ink)
-                        .background(filter == item ? QColor.ink : QColor.sheet, in: Capsule())
-                        .overlay(Capsule().strokeBorder(filter == item ? .clear : QColor.line))
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(filter == item ? .isSelected : [])
+    // MARK: Шапка
+
+    /// Literata 30 и круглые кнопки 44 pt. Кнопка «Летопись» появится на этапе 5.
+    private var header: some View {
+        HStack(alignment: .bottom) {
+            Text("Журнал квестов").font(QFont.title(30))
+            Spacer()
+            Button {
+                withAnimation {
+                    isSearching.toggle()
+                    if !isSearching { search = "" }
                 }
+                searchFocused = isSearching
+            } label: {
+                Image(systemName: isSearching ? "xmark" : "magnifyingglass")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(QColor.ink)
+                    .frame(width: 44, height: 44)
+                    .background(QColor.sheet, in: Circle())
+                    .overlay(Circle().strokeBorder(QColor.lineStrong))
             }
+            .accessibilityLabel(isSearching ? "Закрыть поиск" : "Поиск")
         }
     }
 
-    private func header(_ title: String, _ trailing: String? = nil) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title).font(QFont.title(18))
-            Spacer()
-            if let trailing { Text(trailing).font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary) }
+    private var searchField: some View {
+        HStack(spacing: QSpacing.m) {
+            Image(systemName: "magnifyingglass").foregroundStyle(QColor.inkSecondary)
+            TextField("Поиск по названию", text: $search)
+                .font(QFont.text(15))
+                .focused($searchFocused)
+                .submitLabel(.search)
         }
+        .padding(.horizontal, QSpacing.l)
+        .frame(height: 40)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+        .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.line))
+    }
+
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: QSpacing.m) {
+                ForEach(Filter.allCases) { item in
+                    let isOn = filter == item
+                    Button(item.rawValue) { filter = item }
+                        .font(QFont.text(14, weight: isOn ? .semibold : .medium))
+                        .padding(.horizontal, QSpacing.xl)
+                        .frame(height: 34)
+                        .foregroundStyle(isOn ? QColor.sheet : QColor.ink)
+                        .background(isOn ? QColor.ink : .clear, in: Capsule())
+                        .overlay(Capsule().strokeBorder(isOn ? .clear : QColor.lineStrong))
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isOn ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, QSpacing.screen)
+        }
+        .padding(.horizontal, -QSpacing.screen)
     }
 
     private func empty(_ text: String) -> some View {
         Text(text)
             .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
-            .padding(QSpacing.xl).frame(maxWidth: .infinity, alignment: .leading).sheetCard()
+            .padding(.horizontal, QSpacing.l).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
+
+    // MARK: Ежедневные — одна карточка, справа точки недели
 
     @ViewBuilder
     private var dailySection: some View {
         let today = daily.filter(\.isScheduledToday)
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            header("Ежедневные · сегодня", today.isEmpty ? nil : "\(today.filter(\.doneToday).count) из \(today.count)")
-            if daily.isEmpty { empty("Ежедневных квестов нет. Добавьте через «+».") } else { habitList(daily) }
+        CapsHeader(title: "Ежедневные · сегодня", trailing: today.isEmpty ? nil : "\(today.filter(\.doneToday).count) из \(today.count)")
+        if daily.isEmpty {
+            empty("Ежедневных квестов нет. Добавьте через «+».")
+        } else {
+            VStack(spacing: 0) {
+                ForEach(daily) { status in dailyRow(status) }
+            }
+            .padding(.vertical, QSpacing.xxs)
+            .sheetCard()
         }
     }
+
+    private func dailyRow(_ status: HabitStatus) -> some View {
+        HStack(spacing: QSpacing.l) {
+            Button { toggle(status) } label: { QCheckbox(isOn: status.doneToday, size: 22) }
+                .buttonStyle(.plain)
+                .frame(width: 32, height: 44)
+                .disabled(!status.isScheduledToday)
+                .accessibilityLabel(status.doneToday ? "Снять отметку" : "Отметить")
+            Button { openedHabit = status.id } label: {
+                HStack(spacing: QSpacing.l) {
+                    Text(status.habit.title)
+                        .font(QFont.text(15))
+                        .strikethrough(status.doneToday, color: QColor.inkSecondary)
+                        .foregroundStyle(status.doneToday || !status.isScheduledToday ? QColor.inkSecondary : QColor.ink)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    WeekDots(status: status)
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, QSpacing.l)
+    }
+
+    // MARK: Недельные — отдельные карточки с полосой
 
     @ViewBuilder
     private var weeklySection: some View {
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            header("Недельные", "до вс")
-            if weekly.isEmpty { empty("Недельных квестов нет.") } else { habitList(weekly) }
+        CapsHeader(title: "Недельные", trailing: "до вс")
+        if weekly.isEmpty {
+            empty("Недельных квестов нет.")
+        } else {
+            ForEach(weekly) { status in
+                Button { openedHabit = status.id } label: {
+                    HStack(spacing: QSpacing.l) {
+                        Text(status.habit.title).font(QFont.text(15)).frame(maxWidth: .infinity, alignment: .leading)
+                        ProgressBar(fraction: Double(status.weekDone) / Double(max(status.weekPlanned, 1)), color: QColor.forest)
+                            .frame(width: 72)
+                        Text("\(status.weekDone)/\(status.weekPlanned)")
+                            .font(QFont.text(13, weight: .semibold)).monospacedDigit()
+                            .frame(width: 30, alignment: .trailing)
+                    }
+                    .padding(.horizontal, QSpacing.l)
+                    .frame(minHeight: 52)
+                    .contentShape(Rectangle())
+                    .sheetCard()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(status.habit.title), \(status.weekDone) из \(status.weekPlanned) за неделю")
+            }
         }
     }
 
-    private func habitList(_ items: [HabitStatus]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, status in
-                if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
-                HabitRow(status: status) { toggle(status) } open: { openedHabit = status.id }
-                    .opacity(status.isScheduledToday ? 1 : 0.55)
-            }
-        }
-        .sheetCard()
-    }
+    // MARK: Epic — первый активный тёмной карточкой
 
     @ViewBuilder
     private var epicSection: some View {
-        let active = epics.filter { !$0.epic.isCompleted }.count
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            header("Epic", "\(active) активных")
-            if epics.isEmpty {
-                empty("Epic — большая цель из шагов. Добавьте через «+».")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(epics.enumerated()), id: \.element.id) { index, status in
-                        if index > 0 { Divider().overlay(QColor.line) }
-                        Button { openedEpic = status.id } label: { epicRow(status) }.buttonStyle(.plain)
-                    }
+        let active = epics.filter { !$0.epic.isCompleted }
+        CapsHeader(title: "Epic", trailing: "\(active.count) активных")
+        if epics.isEmpty {
+            empty("Epic — большая цель из шагов. Добавьте через «+».")
+        } else {
+            ForEach(epics) { status in
+                Button { openedEpic = status.id } label: {
+                    if status.id == active.first?.id { featuredEpic(status) } else { compactEpic(status) }
                 }
-                .sheetCard()
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private func epicRow(_ status: EpicStatus) -> some View {
-        VStack(alignment: .leading, spacing: QSpacing.s) {
-            HStack {
-                Text(status.epic.title).font(QFont.text(15, weight: .semibold))
-                Spacer()
-                Text(status.epic.isCompleted ? "веха" : "\(status.doneCount) из \(status.steps.count)")
-                    .font(QFont.text(13, weight: .bold)).monospacedDigit()
-                    .foregroundStyle(status.epic.isCompleted ? QColor.forest : QColor.ink)
+    private func featuredEpic(_ status: EpicStatus) -> some View {
+        VStack(alignment: .leading, spacing: QSpacing.m) {
+            HStack(spacing: 10) {
+                Image(systemName: "flag.fill").font(.system(size: 15)).foregroundStyle(Color(hex: 0xE2A04A))
+                Text(status.epic.title).font(QFont.title(17, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
+                Text("\(status.doneCount) из \(status.steps.count)").font(QFont.text(13, weight: .bold)).monospacedDigit()
             }
-            ProgressBar(fraction: status.steps.isEmpty ? 0 : Double(status.doneCount) / Double(status.steps.count), color: QColor.forest)
-            if let next = status.nextStep, !status.epic.isCompleted {
-                Text("Следующий шаг: \(next.quest.title) · \(Format.when(next.quest, today: model.today))")
-                    .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color(hex: 0x3E4A63))
+                    Capsule().fill(Color(hex: 0xE2A04A))
+                        .frame(width: proxy.size.width * (status.steps.isEmpty ? 0 : Double(status.doneCount) / Double(status.steps.count)))
+                }
+            }
+            .frame(height: 6)
+            if let next = status.nextStep {
+                Text("Следующий шаг: \(next.quest.title) · \(Format.when(next.quest, today: model.today).lowercased())")
+                    .font(QFont.text(13)).foregroundStyle(Color(hex: 0xC9CFDD))
             } else if status.canComplete {
-                Text("Все шаги выполнены — можно завершить").font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.forest)
+                Text("Все шаги выполнены — можно завершить").font(QFont.text(13)).foregroundStyle(Color(hex: 0xC9CFDD))
             }
         }
-        .padding(.horizontal, QSpacing.xl)
-        .padding(.vertical, QSpacing.l)
+        .foregroundStyle(QColor.sheet)
+        .padding(QSpacing.l)
+        .background(QColor.ink, in: RoundedRectangle(cornerRadius: QRadius.card))
         .contentShape(Rectangle())
     }
 
+    private func compactEpic(_ status: EpicStatus) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: status.epic.isCompleted ? "flag.checkered" : "flag")
+                .font(.system(size: 15)).foregroundStyle(QColor.amberDeep)
+            Text(status.epic.title).font(QFont.text(15, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading)
+            Text(status.epic.isCompleted ? "веха" : "\(status.doneCount) из \(status.steps.count)")
+                .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+        }
+        .padding(.horizontal, QSpacing.l)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .sheetCard()
+    }
+
+    // MARK: Квесты — отдельные карточки без рамки
+
     @ViewBuilder
     private var questSection: some View {
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            header("Квесты", "по дате")
-            if openQuests.isEmpty { empty("Открытых квестов нет.") } else { questList(openQuests) }
-            if !doneQuests.isEmpty {
-                Button(showsCompleted ? "Скрыть выполненные" : "Выполненные · \(doneQuests.count)") {
-                    withAnimation { showsCompleted.toggle() }
-                }
-                .font(QFont.text(14, weight: .semibold))
-                .foregroundStyle(QColor.amberDeep)
-                if showsCompleted { questList(Array(doneQuests.prefix(50))) }
+        CapsHeader(title: "Квесты", trailing: "по дате")
+        if openQuests.isEmpty { empty("Открытых квестов нет.") } else { ForEach(openQuests) { journalQuestRow($0) } }
+        if !doneQuests.isEmpty {
+            Button(showsCompleted ? "Скрыть выполненные" : "Выполненные · \(doneQuests.count)") {
+                withAnimation { showsCompleted.toggle() }
             }
+            .font(QFont.text(14, weight: .semibold))
+            .foregroundStyle(QColor.amberDeep)
+            .frame(minHeight: 44)
+            if showsCompleted { ForEach(Array(doneQuests.prefix(50))) { journalQuestRow($0) } }
         }
     }
 
-    private func questList(_ items: [TodayItem]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
-                QuestRow(item: item, today: model.today, profession: model.profession(id: item.skill?.professionId),
-                         epicTitle: model.epic(id: item.quest.epicId)?.epic.title) {
-                    Task {
-                        if item.isCompleted { await model.undo(questId: item.quest.id) }
-                        else { report = await model.complete(questId: item.quest.id) }
+    private func journalQuestRow(_ item: TodayItem) -> some View {
+        HStack(spacing: QSpacing.l) {
+            Button {
+                Task {
+                    if item.isCompleted { await model.undo(questId: item.quest.id) }
+                    else { report = await model.complete(questId: item.quest.id) }
+                }
+            } label: { QCheckbox(isOn: item.isCompleted, size: 22) }
+            .buttonStyle(.plain)
+            .frame(width: 32, height: 44)
+            .accessibilityLabel(item.isCompleted ? "Отменить выполнение" : "Выполнить")
+
+            Button { openedQuest = item.quest } label: {
+                HStack(spacing: QSpacing.l) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(item.quest.title)
+                            .font(QFont.text(15))
+                            .strikethrough(item.isCompleted, color: QColor.inkSecondary)
+                            .foregroundStyle(item.isCompleted ? QColor.inkSecondary : QColor.ink)
+                            .multilineTextAlignment(.leading)
+                        if let epic = model.epic(id: item.quest.epicId) {
+                            Text(epic.epic.title).font(QFont.text(12)).foregroundStyle(QColor.amberDeep)
+                        }
                     }
-                } open: { openedQuest = item.quest }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(Format.when(item.quest, today: model.today))
+                        .font(QFont.text(12))
+                        .foregroundStyle(item.section == .overdue && !item.isCompleted ? QColor.hp : QColor.inkSecondary)
+                    PriorityBars(priority: item.quest.priority)
+                }
+                .frame(minHeight: 40)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
-        .sheetCard()
+        .padding(.horizontal, QSpacing.l)
+        .padding(.vertical, QSpacing.xs)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 
     private func toggle(_ status: HabitStatus) {
@@ -228,13 +352,14 @@ struct AddButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(QColor.sheet)
                 .frame(width: 56, height: 56)
-                .background(QColor.amber, in: Circle())
-                .shadow(color: QColor.ink.opacity(0.15), radius: 6, y: 3)
+                .background(QColor.ink, in: RoundedRectangle(cornerRadius: QRadius.hero))
+                .shadow(color: QColor.ink.opacity(0.25), radius: 6, y: 4)
         }
-        .accessibilityLabel("Добавить")
-        .padding(QSpacing.screen)
+        .accessibilityLabel("Создать")
+        .padding(.trailing, 20)
+        .padding(.bottom, QSpacing.screen)
     }
 }

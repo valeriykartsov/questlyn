@@ -92,9 +92,8 @@ struct TodayView: View {
                 if rows.isEmpty {
                     emptyState
                 } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
+                    VStack(spacing: QSpacing.s) {
+                        ForEach(rows) { item in
                             QuestRow(item: item, today: model.overview?.date, profession: model.profession(id: item.skill?.professionId),
                                      epicTitle: model.epic(id: item.quest.epicId)?.epic.title) {
                                 toggle(item)
@@ -103,7 +102,6 @@ struct TodayView: View {
                             }
                         }
                     }
-                    .sheetCard()
                 }
             }
         }
@@ -138,10 +136,9 @@ struct TodayView: View {
                             .foregroundStyle(QColor.inkSecondary)
                     }
                 }
-                VStack(spacing: 0) {
-                    ForEach(Array(habits.enumerated()), id: \.element.id) { index, status in
-                        if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
-                        HabitRow(status: status) {
+                VStack(spacing: QSpacing.s) {
+                    ForEach(habits) { status in
+                        HabitRow(status: status, attribute: model.profession(id: status.skill?.professionId)?.attributes.first) {
                             Task {
                                 if status.doneToday { await model.unmarkHabit(status.id, on: status.today) }
                                 else { await model.markHabit(status.id, on: status.today) }
@@ -149,7 +146,6 @@ struct TodayView: View {
                         } open: { openedHabit = status.id }
                     }
                 }
-                .sheetCard()
             }
         }
     }
@@ -177,9 +173,7 @@ struct QuestRow: View {
     var body: some View {
         HStack(spacing: QSpacing.l) {
             Button(action: toggle) {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 26))
-                    .foregroundStyle(item.isCompleted ? QColor.forest : QColor.lineStrong)
+                QCheckbox(isOn: item.isCompleted)
                     .frame(width: 32, height: 44)
             }
             .buttonStyle(.plain)
@@ -188,7 +182,7 @@ struct QuestRow: View {
             Button(action: open) {
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
                     Text(item.quest.title)
-                        .font(QFont.text(15, weight: .semibold))
+                        .font(QFont.text(15))
                         .strikethrough(item.isCompleted, color: QColor.inkSecondary)
                         .foregroundStyle(item.isCompleted ? QColor.inkSecondary : QColor.ink)
                         .multilineTextAlignment(.leading)
@@ -201,15 +195,21 @@ struct QuestRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, QSpacing.l)
-        .padding(.vertical, QSpacing.s)
+        .padding(.leading, QSpacing.xs)
+        .padding(.trailing, QSpacing.l)
+        .padding(.vertical, QSpacing.xs)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 
     private var subtitle: String {
         var parts: [String] = []
         if let epicTitle { parts.append(epicTitle) }
-        if item.section != .undated { parts.append(Format.when(item.quest, today: today)) }
-        if let skill = item.skill { parts.append(skill.title) }
+        if item.section == .today, let time = item.quest.dueTime {
+            parts.append("до \(time)")
+        } else if item.section != .undated {
+            parts.append(Format.when(item.quest, today: today))
+        }
+        if epicTitle == nil, let skill = item.skill { parts.append(skill.title) }
         if item.quest.priority != .medium { parts.append(Format.priority(item.quest.priority)) }
         return parts.isEmpty ? "Без навыка" : parts.joined(separator: " · ")
     }
