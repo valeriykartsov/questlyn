@@ -19,7 +19,7 @@ struct DatabaseTests {
     }
 
     @Test func questsForDateAreOrderedByTimeThenCreation() async throws {
-        let repository = GRDBQuestRepository(database)
+        let repository = GRDBStore(database)
         let day = LocalDate(year: 2026, month: 11, day: 10)
         let base = Date(timeIntervalSince1970: 1_800_000_000)
         let untimed = Quest(title: "Без времени", dueDate: day, timezoneId: "Europe/Moscow", createdAt: base)
@@ -35,11 +35,13 @@ struct DatabaseTests {
     }
 
     @Test func heroRoundTrip() async throws {
-        let repository = GRDBHeroRepository(database)
+        let repository = GRDBStore(database)
         #expect(try await repository.currentHero() == nil)
-        let hero = Hero(name: "Валера", classTitle: "Инженер-атлет", createdAt: Date(timeIntervalSince1970: 1_800_000_000))
-        try await repository.save(hero)
+        let hero = Hero(name: "Арин", classTitle: "Инженер-атлет", createdAt: Date(timeIntervalSince1970: 1_800_000_000))
+        let profession = Profession(heroId: hero.id, title: "Атлет", slot: 1, attributes: [.strength, .endurance, .mentality], createdAt: hero.createdAt)
+        try await repository.createHero(hero, professions: [profession])
         #expect(try await repository.currentHero() == hero)
+        #expect(try await repository.professions(heroId: hero.id) == [profession])
     }
 
     @Test func schemaRejectsFocusInProfession() throws {
@@ -82,5 +84,17 @@ struct DatabaseTests {
             try db.execute(sql: insert, arguments: ["g1"])
             #expect(throws: DatabaseError.self) { try db.execute(sql: insert, arguments: ["g2"]) }
         }
+    }
+}
+
+struct UUIDStorageTests {
+    @Test func uuidsAreStoredAsLowercaseText() async throws {
+        let database = try AppDatabase.inMemory()
+        let hero = Hero(name: "Г", classTitle: "К", createdAt: .now)
+        try await GRDBStore(database).createHero(hero, professions: [])
+        let stored = try await database.writer.read { db in
+            try String.fetchOne(db, sql: "SELECT typeof(id) || ':' || id FROM hero")
+        }
+        #expect(stored == "text:\(hero.id.uuidString.lowercased())")
     }
 }

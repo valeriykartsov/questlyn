@@ -25,7 +25,6 @@ let package = Package(
             dependencies: ["Domain", "Application", .product(name: "GRDB", package: "GRDB.swift")]
         ),
         .testTarget(name: "DomainTests", dependencies: ["Domain"]),
-        .testTarget(name: "ApplicationTests", dependencies: ["Application"]),
-        .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
+        .testTarget(name: "PersistenceTests", dependencies: ["Persistence", "Application", "Domain"]),
     ]
 )
