@@ -153,7 +153,8 @@ public struct ChronicleService: Sendable {
             quests[completion.questId].map { ManaSpend(at: completion.completedAt, cost: ManaRules.cost(priority: $0.priority, hasSkill: $0.skillId != nil)) }
         }
         let vitals = VitalsCalculator.state(heroCreatedAt: hero.createdAt, grants: grants, spends: spends, sleeps: try await store.sleepSessions(),
-                                            steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone)
+                                            steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone,
+                                            harms: try await store.harmEntries())
         for (index, entry) in vitals.log.enumerated() {
             switch entry.kind {
             case let .night(night):
@@ -176,11 +177,36 @@ public struct ChronicleService: Sendable {
                 items.append(ChronicleItem(id: "night:\(index)", at: entry.at, category: .health, title: title,
                                            detail: [source, "качество \(Int((night.quality * 100).rounded()))%", full].compactMap { $0 }.joined(separator: " · "),
                                            changes: restored, isCancelled: false, note: nil, isMilestone: false))
+            case let .harm(harm, hpDamage, mpBurned):
+                if harm.kind == .alcohol {
+                    var rowChanges: [ChronicleChange] = []
+                    if mpBurned >= 0.5 { rowChanges.append(.mp(-mpBurned)) }
+                    items.append(ChronicleItem(id: "harm:\(harm.id)", at: entry.at, category: .health, title: harm.title,
+                                               detail: "похмелье на 24 ч · INT и MaxMP ниже, XP не меняется", changes: rowChanges,
+                                               isCancelled: false, note: nil, isMilestone: false))
+                } else {
+                    items.append(ChronicleItem(id: "harm:\(harm.id)", at: entry.at, category: .health, title: harm.title,
+                                               detail: "−\(harm.damagePercent)% HP за отметку", changes: [.hp(-hpDamage)],
+                                               isCancelled: false, note: nil, isMilestone: false))
+                }
             case let .sedentary(_, steps, goal, damage):
                 items.append(ChronicleItem(id: "sedentary:\(index)", at: entry.at, category: .health, title: "Сидячий день",
                                            detail: "\(steps) из \(goal) шагов", changes: [.hp(-damage)],
                                            isCancelled: false, note: nil, isMilestone: false))
             }
+        }
+
+        // Удалённые отметки здоровья — зачёркнуты; настроение — в «Здоровье» рядом с самочувствием.
+        for harm in try await store.harmEntries() where !harm.isActive {
+            items.append(ChronicleItem(id: "harm:\(harm.id)", at: harm.at, category: .health, title: harm.title, detail: nil, changes: [],
+                                       isCancelled: true, note: "Удалено · урон возвращён", isMilestone: false))
+        }
+        for mood in try await store.moodEntries() {
+            let weather = Weather.from(mood.mood, on: mood.localDate)
+            let detail = [mood.isDaySummary ? "итог дня" : nil, "погода: \(weather.title.lowercased())", mood.note].compactMap { $0 }.joined(separator: " · ")
+            items.append(ChronicleItem(id: "mood:\(mood.id)", at: mood.at, category: .health, title: "Настроение: \(mood.mood.title.lowercased())",
+                                       detail: detail, changes: [], isCancelled: mood.deletedAt != nil,
+                                       note: mood.deletedAt != nil ? "Удалено" : nil, isMilestone: false))
         }
 
         // Прогресс: стартовый бонус, DIS, спад, вехи.

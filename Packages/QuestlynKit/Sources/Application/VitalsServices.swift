@@ -12,7 +12,8 @@ public struct VitalsService: Sendable {
             item.completion.map { ManaSpend(at: $0.completedAt, cost: ManaRules.cost(priority: item.quest.priority, hasSkill: item.quest.skillId != nil)) }
         }
         return VitalsCalculator.state(heroCreatedAt: hero.createdAt, grants: grants, spends: spends, sleeps: sleeps,
-                                      steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone)
+                                      steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone,
+                                      harms: try await store.harmEntries())
     }
 
     public func updateSettings(_ settings: VitalSettings) async throws {

@@ -208,6 +208,8 @@ public struct VitalsLogEntry: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
         case night(NightSummary)
         case sedentary(date: LocalDate, steps: Int, goal: Int, damage: Double)
+        /// Отметка блока «Здоровье»: урон HP или начало похмелья (тогда — сгоревшая мана).
+        case harm(HarmEntry, hpDamage: Double, mpBurned: Double)
     }
 
     public var at: Date
@@ -221,17 +223,28 @@ public struct VitalsState: Hashable, Sendable {
     public var maxMP: Double
     /// Последняя посчитанная ночь (сегодняшнее пробуждение), если она уже наступила.
     public var lastNight: NightSummary?
-    /// Ночи и сидячие дни по порядку — для Летописи.
+    /// Ночи, сидячие дни и отметки здоровья по порядку — для Летописи.
     public var log: [VitalsLogEntry] = []
+    /// Действующее похмелье и сколько уровней INT оно снимает сейчас.
+    public var hangover: Hangover?
+    public var intelligenceLevel = 0
+    public var intelligenceRemoved = 0
 
-    public init(hp: Double, maxHP: Double, mp: Double, maxMP: Double, lastNight: NightSummary? = nil, log: [VitalsLogEntry] = []) {
+    public init(hp: Double, maxHP: Double, mp: Double, maxMP: Double, lastNight: NightSummary? = nil, log: [VitalsLogEntry] = [],
+                hangover: Hangover? = nil, intelligenceLevel: Int = 0, intelligenceRemoved: Int = 0) {
         self.hp = hp
         self.maxHP = maxHP
         self.mp = mp
         self.maxMP = maxMP
         self.lastNight = lastNight
         self.log = log
+        self.hangover = hangover
+        self.intelligenceLevel = intelligenceLevel
+        self.intelligenceRemoved = intelligenceRemoved
     }
+
+    /// Действующий INT: уровень минус похмелье (не ниже 0).
+    public var effectiveIntelligence: Int { max(0, intelligenceLevel - intelligenceRemoved) }
 
     public static let woundedShare = 0.3
 
@@ -258,13 +271,15 @@ public enum VitalsCalculator {
         case night(wakeDate: LocalDate, session: SleepSession?)
         case spend(Double)
         case sedentary(LocalDate)
+        case harm(HarmEntry)
     }
 
     /// Проекция HP и MP на момент `now`. Старт — полные HP и MP в момент создания героя.
     public static func state(
         heroCreatedAt: Date, grants: [ProgressGrant], spends: [ManaSpend], sleeps: [SleepSession],
-        steps: [StepDay], settings: VitalSettings, now: Date, timeZone: TimeZone
+        steps: [StepDay], settings: VitalSettings, now: Date, timeZone: TimeZone, harms: [HarmEntry] = []
     ) -> VitalsState {
+        let hangovers = Hangover.timeline(harms)
         let firstDay = LocalDate(heroCreatedAt, timeZone: timeZone)
         let today = LocalDate(now, timeZone: timeZone)
         var levelCache: [LocalDate: [Attribute: Int]] = [:]
@@ -288,6 +303,13 @@ public enum VitalsCalculator {
         let stepsByDay = Dictionary(steps.map { ($0.date, $0.steps) }, uniquingKeysWith: { _, latest in latest })
 
         var events: [(at: Date, event: Event)] = spends.filter { $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .spend($0.cost)) }
+        events += harms.filter { $0.isActive && $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .harm($0)) }
+
+        /// MaxMP с учётом похмелья: −5 MP за каждый снятый уровень INT.
+        func topMana(_ levels: [Attribute: Int], at moment: Date) -> Double {
+            let removed = Hangover.active(at: moment, in: hangovers)?.removedLevels(intelligence: levels[.intelligence] ?? 0) ?? 0
+            return maxMP(levels: levels) - perLevel * Double(removed)
+        }
         if firstDay <= today {
             var day = firstDay
             while day <= today {
@@ -309,10 +331,15 @@ public enum VitalsCalculator {
         var log: [VitalsLogEntry] = []
         for (at, event) in events {
             let current = levels(on: LocalDate(at, timeZone: timeZone))
-            let topHP = maxHP(levels: current), topMP = maxMP(levels: current)
+            let topHP = maxHP(levels: current), topMP = topMana(current, at: at)
             hp = min(hp, topHP)
+            let manaBefore = mp
             mp = min(mp, topMP)
             switch event {
+            case let .harm(entry):
+                let damage = min(hp, topHP * Double(entry.damagePercent) / 100)
+                hp -= damage
+                log.append(VitalsLogEntry(at: at, kind: .harm(entry, hpDamage: damage, mpBurned: manaBefore - mp)))
             case let .spend(cost):
                 mp = max(0, mp - cost)
             case let .sedentary(day):
@@ -334,8 +361,12 @@ public enum VitalsCalculator {
             }
         }
         let todayLevels = levels(on: today)
-        let topHP = maxHP(levels: todayLevels), topMP = maxMP(levels: todayLevels)
-        return VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight, log: log)
+        let topHP = maxHP(levels: todayLevels), topMP = topMana(todayLevels, at: now)
+        let hangover = Hangover.active(at: now, in: hangovers)
+        let intelligence = todayLevels[.intelligence] ?? 0
+        return VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight, log: log,
+                           hangover: hangover, intelligenceLevel: intelligence,
+                           intelligenceRemoved: hangover?.removedLevels(intelligence: intelligence) ?? 0)
     }
 
     /// Момент «дата + локальное время» в часовом поясе пользователя.

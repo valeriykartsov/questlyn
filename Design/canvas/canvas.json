@@ -324,6 +324,20 @@
       "w": 390,
       "x": 6380,
       "y": 9770
+    },
+    "MapStates.dc.html": {
+      "h": 900,
+      "title": "8.8 · D-4: состояния карты дня",
+      "w": 1280,
+      "x": 6850,
+      "y": 9770
+    },
+    "MapStrip.dc.html": {
+      "h": 900,
+      "title": "8.9 · Миниатюра дня в 2D на «Сегодня»",
+      "w": 1280,
+      "x": 8210,
+      "y": 9770
     }
   },
   "createdOnFiles": {
@@ -394,7 +408,7 @@
     "r8": {
       "kind": "title1",
       "maxW": 6000,
-      "text": "8. На review: запись Activity и финальный пиксельный герой (D-7, D-3)",
+      "text": "8. На review: Activity, финальный герой, состояния карты (D-7, D-3, D-4)",
       "x": 0,
       "y": 9520
     }
@@ -445,7 +459,9 @@
     "Mood.dc.html",
     "EHero.dc.html",
     "HeroOutfits.dc.html",
-    "OnbClassLook.dc.html"
+    "OnbClassLook.dc.html",
+    "MapStates.dc.html",
+    "MapStrip.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"

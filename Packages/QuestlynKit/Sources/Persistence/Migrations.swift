@@ -9,6 +9,7 @@ enum Migrations {
     static let heroOutfit = "v5_heroOutfit"
     static let vitals = "v6_vitals"
     static let chronicle = "v7_chronicle"
+    static let wellbeing = "v8_wellbeing"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -239,6 +240,39 @@ enum Migrations {
                 t.column("createdAt", .datetime).notNull()
                 t.column("cancelledAt", .datetime)
                 t.column("recalculatedBy", .text)
+            }
+        }
+
+        // Этап 6: настроение, отметки блока «Здоровье», свои вредные привычки.
+        migrator.registerMigration(wellbeing) { db in
+            try db.create(table: "moodEntry") { t in
+                t.primaryKey("id", .text)
+                t.column("mood", .text).notNull()
+                t.column("note", .text)
+                t.column("isDaySummary", .boolean).notNull().defaults(to: false)
+                t.column("at", .datetime).notNull()
+                t.column("localDate", .text).notNull().indexed()
+                t.column("timezoneId", .text).notNull()
+                t.column("deletedAt", .datetime)
+            }
+            try db.create(table: "customHarmHabit") { t in
+                t.primaryKey("id", .text)
+                t.column("title", .text).notNull()
+                t.column("damagePercent", .integer).notNull().check { [5, 10, 20].contains($0) }
+                t.column("isActive", .boolean).notNull().defaults(to: true)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "harmEntry") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("customHabitId", .text).references("customHarmHabit", onDelete: .setNull)
+                t.column("title", .text).notNull()
+                t.column("damagePercent", .integer).notNull().check { $0 >= 0 && $0 <= 100 }
+                t.column("alcohol", .text)
+                t.column("at", .datetime).notNull()
+                t.column("localDate", .text).notNull().indexed()
+                t.column("timezoneId", .text).notNull()
+                t.column("deletedAt", .datetime)
             }
         }
 

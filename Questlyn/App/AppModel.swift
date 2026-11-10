@@ -25,6 +25,112 @@ final class AppModel {
     func skill(id: UUID?) -> Skill? { skills.first { $0.id == id } }
     func profession(id: UUID?) -> Profession? { overview?.professions.first { $0.id == id } }
 
+    // MARK: Настроение и календарь — этап 6
+
+    var weather: Weather { overview?.weather ?? .clear }
+    var todayHarms: [HarmEntry] { overview?.todayHarms ?? [] }
+    var lastMood: MoodEntry? { overview?.lastMood }
+
+    private let moodSink = StateOfMindSink()
+    private static let stateOfMindKey = "stateOfMindWrite"
+    /// Писать отметки настроения в Apple Health.
+    var writesStateOfMind: Bool {
+        get { access(keyPath: \.writesStateOfMind); return UserDefaults.standard.bool(forKey: Self.stateOfMindKey) }
+        set { withMutation(keyPath: \.writesStateOfMind) { UserDefaults.standard.set(newValue, forKey: Self.stateOfMindKey) } }
+    }
+
+    func enableStateOfMind() async {
+        await run { [self] in
+            try await moodSink.requestAuthorization()
+            writesStateOfMind = true
+        }
+    }
+
+    func checkIn(_ draft: CheckInDraft) async -> Bool {
+        await run { [self] in
+            let report = try await WellbeingService(store: store).checkIn(draft, now: .now, timeZone: timeZone)
+            if writesStateOfMind, let mood = report.mood {
+                // Сбой записи в Apple Health не отменяет отметку в приложении.
+                try? await moodSink.write(mood)
+            }
+            await reload()
+        }
+    }
+
+    func deleteHarm(_ id: UUID) async {
+        await run { [self] in
+            try await WellbeingService(store: store).deleteHarm(id: id, now: .now)
+            await reload()
+        }
+    }
+
+    func createHarmHabit(title: String, percent: Int) async -> Bool {
+        await run { [self] in
+            try await WellbeingService(store: store).createHabit(title: title, damagePercent: percent, now: .now)
+            await reload()
+        }
+    }
+
+    func archiveHarmHabit(_ id: UUID) async {
+        await run { [self] in
+            try await WellbeingService(store: store).archiveHabit(id: id)
+            await reload()
+        }
+    }
+
+    let calendar = CalendarSource()
+    private(set) var agendaEvents: [AgendaEvent] = []
+    private(set) var isCalendarAuthorized = false
+
+    /// Повестка: 7 дней назад и 14 вперёд (02 от 11.11.2026).
+    static let agendaDaysBack = 7
+    static let agendaDaysForward = 14
+
+    func loadAgenda() {
+        isCalendarAuthorized = calendar.isAuthorized
+        let start = VitalsCalculator.date(today.adding(days: -Self.agendaDaysBack), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        let end = VitalsCalculator.date(today.adding(days: Self.agendaDaysForward + 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        agendaEvents = calendar.events(from: start, to: end)
+    }
+
+    func connectCalendar() async {
+        await run { [self] in
+            _ = try await calendar.requestAccess()
+            loadAgenda()
+        }
+    }
+
+    // MARK: Карта дня — этап 6B
+
+    /// День на карте: события календаря, квесты с датой, отметки настроения; герой — только сегодня.
+    func dayMap(for date: LocalDate) -> DayMap {
+        let start = VitalsCalculator.date(date, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        let end = VitalsCalculator.date(date.adding(days: 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        var events = calendar.events(from: start, to: end).map {
+            MapEvent(id: $0.id, title: $0.title, start: $0.start, end: $0.end, isAllDay: $0.isAllDay, attendees: $0.attendees)
+        }
+        #if DEBUG
+        // `-QuestlynSampleEvents YES` — события как в макете 3.5, чтобы проверить карту в симуляторе без календаря.
+        if UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") {
+            func at(_ h: Int, _ m: Int) -> Date { VitalsCalculator.date(date, LocalTime(hour: h, minute: m)!, timeZone: timeZone) }
+            events += [
+                MapEvent(id: "s1", title: "Стендап", start: at(9, 0), end: at(9, 15), isAllDay: false, attendees: 2),
+                MapEvent(id: "s2", title: "Встреча", start: at(11, 0), end: at(12, 30), isAllDay: false, attendees: 2),
+                MapEvent(id: "s3", title: "Обед", start: at(13, 0), end: at(13, 30), isAllDay: false, attendees: 1),
+                MapEvent(id: "s4", title: "Отчёт", start: at(15, 0), end: at(16, 0), isAllDay: false, attendees: 0),
+                MapEvent(id: "s5", title: "Созвон", start: at(15, 30), end: at(16, 30), isAllDay: false, attendees: 3),
+                MapEvent(id: "s6", title: "Тренировка", start: at(19, 0), end: at(20, 0), isAllDay: false, attendees: 0),
+                MapEvent(id: "s7", title: "День рождения Пети", start: at(0, 0), end: at(23, 59), isAllDay: true, attendees: 0),
+            ]
+        }
+        #endif
+        let quests = (overview?.journal ?? []).filter { $0.quest.dueDate == date }.map { item in
+            MapQuest(title: item.quest.title, start: item.quest.dueTime.map { VitalsCalculator.date(date, $0, timeZone: timeZone) },
+                     isDone: item.isCompleted)
+        }
+        return DayMapBuilder.build(date: date, events: events, quests: quests, moods: overview?.moods ?? [], now: .now, timeZone: timeZone)
+    }
+
     // MARK: Летопись — этап 5
 
     private(set) var chronicle: [ChronicleDay] = []

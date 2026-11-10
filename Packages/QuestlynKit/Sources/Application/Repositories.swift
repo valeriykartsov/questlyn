@@ -100,6 +100,21 @@ public protocol ChronicleRepository: Sendable {
     func allActivities() async throws -> [Activity]
 }
 
+/// Настроение и блок «Здоровье» (этап 6). Удаление — пометкой, история остаётся в Летописи.
+public protocol WellbeingRepository: Sendable {
+    /// Все отметки настроения, включая удалённые.
+    func moodEntries() async throws -> [MoodEntry]
+    /// «Итог дня» снимает этот флаг с прежних отметок того же дня.
+    func record(_ mood: MoodEntry) async throws
+    func deleteMood(id: UUID, at date: Date) async throws
+    /// Все отметки здоровья, включая удалённые.
+    func harmEntries() async throws -> [HarmEntry]
+    func record(_ harms: [HarmEntry]) async throws
+    func deleteHarm(id: UUID, at date: Date) async throws
+    func customHarmHabits() async throws -> [CustomHarmHabit]
+    func save(_ habit: CustomHarmHabit) async throws
+}
+
 public protocol ResetRepository: Sendable {
     /// Удалить все данные и создать пустую схему заново.
     func eraseAll() async throws
@@ -107,4 +122,4 @@ public protocol ResetRepository: Sendable {
 
 public typealias QuestlynStore = HeroRepository & SkillRepository & QuestRepository & CompletionRepository & GrantRepository
     & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository & ActivityRepository & VitalsRepository
-    & ChronicleRepository
+    & ChronicleRepository & WellbeingRepository

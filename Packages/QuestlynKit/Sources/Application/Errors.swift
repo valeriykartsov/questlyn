@@ -5,6 +5,8 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case heroAlreadyExists
     case heroNotFound
     case invalidStepGoal
+    case emptyCheckIn
+    case invalidHarmStrength
     case questNotFound
     case skillNotFound
     case professionNotFound
@@ -35,6 +37,8 @@ extension QuestlynError: CustomStringConvertible {
         case .heroAlreadyExists: "Герой уже создан."
         case .heroNotFound: "Герой не найден."
         case .invalidStepGoal: "Норма шагов — от 500 до 30 000."
+        case .emptyCheckIn: "Отметьте настроение или что-нибудь в блоке «Здоровье»."
+        case .invalidHarmStrength: "Сила привычки — 5, 10 или 20% HP."
         case .questNotFound: "Квест не найден."
         case .skillNotFound: "Навык не найден."
         case .professionNotFound: "Профессия не найдена."

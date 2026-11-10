@@ -77,3 +77,21 @@ struct HealthKitSource: HealthDataSource {
         return result
     }
 }
+
+/// Apple Health State of Mind — запись отметок настроения (6.1, 02 от 11.11.2026).
+struct StateOfMindSink: MoodHealthSink {
+    private let store = HKHealthStore()
+    private static let type = HKSampleType.stateOfMindType()
+
+    var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
+
+    func requestAuthorization() async throws {
+        try await store.requestAuthorization(toShare: [Self.type], read: [])
+    }
+
+    func write(_ mood: MoodEntry) async throws {
+        let sample = HKStateOfMind(date: mood.at, kind: mood.isDaySummary ? .dailyMood : .momentaryEmotion,
+                                   valence: mood.mood.valence, labels: [], associations: [])
+        try await store.save(sample)
+    }
+}

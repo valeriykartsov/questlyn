@@ -25,7 +25,7 @@ struct QuestlynApp: App {
 struct RootView: View {
     @Bindable var model: AppModel
 
-    enum AppTab: String { case today, journal, hero }
+    enum AppTab: String { case today, journal, hero, calendar }
 
     /// В отладке вкладку можно задать аргументом запуска `-QuestlynTab journal` — для проверки экранов в симуляторе.
     @State private var tab: AppTab = {
@@ -38,11 +38,13 @@ struct RootView: View {
     var body: some View {
         Group {
             #if DEBUG
-            // `-QuestlynPreview onboardingClass | appearance | health` — экраны, до которых в симуляторе не дойти без нажатий.
+            // `-QuestlynPreview onboardingClass | appearance | health | checkin | map` — экраны, до которых в симуляторе не дойти без нажатий.
             if let preview = UserDefaults.standard.string(forKey: "QuestlynPreview"), model.isLoaded {
                 switch preview {
                 case "appearance": NavigationStack { AppearanceEditorView(model: model) }
                 case "health": NavigationStack { HealthSettingsView(model: model) }
+                case "checkin": CheckInView(model: model)
+                case "map": MapOverviewView(model: model)
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
             } else { content }
@@ -72,6 +74,7 @@ struct RootView: View {
                     Tab("Сегодня", systemImage: "sun.max", value: AppTab.today) { TodayView(model: model) }
                     Tab("Журнал", systemImage: "book.closed", value: AppTab.journal) { JournalView(model: model) }
                     Tab("Герой", systemImage: "person.crop.circle", value: AppTab.hero) { HeroView(model: model) }
+                    Tab("Календарь", systemImage: "calendar", value: AppTab.calendar) { CalendarView(model: model) }
                 }
                 .tint(QColor.amber)
             }
