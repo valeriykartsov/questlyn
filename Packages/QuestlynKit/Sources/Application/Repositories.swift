@@ -4,14 +4,19 @@ import Domain
 /// Порты хранения. Реализация — в Persistence (одна БД, транзакции внутри методов).
 public protocol HeroRepository: Sendable {
     func currentHero() async throws -> Hero?
-    /// Герой и его профессии — одной транзакцией (первая БД после онбординга).
-    func createHero(_ hero: Hero, professions: [Profession]) async throws
+    /// Герой, профессии и стартовый бонус — одной транзакцией (первая БД после онбординга).
+    func createHero(_ hero: Hero, professions: [Profession], grants: [ProgressGrant]) async throws
     func professions(heroId: UUID) async throws -> [Profession]
+    func save(_ hero: Hero) async throws
+    /// Смена профессий: сохранить новые и изменённые, отключить убранные вместе с навыками, вернуть навыки возвращённых.
+    func applyProfessions(_ professions: [Profession]) async throws
 }
 
 public protocol SkillRepository: Sendable {
     func skills() async throws -> [Skill]
     func save(_ skill: Skill) async throws
+    func masteries() async throws -> [SkillMastery]
+    func save(_ mastery: SkillMastery) async throws
 }
 
 public protocol QuestRepository: Sendable {
@@ -62,10 +67,20 @@ public protocol GrantRepository: Sendable {
     func grants(sourceId: UUID) async throws -> [ProgressGrant]
 }
 
+public protocol ActivityRepository: Sendable {
+    /// Активные (не удалённые) активности в диапазоне дат.
+    func activities(from: LocalDate, through: LocalDate) async throws -> [Activity]
+    func record(_ activity: Activity, grants: [ProgressGrant]) async throws
+    /// Квест, закрытый активностью: факт выполнения, активность и все начисления — одной транзакцией.
+    func record(_ completion: QuestCompletion, questGrants: [ProgressGrant], activity: Activity, activityGrants: [ProgressGrant]) async throws
+    /// Удаление: `deletedAt` у факта, начисления удаляются.
+    func deleteActivity(id: UUID, at date: Date) async throws
+}
+
 public protocol ResetRepository: Sendable {
     /// Удалить все данные и создать пустую схему заново.
     func eraseAll() async throws
 }
 
 public typealias QuestlynStore = HeroRepository & SkillRepository & QuestRepository & CompletionRepository & GrantRepository
-    & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository
+    & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository & ActivityRepository

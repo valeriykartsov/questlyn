@@ -1,46 +1,40 @@
 import SwiftUI
 import Domain
+import Application
 
-/// Короткий онбординг этапа 1: имя → профессии → класс (макеты OnbHero, Onboarding, OnbClass).
-/// Внешность и настройка атрибутов профессий — этап 3.5.
+/// Полный онбординг (макеты OnbHero, Onboarding, OnbAttrs, OnbClass): герой → профессии → атрибуты → класс.
+/// На шаге «Класс» выбирается образ героя (макет 8.7).
 struct OnboardingView: View {
     let model: AppModel
+    /// Только для отладки: открыть сразу шаг «Класс» с двумя профессиями.
+    var debugClassStep = false
 
-    private enum Step: Int, CaseIterable { case hero, professions, heroClass }
+    private enum Step: Int, CaseIterable { case hero, professions, attributes, heroClass }
 
     @State private var step: Step = .hero
     @State private var name = ""
-    @State private var selected: [String] = []
-    @State private var classTitle = ""
+    @State private var appearance = HeroAppearance.default
+    @State private var setup = ProfessionSetup()
     @State private var isSaving = false
-
-    private var selectedItems: [ProfessionCatalogItem] { selected.compactMap(ProfessionCatalog.item(id:)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                if step != .hero {
-                    Button {
-                        withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .hero }
-                    } label: {
-                        Label("Назад", systemImage: "chevron.left").font(QFont.text(15, weight: .medium))
-                    }
-                    .foregroundStyle(QColor.amberDeep)
-                }
-                Spacer()
-                Text("\(step.rawValue + 1) / \(Step.allCases.count)")
-                    .font(QFont.text(13, weight: .semibold))
-                    .foregroundStyle(QColor.inkSecondary)
-                    .monospacedDigit()
-            }
-            .frame(height: 44)
-
+            topBar
             ScrollView {
-                VStack(alignment: .leading, spacing: QSpacing.l) {
+                VStack(alignment: .leading, spacing: QSpacing.screen) {
+                    header
                     switch step {
                     case .hero: heroStep
-                    case .professions: professionsStep
-                    case .heroClass: classStep
+                    case .professions: ProfessionPickerStep(setup: setup)
+                    case .attributes: ProfessionAttributesStep(setup: setup)
+                    case .heroClass:
+                        ClassStep(setup: setup)
+                        VStack(alignment: .leading, spacing: QSpacing.s) {
+                            CapsHeader(title: "Образ героя")
+                            OutfitPicker(appearance: $appearance, accent: accent)
+                        }
+                        Text("Цвет одежды — по основной профессии. Образ, профессии и название класса можно сменить позже — прогресс сохранится. Ранг появится после первых выполненных квестов.")
+                            .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                     }
                 }
                 .padding(.top, QSpacing.l)
@@ -53,135 +47,136 @@ struct OnboardingView: View {
                 .disabled(!canContinue || isSaving)
                 .padding(.bottom, QSpacing.l)
         }
-        .padding(.horizontal, QSpacing.screen)
+        .padding(.horizontal, 20)
         .paperScreen()
+        .onAppear {
+            guard debugClassStep, setup.choices.isEmpty else { return }
+            name = "Арин"
+            setup.choices = ["software-engineer", "athlete"].compactMap(ProfessionChoice.catalog)
+            step = .heroClass
+        }
     }
 
-    private func header(_ title: String, _ subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            Text(title).font(QFont.title(28))
-            Text(subtitle).font(QFont.text(15)).foregroundStyle(QColor.inkSecondary)
+    /// Назад · 4 полоски шагов · «N / 4».
+    private var topBar: some View {
+        HStack {
+            Button {
+                withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .hero }
+            } label: {
+                Image(systemName: "chevron.left").font(.system(size: 18, weight: .semibold)).frame(width: 44, height: 44, alignment: .leading)
+            }
+            .foregroundStyle(QColor.ink)
+            .opacity(step == .hero ? 0 : 1)
+            .disabled(step == .hero)
+            .accessibilityLabel("Назад")
+            Spacer()
+            HStack(spacing: 6) {
+                ForEach(Step.allCases, id: \.self) { s in
+                    Capsule().fill(s.rawValue <= step.rawValue ? QColor.ink : Color(hex: 0xD9CDB6)).frame(width: 28, height: 4)
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel("Шаг \(step.rawValue + 1) из 4")
+            Spacer()
+            Text("\(step.rawValue + 1) / 4")
+                .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+                .frame(width: 44, alignment: .trailing)
+        }
+        .frame(height: 44)
+    }
+
+    private var header: some View {
+        let texts: (String, String) = switch step {
+        case .hero: ("Создайте героя", "Герой будет расти вместе с вашими реальными делами. Внешность можно поменять позже.")
+        case .professions: ("Чем вы занимаетесь?", "Выберите до трёх профессий. Из них сложится ваш класс, а атрибуты профессий будут расти от квестов.")
+        case .attributes: ("Что развивает профессия?", "От 1 до 3 атрибутов по приоритету. Мы подставили значения из каталога — поменяйте, если у вас иначе.")
+        case .heroClass: ("Класс и образ", "Класс — это сочетание ваших профессий. Название и образ героя выбираете вы.")
+        }
+        return VStack(alignment: .leading, spacing: QSpacing.s) {
+            Text(texts.0).font(QFont.title(28))
+            Text(texts.1).font(QFont.text(15)).foregroundStyle(QColor.inkSecondary)
         }
     }
 
     private var heroStep: some View {
-        VStack(alignment: .leading, spacing: QSpacing.l) {
-            header("Создайте героя", "Герой будет расти вместе с вашими реальными делами.")
+        VStack(alignment: .leading, spacing: QSpacing.screen) {
+            HeroStage(appearance: appearance, accent: accent, scale: 3, height: 200)
             VStack(alignment: .leading, spacing: QSpacing.s) {
-                Text("Имя героя").font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
-                TextField("Например, Арин", text: $name)
-                    .font(QFont.text(17))
+                CapsHeader(title: "Имя героя")
+                TextField("Например, Странник", text: $name)
+                    .font(QFont.text(17, weight: .medium))
                     .textInputAutocapitalization(.words)
                     .submitLabel(.next)
                     .onSubmit(next)
                     .padding(.horizontal, QSpacing.xl)
-                    .frame(height: 50)
-                    .sheetCard()
+                    .frame(height: 52)
+                    .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+                    .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.ink, lineWidth: 2))
+            }
+            VStack(alignment: .leading, spacing: QSpacing.l) {
+                SwatchRow(title: "Волосы", options: HeroAppearance.Hair.allCases, selected: appearance.hair) { appearance.hair = $0 }
+                SwatchRow(title: "Кожа", options: HeroAppearance.Skin.allCases, selected: appearance.skin) { appearance.skin = $0 }
+                Text("Образ героя выберете на шаге «Класс», цвет одежды задаёт основная профессия.")
+                    .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
             }
         }
     }
 
-    private var professionsStep: some View {
-        VStack(alignment: .leading, spacing: QSpacing.l) {
-            header("Чем вы занимаетесь?", "Выберите до трёх профессий. Из них сложится ваш класс, а атрибуты профессий будут расти от квестов.")
-            VStack(spacing: QSpacing.m) {
-                ForEach(ProfessionCatalog.items) { item in
-                    professionRow(item)
-                }
-            }
-            Text("Выбрано \(selected.count) из 3 · первая выбранная — основная профессия")
-                .font(QFont.text(13))
-                .foregroundStyle(QColor.inkSecondary)
-        }
-    }
-
-    private func professionRow(_ item: ProfessionCatalogItem) -> some View {
-        let index = selected.firstIndex(of: item.id)
-        let isOn = index != nil
-        return Button {
-            if let index { selected.remove(at: index) } else if selected.count < 3 { selected.append(item.id) }
-        } label: {
-            HStack(spacing: QSpacing.l) {
-                VStack(alignment: .leading, spacing: QSpacing.xxs) {
-                    Text(item.title).font(QFont.text(16, weight: .semibold))
-                    Text(item.attributes.map(\.code).joined(separator: " · "))
-                        .font(QFont.text(13))
-                        .foregroundStyle(QColor.inkSecondary)
-                }
-                Spacer()
-                if index == 0 {
-                    Text("Основная")
-                        .font(QFont.text(12, weight: .semibold))
-                        .foregroundStyle(QColor.amberDeep)
-                }
-                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(isOn ? QColor.ink : QColor.lineStrong)
-            }
-            .padding(.horizontal, QSpacing.xl)
-            .padding(.vertical, QSpacing.l)
-            .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.card))
-            .overlay(RoundedRectangle(cornerRadius: QRadius.card).strokeBorder(isOn ? QColor.ink : QColor.line, lineWidth: isOn ? 2 : 1))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isOn && selected.count >= 3)
-        .opacity(!isOn && selected.count >= 3 ? 0.5 : 1)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
-    }
-
-    private var classStep: some View {
-        let attributes = Attribute.professionSelectable.filter { a in selectedItems.contains { $0.attributes.contains(a) } }
-        return VStack(alignment: .leading, spacing: QSpacing.l) {
-            header("Как назовём класс?", "Класс — это сочетание ваших профессий. Название придумываете вы.")
-            VStack(alignment: .leading, spacing: QSpacing.s) {
-                Text("Название класса").font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
-                TextField(selectedItems.map(\.title).joined(separator: " · "), text: $classTitle)
-                    .font(QFont.text(17))
-                    .padding(.horizontal, QSpacing.xl)
-                    .frame(height: 50)
-                    .sheetCard()
-            }
-            VStack(alignment: .leading, spacing: QSpacing.m) {
-                ForEach(selectedItems) { item in
-                    HStack {
-                        Text(item.title).font(QFont.text(15, weight: .semibold))
-                        Spacer()
-                        Text(item.attributes.map(\.code).joined(separator: " · "))
-                            .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
-                    }
-                }
-                Divider().overlay(QColor.line)
-                Text("Атрибуты класса: " + attributes.map(\.code).joined(separator: ", "))
-                    .font(QFont.text(13, weight: .semibold))
-            }
-            .padding(QSpacing.xl)
-            .sheetCard()
-            Text("Ранг появится после первых выполненных квестов.")
-                .font(QFont.text(13))
-                .foregroundStyle(QColor.inkSecondary)
-        }
-    }
+    /// Цвет одежды — по первой выбранной профессии.
+    private var accent: UInt32 { setup.choices.first.map { HeroAccent.hex(catalogItemId: $0.catalogItemId) } ?? HeroAccent.fallback }
 
     private var canContinue: Bool {
         switch step {
         case .hero: !name.trimmingCharacters(in: .whitespaces).isEmpty
-        case .professions: !selected.isEmpty
+        case .professions: !setup.choices.isEmpty
+        case .attributes: setup.choices.allSatisfy { !$0.attributes.isEmpty }
         case .heroClass: true
         }
     }
 
     private func next() {
         guard canContinue else { return }
-        switch step {
-        case .hero: withAnimation { step = .professions }
-        case .professions: withAnimation { step = .heroClass }
-        case .heroClass:
-            isSaving = true
-            Task {
-                _ = await model.startAdventure(name: name, catalogItemIds: selected, classTitle: classTitle)
-                isSaving = false
-            }
+        if let following = Step(rawValue: step.rawValue + 1) {
+            withAnimation { step = following }
+            return
+        }
+        isSaving = true
+        Task {
+            let title = setup.classTitle.trimmingCharacters(in: .whitespaces).isEmpty ? setup.defaultClassTitle : setup.classTitle
+            _ = await model.startAdventure(name: name, appearance: appearance, professions: setup.choices, classTitle: title)
+            isSaving = false
+        }
+    }
+}
+
+/// Цвета волос и кожи из макета OnbHero.
+protocol AppearanceSwatch: Hashable {
+    var color: Color { get }
+    var label: String { get }
+}
+
+extension HeroAppearance.Hair: AppearanceSwatch {
+    var color: Color { Color(hex: hex) }
+
+    var label: String {
+        switch self {
+        case .dark: "Тёмные волосы"
+        case .red: "Рыжие волосы"
+        case .blond: "Светлые волосы"
+        case .black: "Чёрные волосы"
+        }
+    }
+}
+
+extension HeroAppearance.Skin: AppearanceSwatch {
+    var color: Color { Color(hex: hex) }
+
+    var label: String {
+        switch self {
+        case .light: "Светлая кожа"
+        case .medium: "Средняя кожа"
+        case .tan: "Смуглая кожа"
+        case .deep: "Тёмная кожа"
         }
     }
 }

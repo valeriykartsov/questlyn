@@ -20,6 +20,7 @@ struct TodayView: View {
                 rankCard
                 AttributeStrip(progress: model.progress)
                 habitsSection
+                activitySection
                 section(.overdue, title: "Просрочено")
                 section(.today, title: "Квесты на сегодня", showEmpty: true)
                 section(.undated, title: "Без даты")
@@ -119,6 +120,53 @@ struct TodayView: View {
         .padding(.horizontal, QSpacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
         .sheetCard()
+    }
+
+    @State private var deletingActivity: Activity?
+
+    /// Активность за сегодня: тип, длительность, что дала.
+    @ViewBuilder
+    private var activitySection: some View {
+        if !model.activities.isEmpty {
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Активность").font(QFont.title(18))
+                    Spacer()
+                    Text(Format.minutes(model.activities.reduce(0) { $0 + $1.durationMinutes }) + " сегодня")
+                        .font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+                }
+                VStack(spacing: QSpacing.s) {
+                    ForEach(model.activities) { activity in
+                        Button { deletingActivity = activity } label: { activityRow(activity) }.buttonStyle(.plain)
+                    }
+                }
+            }
+            .confirmationDialog("Удалить активность?", isPresented: Binding(get: { deletingActivity != nil }, set: { if !$0 { deletingActivity = nil } }),
+                                titleVisibility: .visible, presenting: deletingActivity) { activity in
+                Button("Удалить", role: .destructive) { Task { await model.deleteActivity(activity.id) } }
+            } message: { activity in
+                Text(activity.questCompletionId == nil ? "Начисления этой активности будут сняты."
+                                                       : "Активность закрыла квест. Чтобы убрать её вместе с квестом, отмените выполнение квеста.")
+            }
+        }
+    }
+
+    private func activityRow(_ activity: Activity) -> some View {
+        let grants = (model.overview?.progress.grants ?? []).filter { $0.sourceId == activity.id }
+        return HStack(spacing: QSpacing.l) {
+            Image(systemName: "timer").font(.system(size: 18)).foregroundStyle(QColor.forest).frame(width: 32, height: 44)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("\(activity.template?.title ?? "Активность") · \(Format.minutes(activity.durationMinutes))").font(QFont.text(15))
+                Text(grants.isEmpty ? "Предел дня — без XP" : model.grantSummary(grants))
+                    .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(activity.startedAt.formatted(.dateTime.hour().minute().locale(Locale(identifier: "ru_RU"))))
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        }
+        .padding(.leading, QSpacing.xs).padding(.trailing, QSpacing.l).padding(.vertical, QSpacing.xs)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder

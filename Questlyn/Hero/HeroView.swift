@@ -2,11 +2,14 @@ import SwiftUI
 import Domain
 import Application
 
-/// «Герой» этапа 1 (макет HeroV2 без HP/MP, внешности и формы навыка).
+/// «Герой» (макет HeroV2 без HP/MP): пиксельный герой, ранг, атрибуты, профессии.
 struct HeroView: View {
     let model: AppModel
     @State private var isCreatingSkill = false
     @State private var isShowingSettings = false
+    @State private var isEditingProfessions = false
+    @State private var openedAttribute: Attribute?
+    @State private var openedSkill: UUID?
 
     private var progress: HeroProgress { model.progress }
 
@@ -25,6 +28,11 @@ struct HeroView: View {
         .paperScreen()
         .sheet(isPresented: $isCreatingSkill) { SkillFormView(model: model) }
         .sheet(isPresented: $isShowingSettings) { SettingsView(model: model) }
+        .sheet(isPresented: $isEditingProfessions) { ProfessionEditorView(model: model) }
+        .sheet(item: $openedAttribute) { AttributeDetailView(model: model, attribute: $0) }
+        .sheet(item: Binding(get: { openedSkill.map(IdentifiedID.init) }, set: { openedSkill = $0?.id })) {
+            SkillDetailView(model: model, skillId: $0.id)
+        }
     }
 
     private var header: some View {
@@ -42,11 +50,25 @@ struct HeroView: View {
                 }
                 .accessibilityLabel("Настройки")
             }
-            Text(model.hero?.classTitle ?? "Герой")
-                .font(QFont.title(30))
-            Text(classNote)
-                .font(QFont.text(13))
-                .foregroundStyle(QColor.inkSecondary)
+            HStack(alignment: .bottom, spacing: QSpacing.l) {
+                if let hero = model.hero {
+                    HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136)
+                        .frame(width: 96)
+                }
+                VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                    Text(model.hero?.classTitle ?? "Герой")
+                        .font(QFont.title(30))
+                    Text(classNote)
+                        .font(QFont.text(13))
+                        .foregroundStyle(QColor.inkSecondary)
+                    if let outfit = model.hero?.appearance.outfit {
+                        Text("Образ: \(outfit.title)")
+                            .font(QFont.text(13))
+                            .foregroundStyle(QColor.inkSecondary)
+                    }
+                }
+                .padding(.bottom, QSpacing.xs)
+            }
         }
     }
 
@@ -84,7 +106,9 @@ struct HeroView: View {
             Text("Атрибуты").font(QFont.title(18))
             VStack(spacing: QSpacing.l) {
                 ForEach(Attribute.allCases, id: \.self) { attribute in
-                    attributeRow(attribute)
+                    Button { openedAttribute = attribute } label: { attributeRow(attribute) }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Подробнее: начисления и спад")
                 }
             }
             .padding(QSpacing.xl)
@@ -109,7 +133,12 @@ struct HeroView: View {
                 Text(attribute.code).font(QFont.text(13, weight: .bold)).frame(width: 40, alignment: .leading)
                 Text(attribute.title).font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                 Spacer()
+                if progress.decayEvents(attribute).last?.date == model.today {
+                    Image(systemName: "arrow.down.right").font(.system(size: 11, weight: .bold)).foregroundStyle(QColor.hp)
+                        .accessibilityLabel("Спад")
+                }
                 Text("ур. \(level)").font(QFont.text(15, weight: .bold)).monospacedDigit()
+                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
             }
             ProgressBar(fraction: step.current / Double(step.needed), color: inClass ? QColor.ink : Color(hex: 0xB3A890))
             HStack {
@@ -123,14 +152,50 @@ struct HeroView: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func skillRow(_ skill: Skill) -> some View {
+        let condition = progress.skillCondition[skill.id]
+        let mastery = model.mastery(skillId: skill.id) ?? 0
+        return VStack(alignment: .leading, spacing: QSpacing.xs) {
+            HStack {
+                Text(skill.title).font(QFont.text(15))
+                Spacer()
+                Text("\(Format.xp(progress.skillXP[skill.id] ?? .zero)) XP")
+                    .font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+            }
+            HStack(spacing: QSpacing.m) {
+                Text(condition.map(conditionText) ?? "Форма: после первой практики")
+                    .font(QFont.text(12))
+                    .foregroundStyle(condition.map { $0 >= 80 ? QColor.forest : ($0 >= 60 ? QColor.amberDeep : QColor.hp) } ?? QColor.inkSecondary)
+                Spacer()
+                HStack(spacing: 3) {
+                    ForEach(1...5, id: \.self) { n in
+                        Circle().fill(n <= mastery ? QColor.amber : QColor.line).frame(width: 6, height: 6)
+                    }
+                }
+                .accessibilityElement()
+                .accessibilityLabel(mastery == 0 ? "Мастерство не оценено" : "Мастерство \(mastery) из 5")
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func conditionText(_ value: Int) -> String {
+        let word = value >= 80 ? "хорошая" : (value >= 60 ? "снижается" : "слабая")
+        return "Форма: \(word) · \(value)%"
+    }
+
     private var professions: some View {
         VStack(alignment: .leading, spacing: QSpacing.m) {
-            HStack {
+            VStack(alignment: .leading, spacing: QSpacing.xs) {
                 Text("Профессии и навыки").font(QFont.title(18))
-                Spacer()
-                Button("+ Навык") { isCreatingSkill = true }
-                    .font(QFont.text(14, weight: .semibold))
-                    .foregroundStyle(QColor.amberDeep)
+                HStack(spacing: QSpacing.xl) {
+                    Button("+ Навык") { isCreatingSkill = true }
+                    Button("Изменить профессии") { isEditingProfessions = true }
+                }
+                .font(QFont.text(14, weight: .semibold))
+                .foregroundStyle(QColor.amberDeep)
+                .frame(minHeight: 32)
             }
             ForEach(model.activeProfessions) { profession in
                 VStack(alignment: .leading, spacing: QSpacing.m) {
@@ -148,14 +213,7 @@ struct HeroView: View {
                         Text("Навыков пока нет").font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                     } else {
                         ForEach(skills) { skill in
-                            HStack {
-                                Text(skill.title).font(QFont.text(15))
-                                Spacer()
-                                Text("\(Format.xp(progress.skillXP[skill.id] ?? .zero)) XP")
-                                    .font(QFont.text(13, weight: .semibold))
-                                    .foregroundStyle(QColor.inkSecondary)
-                                    .monospacedDigit()
-                            }
+                            Button { openedSkill = skill.id } label: { skillRow(skill) }.buttonStyle(.plain)
                         }
                     }
                 }

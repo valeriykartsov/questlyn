@@ -16,16 +16,44 @@ struct HeroRecord: QuestlynRecord {
     var id: UUID
     var name: String
     var classTitle: String
+    var hair: String
+    var skin: String
+    var outfit: String
     var createdAt: Date
 
     init(_ hero: Hero) {
         id = hero.id
         name = hero.name
         classTitle = hero.classTitle
+        hair = hero.appearance.hair.rawValue
+        skin = hero.appearance.skin.rawValue
+        outfit = hero.appearance.outfit.rawValue
         createdAt = hero.createdAt
     }
 
-    var domain: Hero { Hero(id: id, name: name, classTitle: classTitle, createdAt: createdAt) }
+    var domain: Hero {
+        Hero(id: id, name: name, classTitle: classTitle,
+             appearance: HeroAppearance(hair: .init(rawValue: hair) ?? .dark, skin: .init(rawValue: skin) ?? .medium,
+                                        outfit: .init(rawValue: outfit) ?? .coder),
+             createdAt: createdAt)
+    }
+}
+
+struct SkillMasteryRecord: QuestlynRecord {
+    static let databaseTableName = "skillMastery"
+    var id: UUID
+    var skillId: UUID
+    var value: Int
+    var assessedAt: Date
+
+    init(_ m: SkillMastery) {
+        id = m.id
+        skillId = m.skillId
+        value = m.value
+        assessedAt = m.assessedAt
+    }
+
+    var domain: SkillMastery { SkillMastery(id: id, skillId: skillId, value: value, assessedAt: assessedAt) }
 }
 
 struct ProfessionRecord: QuestlynRecord {
@@ -166,8 +194,10 @@ struct ProgressGrantRecord: QuestlynRecord {
     var amountCenti: Int
     var reason: String
     var createdAt: Date
+    var localDate: String?
 
     init(_ g: ProgressGrant) {
+        localDate = g.effectiveDate.description
         id = g.id
         sourceType = g.sourceType.rawValue
         sourceId = g.sourceId
@@ -200,7 +230,8 @@ struct ProgressGrantRecord: QuestlynRecord {
             return nil
         }
         return ProgressGrant(id: id, sourceType: source, sourceId: sourceId, ruleVersion: RuleVersion(rawValue: ruleVersion),
-                             target: target, amount: CentiXP(amountCenti), reason: reason, createdAt: createdAt)
+                             target: target, amount: CentiXP(amountCenti), reason: reason, createdAt: createdAt,
+                             effectiveDate: localDate.flatMap(LocalDate.init(string:)))
     }
 }
 
@@ -291,5 +322,41 @@ struct HabitOccurrenceRecord: QuestlynRecord {
         guard let date = LocalDate(string: localDate) else { return nil }
         return HabitOccurrence(id: id, habitId: habitId, localDate: date, completedAt: completedAt,
                                timezoneId: timezoneId, undoneAt: undoneAt, classSnapshot: classSnapshot)
+    }
+}
+
+struct ActivityRecord: QuestlynRecord {
+    static let databaseTableName = "activity"
+    var id: UUID
+    var templateId: String
+    var skillId: UUID?
+    var durationMinutes: Int
+    var creditedMinutes: Int
+    var localDate: String
+    var startedAt: Date
+    var timezoneId: String
+    var questCompletionId: UUID?
+    var classSnapshot: ClassSnapshot
+    var deletedAt: Date?
+
+    init(_ a: Activity) {
+        id = a.id
+        templateId = a.templateId
+        skillId = a.skillId
+        durationMinutes = a.durationMinutes
+        creditedMinutes = a.creditedMinutes
+        localDate = a.localDate.description
+        startedAt = a.startedAt
+        timezoneId = a.timezoneId
+        questCompletionId = a.questCompletionId
+        classSnapshot = a.classSnapshot
+        deletedAt = a.deletedAt
+    }
+
+    var domain: Activity? {
+        guard let date = LocalDate(string: localDate) else { return nil }
+        return Activity(id: id, templateId: templateId, skillId: skillId, durationMinutes: durationMinutes, creditedMinutes: creditedMinutes,
+                        localDate: date, startedAt: startedAt, timezoneId: timezoneId, questCompletionId: questCompletionId,
+                        classSnapshot: classSnapshot, deletedAt: deletedAt)
     }
 }

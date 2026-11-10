@@ -99,7 +99,8 @@ public struct HabitMarkService: Sendable {
         let occurrence = HabitOccurrence(habitId: habitId, localDate: date, completedAt: now,
                                          timezoneId: timeZone.identifier, classSnapshot: snapshot)
         let grants = GrantCalculator.habitOccurrenceGrants(occurrenceId: occurrence.id, skill: skill,
-                                                           skillProfessionTitle: profession?.title, snapshot: snapshot, createdAt: now)
+                                                           skillProfessionTitle: profession?.title, snapshot: snapshot,
+                                                           createdAt: now, effectiveDate: date)
         try await store.record(occurrence, grants: grants)
         try await DisciplineService(store: store).settle(now: now, timeZone: timeZone)
         return grants
@@ -149,7 +150,8 @@ public struct DisciplineService: Sendable {
                     let grant = ProgressGrant(
                         sourceType: .weeklyDiscipline, sourceId: sourceId, ruleVersion: .current,
                         target: .attribute(.discipline), amount: amount,
-                        reason: Self.reason(week: week, result: result), createdAt: now
+                        reason: Self.reason(week: week, result: result), createdAt: now,
+                        effectiveDate: week.adding(days: 7)
                     )
                     try await store.replaceDisciplineGrant(sourceId: sourceId, with: grant)
                 }

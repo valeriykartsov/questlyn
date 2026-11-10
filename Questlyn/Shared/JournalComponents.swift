@@ -98,3 +98,7 @@ extension Attribute {
         }
     }
 }
+
+extension Attribute: @retroactive Identifiable {
+    public var id: String { rawValue }
+}

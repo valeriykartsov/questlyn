@@ -3,34 +3,129 @@ import Domain
 
 private func trimmed(_ text: String) -> String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-/// Онбординг: имя → 1–3 профессии из каталога → название класса (BACKLOG 1.2).
+/// Профессия, выбранная в онбординге или при смене: из каталога или своя; атрибуты можно переопределить.
+public struct ProfessionChoice: Sendable, Equatable {
+    public var catalogItemId: String?
+    public var title: String
+    public var attributes: [Attribute]
+
+    public init(catalogItemId: String? = nil, title: String, attributes: [Attribute]) {
+        self.catalogItemId = catalogItemId
+        self.title = title
+        self.attributes = attributes
+    }
+
+    public static func catalog(_ id: String) -> ProfessionChoice? {
+        ProfessionCatalog.item(id: id).map { ProfessionChoice(catalogItemId: $0.id, title: $0.title, attributes: $0.attributes) }
+    }
+
+    func validate() throws {
+        guard !trimmed(title).isEmpty else { throw QuestlynError.emptyName }
+        guard (1...3).contains(attributes.count), Set(attributes).count == attributes.count,
+              attributes.allSatisfy(\.isSelectableForProfession) else { throw QuestlynError.invalidProfessionAttributes }
+    }
+}
+
+/// Онбординг: герой и внешность → 1–3 профессии (каталог или своя) → атрибуты → класс (BACKLOG 1.2, 3.5).
+/// Создаёт первую БД и стартовый бонус (02, 07).
 public struct OnboardingService: Sendable {
     private let store: any QuestlynStore
     public init(store: any QuestlynStore) { self.store = store }
 
-    /// Порядок `catalogItemIds` — порядок слотов: первая — основная профессия.
+    /// Короткая форма: профессии из каталога без правки атрибутов.
     @discardableResult
-    public func start(heroName: String, catalogItemIds: [String], classTitle: String, now: Date) async throws -> Hero {
+    public func start(heroName: String, catalogItemIds: [String], classTitle: String, now: Date,
+                      timeZone: TimeZone = .current) async throws -> Hero {
+        let choices = try catalogItemIds.map { id in
+            guard let choice = ProfessionChoice.catalog(id) else { throw QuestlynError.unknownCatalogItem(id) }
+            return choice
+        }
+        guard Set(catalogItemIds).count == catalogItemIds.count else { throw QuestlynError.invalidProfessionCount }
+        return try await start(heroName: heroName, appearance: .default, professions: choices, classTitle: classTitle, now: now, timeZone: timeZone)
+    }
+
+    /// Порядок `professions` — порядок слотов: первая — основная профессия.
+    @discardableResult
+    public func start(heroName: String, appearance: HeroAppearance, professions choices: [ProfessionChoice],
+                      classTitle: String, now: Date, timeZone: TimeZone) async throws -> Hero {
         let name = trimmed(heroName)
         guard !name.isEmpty else { throw QuestlynError.emptyName }
-        guard (1...3).contains(catalogItemIds.count), Set(catalogItemIds).count == catalogItemIds.count else {
-            throw QuestlynError.invalidProfessionCount
-        }
+        guard (1...3).contains(choices.count) else { throw QuestlynError.invalidProfessionCount }
+        try choices.forEach { try $0.validate() }
         guard try await store.currentHero() == nil else { throw QuestlynError.heroAlreadyExists }
-        let items = try catalogItemIds.map { id in
-            guard let item = ProfessionCatalog.item(id: id) else { throw QuestlynError.unknownCatalogItem(id) }
-            return item
-        }
         let title = trimmed(classTitle)
-        let hero = Hero(name: name, classTitle: title.isEmpty ? items.map(\.title).joined(separator: " · ") : title, createdAt: now)
-        let professions = items.enumerated().map { index, item in
+        let hero = Hero(name: name, classTitle: title.isEmpty ? choices.map(\.title).joined(separator: " · ") : title,
+                        appearance: appearance, createdAt: now)
+        let professions = choices.enumerated().map { index, choice in
             Profession(
-                heroId: hero.id, title: item.title, slot: index + 1, attributes: item.attributes,
-                catalogItemId: item.id, catalogVersion: ProfessionCatalog.version, createdAt: now
+                heroId: hero.id, title: trimmed(choice.title), slot: index + 1, attributes: choice.attributes,
+                catalogItemId: choice.catalogItemId, catalogVersion: choice.catalogItemId == nil ? nil : ProfessionCatalog.version,
+                createdAt: now
             )
         }
-        try await store.createHero(hero, professions: professions)
+        let bonus = GrantCalculator.onboardingBonusGrants(heroId: hero.id, professions: professions, createdAt: now,
+                                                          effectiveDate: LocalDate(now, timeZone: timeZone))
+        try await store.createHero(hero, professions: professions, grants: bonus)
         return hero
+    }
+}
+
+/// Смена профессий и названия класса (02): навыки убранной профессии становятся неактивными,
+/// возвращённая профессия (тот же пункт каталога или то же своё название) получает навыки обратно.
+/// Уровни атрибутов не меняются.
+/// Внешность героя: волосы, кожа и образ (3.6). Меняется в настройках без последствий для прогресса.
+public struct HeroService: Sendable {
+    private let store: any QuestlynStore
+    public init(store: any QuestlynStore) { self.store = store }
+
+    @discardableResult
+    public func updateAppearance(_ appearance: HeroAppearance) async throws -> Hero {
+        guard var hero = try await store.currentHero() else { throw QuestlynError.heroNotFound }
+        hero.appearance = appearance
+        try await store.save(hero)
+        return hero
+    }
+}
+
+public struct ProfessionService: Sendable {
+    private let store: any QuestlynStore
+    public init(store: any QuestlynStore) { self.store = store }
+
+    public func update(professions choices: [ProfessionChoice], classTitle: String, now: Date) async throws {
+        guard var hero = try await store.currentHero() else { throw QuestlynError.heroNotFound }
+        guard (1...3).contains(choices.count) else { throw QuestlynError.invalidProfessionCount }
+        try choices.forEach { try $0.validate() }
+        var existing = try await store.professions(heroId: hero.id)
+        var result: [Profession] = []
+        for (index, choice) in choices.enumerated() {
+            let title = trimmed(choice.title)
+            if let match = existing.firstIndex(where: { old in
+                choice.catalogItemId.map { $0 == old.catalogItemId } ?? (old.catalogItemId == nil && old.title == title)
+            }) {
+                var profession = existing.remove(at: match)
+                profession.slot = index + 1
+                profession.attributes = choice.attributes
+                profession.title = title
+                profession.isActive = true
+                result.append(profession)
+            } else {
+                result.append(Profession(
+                    heroId: hero.id, title: title, slot: index + 1, attributes: choice.attributes,
+                    catalogItemId: choice.catalogItemId, catalogVersion: choice.catalogItemId == nil ? nil : ProfessionCatalog.version,
+                    createdAt: now
+                ))
+            }
+        }
+        for var removed in existing where removed.isActive {
+            removed.isActive = false
+            result.append(removed)
+        }
+        try await store.applyProfessions(result)
+        let title = trimmed(classTitle)
+        if !title.isEmpty, title != hero.classTitle {
+            hero.classTitle = title
+            try await store.save(hero)
+        }
     }
 }
 
@@ -40,7 +135,7 @@ public struct SkillService: Sendable {
     public init(store: any QuestlynStore) { self.store = store }
 
     @discardableResult
-    public func create(title: String, professionId: UUID, now: Date) async throws -> Skill {
+    public func create(title: String, professionId: UUID, mastery: Int? = nil, now: Date) async throws -> Skill {
         let name = trimmed(title)
         guard !name.isEmpty else { throw QuestlynError.emptyName }
         guard let hero = try await store.currentHero() else { throw QuestlynError.heroNotFound }
@@ -49,7 +144,14 @@ public struct SkillService: Sendable {
         }
         let skill = Skill(professionId: professionId, title: name, createdAt: now)
         try await store.save(skill)
+        if let mastery { try await store.save(SkillMastery(skillId: skill.id, value: mastery, assessedAt: now)) }
         return skill
+    }
+
+    /// Мастерство 1–5 меняется только вручную и хранится как факт оценки (07, раздел 6).
+    public func assess(skillId: UUID, mastery: Int, now: Date) async throws {
+        guard try await store.skills().contains(where: { $0.id == skillId }) else { throw QuestlynError.skillNotFound }
+        try await store.save(SkillMastery(skillId: skillId, value: mastery, assessedAt: now))
     }
 }
 
@@ -156,6 +258,10 @@ public struct CompletionService: Sendable {
     public init(store: any QuestlynStore) { self.store = store }
 
     public func complete(questId: UUID, now: Date, timeZone: TimeZone) async throws -> CompletionReport {
+        try await complete(questId: questId, now: now, timeZone: timeZone, activity: nil)
+    }
+
+    func complete(questId: UUID, now: Date, timeZone: TimeZone, activity draft: ActivityDraft?) async throws -> CompletionReport {
         guard let quest = try await store.quest(id: questId) else { throw QuestlynError.questNotFound }
         guard try await store.activeCompletion(questId: questId) == nil else { throw QuestlynError.alreadyCompleted }
 
@@ -175,14 +281,24 @@ public struct CompletionService: Sendable {
             questId: questId, completedAt: now, localDate: LocalDate(now, timeZone: timeZone),
             timezoneId: timeZone.identifier, classSnapshot: snapshot
         )
-        let grants = GrantCalculator.questCompletionGrants(
-            completionId: completion.id, priority: quest.priority, skill: skill,
-            skillProfessionTitle: skillProfession?.title, snapshot: snapshot, createdAt: now
+        // С активностью квест даёт только FOC: навык и атрибуты начисляет Activity.
+        var grants = GrantCalculator.questCompletionGrants(
+            completionId: completion.id, priority: quest.priority, skill: draft == nil ? skill : nil,
+            skillProfessionTitle: skillProfession?.title, snapshot: draft == nil ? snapshot : .empty,
+            createdAt: now, effectiveDate: completion.localDate
         )
         let classAttributes = ClassRules.classAttributes(of: professions)
-        let before = HeroProgress(grants: try await store.allGrants(), classAttributes: classAttributes)
-        try await store.record(completion, grants: grants)
-        let after = HeroProgress(grants: try await store.allGrants(), classAttributes: classAttributes)
+        let today = completion.localDate
+        let before = HeroProgress(grants: try await store.allGrants(), classAttributes: classAttributes, today: today)
+        if let draft {
+            let (activity, activityGrants) = try await ActivityService(store: store)
+                .prepare(draft, now: now, timeZone: timeZone, questCompletionId: completion.id)
+            try await store.record(completion, questGrants: grants, activity: activity, activityGrants: activityGrants)
+            grants += activityGrants
+        } else {
+            try await store.record(completion, grants: grants)
+        }
+        let after = HeroProgress(grants: try await store.allGrants(), classAttributes: classAttributes, today: today)
         return CompletionReport(quest: quest, completion: completion, grants: grants, before: before, after: after)
     }
 
@@ -222,6 +338,10 @@ public struct TodayOverview: Sendable, Equatable {
     public var journal: [TodayItem]
     /// DIS за прошлую неделю, если уже посчитан.
     public var lastDiscipline: ProgressGrant?
+    /// Последняя оценка мастерства по навыкам.
+    public var masteries: [UUID: Int]
+    /// Активности сегодня.
+    public var activities: [Activity]
 }
 
 /// Сборка «Сегодня» и «Героя» (BACKLOG 1.5, 1.8).
@@ -270,7 +390,8 @@ public struct TodayService: Sendable {
             }
         }
 
-        let progress = HeroProgress(grants: try await store.allGrants(), classAttributes: ClassRules.classAttributes(of: professions))
+        let progress = HeroProgress(grants: try await store.allGrants(), classAttributes: ClassRules.classAttributes(of: professions), today: date)
+        let masteries = Dictionary(try await store.masteries().map { ($0.skillId, $0.value) }, uniquingKeysWith: { _, latest in latest })
 
         // Журнал: все обычные квесты; выполненные — с фактом выполнения.
         let allQuests = try await store.allQuests()
@@ -292,6 +413,7 @@ public struct TodayService: Sendable {
         let lastWeek = date.weekStart.adding(days: -7)
         let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
         return TodayOverview(date: date, hero: hero, professions: professions, skills: skills, items: items, progress: progress,
-                             habits: habits, epics: epics, journal: journal, lastDiscipline: lastDiscipline)
+                             habits: habits, epics: epics, journal: journal, lastDiscipline: lastDiscipline, masteries: masteries,
+                             activities: try await store.activities(from: date, through: date))
     }
 }

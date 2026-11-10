@@ -20,6 +20,9 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case epicNotFound
     case epicHasOpenSteps
     case resetNotConfirmed
+    case invalidProfessionAttributes
+    case unknownActivityType
+    case invalidDuration
 }
 
 extension QuestlynError: CustomStringConvertible {
@@ -45,6 +48,9 @@ extension QuestlynError: CustomStringConvertible {
         case .habitNotFound: "Привычка не найдена."
         case .epicNotFound: "Epic не найден."
         case .epicHasOpenSteps: "Завершить Epic можно, когда все шаги выполнены."
+        case .unknownActivityType: "Такого типа активности нет."
+        case .invalidDuration: "Длительность — от 1 минуты до 24 часов."
+        case .invalidProfessionAttributes: "У профессии от 1 до 3 разных атрибутов: STR, END, INT, MNT, CHR."
         case .resetNotConfirmed: "Чтобы сбросить данные, введите слово СБРОС."
         }
     }

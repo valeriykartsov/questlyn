@@ -32,21 +32,48 @@ final class AppModel {
         isLoaded = true
     }
 
-    func startAdventure(name: String, catalogItemIds: [String], classTitle: String) async -> Bool {
+    func startAdventure(name: String, appearance: HeroAppearance, professions: [ProfessionChoice], classTitle: String) async -> Bool {
         await run { [self] in
-            try await OnboardingService(store: store).start(heroName: name, catalogItemIds: catalogItemIds, classTitle: classTitle, now: .now)
+            try await OnboardingService(store: store).start(heroName: name, appearance: appearance, professions: professions,
+                                                            classTitle: classTitle, now: .now, timeZone: timeZone)
             await reload()
         }
     }
 
-    func createSkill(title: String, professionId: UUID) async -> Skill? {
+    /// Цвет акцента одежды героя — по основной профессии (слот 1).
+    var heroAccent: UInt32 { HeroAccent.hex(catalogItemId: activeProfessions.min { $0.slot < $1.slot }?.catalogItemId) }
+
+    func updateAppearance(_ appearance: HeroAppearance) async -> Bool {
+        await run { [self] in
+            try await HeroService(store: store).updateAppearance(appearance)
+            await reload()
+        }
+    }
+
+    func updateProfessions(_ professions: [ProfessionChoice], classTitle: String) async -> Bool {
+        await run { [self] in
+            try await ProfessionService(store: store).update(professions: professions, classTitle: classTitle, now: .now)
+            await reload()
+        }
+    }
+
+    func createSkill(title: String, professionId: UUID, mastery: Int? = nil) async -> Skill? {
         var created: Skill?
         await run { [self] in
-            created = try await SkillService(store: store).create(title: title, professionId: professionId, now: .now)
+            created = try await SkillService(store: store).create(title: title, professionId: professionId, mastery: mastery, now: .now)
             await reload()
         }
         return created
     }
+
+    func assessMastery(skillId: UUID, value: Int) async {
+        await run { [self] in
+            try await SkillService(store: store).assess(skillId: skillId, mastery: value, now: .now)
+            await reload()
+        }
+    }
+
+    func mastery(skillId: UUID) -> Int? { overview?.masteries[skillId] }
 
     func createQuest(_ draft: QuestDraft) async -> Bool {
         await run { [self] in
@@ -103,6 +130,60 @@ final class AppModel {
             try await HabitMarkService(store: store).unmark(habitId: habitId, on: date, now: .now, timeZone: timeZone)
             await reload()
         }
+    }
+
+    // MARK: Activity
+
+    var activities: [Activity] { overview?.activities ?? [] }
+
+    func recordActivity(_ draft: ActivityDraft) async -> ActivityReport? {
+        var report: ActivityReport?
+        await run { [self] in
+            report = try await ActivityService(store: store).record(draft, now: .now, timeZone: timeZone)
+            await reload()
+        }
+        return report
+    }
+
+    func deleteActivity(_ id: UUID) async {
+        await run { [self] in
+            try await ActivityService(store: store).delete(activityId: id, now: .now)
+            await reload()
+        }
+    }
+
+    func complete(questId: UUID, with draft: ActivityDraft) async -> CompletionReport? {
+        var report: CompletionReport?
+        await run { [self] in
+            report = try await CompletionService(store: store).complete(questId: questId, with: draft, now: .now, timeZone: timeZone)
+            await reload()
+        }
+        return report
+    }
+
+    /// Предпросмотр начислений Activity по тем же правилам, с учётом предела дня (только для сегодняшних записей).
+    func previewActivity(_ draft: ActivityDraft) -> (credited: Int, grants: [ProgressGrant]) {
+        guard let template = ActivityTemplate.template(id: draft.templateId) else { return (0, []) }
+        let date = LocalDate(draft.startedAt, timeZone: timeZone)
+        let already = date == today ? activities.filter { $0.templateId == template.id }.reduce(0) { $0 + $1.creditedMinutes } : 0
+        let credited = ActivityRules.creditedMinutes(duration: draft.durationMinutes, alreadyCreditedToday: already)
+        let skill = skill(id: draft.skillId)
+        let profession = profession(id: skill?.professionId)
+        let snapshot = profession.map { ClassRules.snapshot(skillProfession: $0, activeProfessions: activeProfessions) } ?? .empty
+        let grants = GrantCalculator.activityGrants(activityId: UUID(), template: template, creditedMinutes: credited, skill: skill,
+                                                    skillProfessionTitle: profession?.title, snapshot: snapshot, createdAt: .now, effectiveDate: date)
+        return (credited, grants)
+    }
+
+    /// «Бег +6,67 · STR +3,33 · …»
+    func grantSummary(_ grants: [ProgressGrant]) -> String {
+        grants.map { grant in
+            switch grant.target {
+            case .attribute(let a): "\(a.code) \(Format.signedXP(grant.amount))"
+            case .skill(let id): "«\(skill(id: id)?.title ?? "Навык")» \(Format.signedXP(grant.amount))"
+            }
+        }
+        .joined(separator: " · ")
     }
 
     // MARK: Сброс

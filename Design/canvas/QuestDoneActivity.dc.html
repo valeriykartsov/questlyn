@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Выполнить с активностью</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; position: relative; overflow: hidden;">
+  <div style="padding: 54px 16px 0; display: flex; flex-direction: column; gap: 12px; opacity: 0.45;" aria-hidden="true">
+    <div style="font-size: 15px; color: #9A5214;">Закрыть</div>
+    <div style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700;">Пробежать 10 км</div>
+    <div style="font-size: 15px; color: #4A5368;">Первая длинная пробежка перед полумарафоном.</div>
+    <div style="height: 150px; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6;"></div>
+  </div>
+
+  <div style="position: absolute; inset: 0; background: rgba(31, 42, 68, 0.28);" aria-hidden="true"></div>
+
+  <div role="dialog" aria-label="Выполнить с активностью" style="position: absolute; left: 0; right: 0; bottom: 0; background: #F5F0E6; border-radius: 22px 22px 0 0; padding: 10px 16px 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -6px 24px rgba(31,42,68,.18);">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;" aria-hidden="true"></div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700;">Выполнить с активностью</div>
+      <div style="font-size: 14px; color: #4A5368;">Пробежать 10 км · шаг Epic «Полумарафон весной»</div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px;">
+      <a href="ActivityNew.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; text-decoration: none; color: #1F2A44; border-bottom: 1px solid #E3D9C6;">
+        <span style="flex-grow: 1; font-size: 15px;">Тип</span><span style="font-size: 15px; font-weight: 600;">Бег и кардио</span><span style="color: #4A5368;" aria-hidden="true">›</span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;">
+        <span style="flex-grow: 1; font-size: 15px;">Длительность</span>
+        <button type="button" aria-label="Меньше на 5 минут" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #C9BCA2; background: #F5F0E6; color: #1F2A44; font: 600 18px Inter, sans-serif;">−</button>
+        <span style="font-size: 17px; font-weight: 700; min-width: 64px; text-align: center;">55 мин</span>
+        <button type="button" aria-label="Больше на 5 минут" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #C9BCA2; background: #F5F0E6; color: #1F2A44; font: 600 18px Inter, sans-serif;">+</button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Что изменится</span>
+      <div style="background: #FFFCF6; border-radius: 14px; border: 1px solid #E3D9C6;">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+          <span style="width: 44px; height: 28px; border-radius: 6px; background: #F3E9DD; color: #9A5214; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;">FOC</span>
+          <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">От квеста</span><span style="font-size: 12px; color: #4A5368;">Обычный квест · средний приоритет</span></span>
+          <span style="font-size: 16px; font-weight: 700; color: #9A5214;">+5</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;">
+          <span style="width: 44px; height: 28px; border-radius: 6px; background: #E5EEE8; color: #2F6B4F; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;">XP</span>
+          <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">От активности · 55 мин</span><span style="font-size: 12px; color: #4A5368;">«Бег» +9,17 · STR +4,58 · END +2,75 · MNT +2,29</span></span>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Навык и атрибуты начисляются один раз — от активности. Квест добавляет только FOC и шаг Epic.</div>
+    </div>
+
+    <button type="button" style="height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Выполнить и записать</button>
+    <a href="RewardV2.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; text-decoration: none;">Выполнить без активности</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

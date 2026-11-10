@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Герой E в пропорциях LPC</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 40px 48px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 32px; font-weight: 700;">Вариант E · свой герой в пропорциях LPC</h1>
+    <p style="margin: 0; font-size: 15px; color: #4A5368; max-width: 1100px; line-height: 1.45;">Оригинальный рисунок, без чужих ассетов и лицензий. Взрослые пропорции около 3 голов, вид сверху под углом, фигура 24×47 px — помещается в кадр 64×64, как у LPC. Мягкий тёплый контур и палитра «Полевого журнала». Волосы, кожа и плащ перекрашиваются подменой цветов.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 24px;">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">По умолчанию · Инженер-программист</div>
+      <div style="display: flex; gap: 16px; align-items: flex-end;">
+        <div style="height: 236px; width: 190px; border-radius: 14px; background: #E7DCC4; position: relative; overflow: hidden; flex-shrink: 0;">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #B9AA86; border-top: 6px solid #8E7F5C;" aria-hidden="true"></div>
+          <div style="position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; grid-template-columns: repeat(24, 4px); grid-auto-rows: 4px;" role="img" aria-label="Герой в зелёном плаще, вид спереди">
+            <sc-for list="{{big}}" as="p" hint-placeholder-count="1128"><div style="background: {{p.c}};"></div></sc-for>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(20, 6px); grid-auto-rows: 6px; border-radius: 12px; overflow: hidden; background: #E7DCC4;" role="img" aria-label="Портрет героя">
+          <sc-for list="{{face}}" as="p" hint-placeholder-count="360"><div style="background: {{p.c}};"></div></sc-for>
+        </div>
+      </div>
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">4 направления — для карты дня</div>
+      <div style="display: flex; gap: 14px;">
+        <sc-for list="{{dirs}}" as="m" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(24, 3px); grid-auto-rows: 3px;" role="img" aria-label="{{m.label}}">
+              <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="1128"><div style="background: {{p.c}};"></div></sc-for>
+            </div>
+            <div style="font-size: 11px; color: #4A5368;">{{m.label}}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">На карте — 24×47 pt (×1) или ×2; на «Герое» и в онбординге — ×4 и портрет.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Плащ по основной профессии</div>
+        <div style="display: flex; gap: 18px;">
+          <sc-for list="{{cloaks}}" as="m" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 104px;">
+              <div style="display: grid; grid-template-columns: repeat(24, 2.5px); grid-auto-rows: 2.5px;" role="img" aria-label="{{m.label}}">
+                <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="1128"><div style="background: {{p.c}};"></div></sc-for>
+              </div>
+              <div style="font-size: 11px; color: #4A5368; text-align: center; line-height: 1.25;">{{m.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Волосы и кожа — как в онбординге</div>
+        <div style="display: flex; gap: 18px;">
+          <sc-for list="{{looks}}" as="m" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px;">
+              <div style="display: flex; gap: 8px; align-items: flex-end;">
+                <div style="display: grid; grid-template-columns: repeat(24, 2.5px); grid-auto-rows: 2.5px;" role="img" aria-label="{{m.label}}">
+                  <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="1128"><div style="background: {{p.c}};"></div></sc-for>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(20, 2.5px); grid-auto-rows: 2.5px; border-radius: 6px; overflow: hidden; background: #E7DCC4;" aria-hidden="true">
+                  <sc-for list="{{m.face}}" as="p" hint-placeholder-count="360"><div style="background: {{p.c}};"></div></sc-for>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: #4A5368; text-align: center; line-height: 1.25;">{{m.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px; line-height: 1.45;">
+        <div style="padding: 12px 14px; border-radius: 14px; background: #E5EEE8; color: #24533D;"><b>Плюсы.</b> Пропорции как у LPC, никаких лицензий и благодарностей. Стиль совпадает с «Полевым журналом» и текущей картой. Палитра заранее разложена под подмену цветов.</div>
+        <div style="padding: 12px 14px; border-radius: 14px; background: #F1E3D3; color: #5C3410;"><b>Минусы.</b> Анимацию ходьбы (4 направления × 4–6 кадров), состояния и персонажей событий на карте рисую сам — готового набора нет. Это черновик: детали лица и плаща дошлифую после выбора.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DATA = {"dirs": [["......KKKKKKKKKKKK......", ".....KHHHHHHHHHHHHK.....", "....KHHHHHHHHHHHHHHK....", "....KHhHHHHHHHHHHhHK....", "....KHHHHHhHHhHHHHHK....", "....KHHHHSSSSSSHHHHK....", "....KHHSSSSSSSSSSHHK....", "....KHSSSSSSSSSSSSHK....", "....KHSSESSSSSSESSHK....", "....KHsSESSSSSSESsHK....", "....KhsSSSSSSSSSSshK....", ".....KsSSSSssSSSSsK.....", "......KssSSSSSSssK......", ".......KKssssssKK.......", ".........KssssK.........", ".....KKCCCCTTCCCCKK.....", "....KCCYCCTTTTCCYCCK....", "...KCCYCCCTTTTCCCYCCK...", "...KCYCCCTTTTTTCCCYCK...", "...KCYCCCTTTTTTCCCYCK...", "...KCCCCCTTTTTTCCCCCK...", "...KCCCCCTTTTTTCCCCCK...", "...KCCCCCTTTTTTCCCCCK...", "...KCDCCCTTTTTTCCCDCK...", "...KDCCCDTTTTTTDCCCDK...", "...KDDCDDTTTTTTDDCDDK...", "...KKDDDKBBbbBBKDDDKK...", "...KSSKTTTTTTTTTTKSSK...", "...KsSKTTTTttTTTTKSsK...", "....KKKTTTTTTTTTTKKK....", ".....KTTTTTTTTTTTTK.....", ".....KtttttKKtttttK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KpPPpK..KpPPpK.....", ".....KFFFFK..KFFFFK.....", ".....KFFFFK..KFFFFK.....", "....KFFFFFK..KFFFFFK....", "....KKKKKKK..KKKKKKK...."], ["......KKKKKKKKKKKK......", ".....KHHHHHHHHHHHHK.....", "....KHHHHHHHHHHHHHHK....", "....KHhHHHHHHHHHHhHK....", "....KHHHHHhHHhHHHHHK....", "....KHHHHHHHHHHHHHHK....", "....KHHHHHHHHHHHHHHK....", "....KHHHhHHHHHHhHHHK....", "....KHHHHHHHHHHHHHHK....", "....KhHHHHHHHHHHHHhK....", "....KShHHHHHHHHHHhSK....", ".....KhhHHHHHHHHhhK.....", "......KhhhHHHHhhhK......", ".......KKhhhhhhKK.......", ".........KssssK.........", ".....KKCCCCCCCCCCKK.....", "....KCCYCCCCCCCCYCCK....", "...KCCYCCCCCCCCCCYCCK...", "...KCYCCCCCCCCCCCCYCK...", "...KCYCCCCCCCCCCCCYCK...", "...KCCCCCCCCCCCCCCCCK...", "...KCCCCCCCCCCCCCCCCK...", "...KCCCCCCCCCCCCCCCCK...", "...KCDCCCCCCCCCCCCDCK...", "...KDCCCCCCCCCCCCCCDK...", "...KDDCCCCCDDCCCCCDDK...", "...KKDDDDDDDDDDDDDDKK...", "...KSSKKKKKKKKKKKKSSK...", "...KsSKTTTTTTTTTTKSsK...", "....KKKTTTTTTTTTTKKK....", ".....KTTTTTTTTTTTTK.....", ".....KtttttKKtttttK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPPK..KPPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KPPPpK..KpPPPK.....", ".....KpPPpK..KpPPpK.....", ".....KFFFFK..KFFFFK.....", ".....KFFFFK..KFFFFK.....", "....KFFFFFK..KFFFFFK....", "....KKKKKKK..KKKKKKK...."], ["........................", "........KKKKKKK.........", "......KKHHHHHHHK........", ".....KHHHHHHHHHHK.......", ".....KHHHHHHhHHHHK......", "....KHHHHHHHHHHhHK......", "....KSSHHHHHHHHHHK......", "...KSSSSHHHHHHHHhK......", "...KSESSSSsHHHHHHK......", "..KSSESSSSSSHHHHHK......", "..KSSSSSSSsSHHHHK.......", "...KSSSSSSsHHHhK........", "...KsSSSSSKHHHK.........", "....KsSSSsK.KK..........", ".....KKssK..............", "......KssK..............", ".....KTCCCKK............", "....KTTCYCCCK...........", "....KTTCYCCCCK..........", "....KTTCYCCCCK..........", "....KTTCCCCCCDK.........", "....KTTCCCCCCDK.........", "....KTTCCCCCCDK.........", "....KTTCCCCCCDK.........", "....KTTCCCCCDDK.........", "....KTTCCCCCDDK.........", "....KTTKCCCDDDK.........", "....KBBKSKDDDDK.........", "....KTTKsKKKKK..........", "....KTTTKTTK............", "....KTTTTTTK............", "....KttttttK............", ".....KPPPPK.............", ".....KPPPPK.............", ".....KPPPPK.............", ".....KPPPPK.............", ".....KPPPPK.............", ".....KPPPPK.............", ".....KPPPpK.............", ".....KPPPpK.............", ".....KPPPpK.............", ".....KPPPpK.............", ".....KpPPpK.............", ".....KFFFFK.............", "....KFFFFFK.............", "...KFFFFFFK.............", "...KKKKKKKK............."], ["........................", ".........KKKKKKK........", "........KHHHHHHHKK......", ".......KHHHHHHHHHHK.....", "......KHHHHhHHHHHHK.....", "......KHhHHHHHHHHHHK....", "......KHHHHHHHHHHSSK....", "......KhHHHHHHHHSSSSK...", "......KHHHHHHsSSSSESK...", "......KHHHHHSSSSSSESSK..", ".......KHHHHSsSSSSSSSK..", "........KhHHHsSSSSSSK...", ".........KHHHKSSSSSsK...", "..........KK.KsSSSsK....", "..............KssKK.....", "..............KssK......", "............KKCCCTK.....", "...........KCCCYCTTK....", "..........KCCCCYCTTK....", "..........KCCCCYCTTK....", ".........KDCCCCCCTTK....", ".........KDCCCCCCTTK....", ".........KDCCCCCCTTK....", ".........KDCCCCCCTTK....", ".........KDDCCCCCTTK....", ".........KDDCCCCCTTK....", ".........KDDDCCCKTTK....", ".........KDDDDKSKBBK....", "..........KKKKKsKTTK....", "............KTTKTTTK....", "............KTTTTTTK....", "............KttttttK....", ".............KPPPPK.....", ".............KPPPPK.....", ".............KPPPPK.....", ".............KPPPPK.....", ".............KPPPPK.....", ".............KPPPPK.....", ".............KpPPPK.....", ".............KpPPPK.....", ".............KpPPPK.....", ".............KpPPPK.....", ".............KpPPpK.....", ".............KFFFFK.....", ".............KFFFFFK....", ".............KFFFFFFK...", ".............KKKKKKKK..."]], "face": ["....KKKKKKKKKKKK....", "...KHHHHHHHHHHHHK...", "..KHHHHHHHHHHHHHHK..", "..KHhHHHHHHHHHHhHK..", "..KHHHHHhHHhHHHHHK..", "..KHHHHSSSSSSHHHHK..", "..KHHSSSSSSSSSSHHK..", "..KHSSSSSSSSSSSSHK..", "..KHSSESSSSSSESSHK..", "..KHsSESSSSSSESsHK..", "..KhsSSSSSSSSSSshK..", "...KsSSSSssSSSSsK...", "....KssSSSSSSssK....", ".....KKssssssKK.....", ".......KssssK.......", "...KKCCCCTTCCCCKK...", "..KCCYCCTTTTCCYCCK..", ".KCCYCCCTTTTCCCYCCK."]};
+    const shade = (hex, f) => {
+      const n = parseInt(hex.slice(1), 16);
+      const ch = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f)));
+      return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');
+    };
+    const pal = (cloak, hair, skin) => ({
+      K: '#2A2320', H: hair, h: shade(hair, 0.76), S: skin, s: shade(skin, 0.86), E: '#1F2A44',
+      C: cloak, Y: shade(cloak, 1.3), D: shade(cloak, 0.75), T: '#D8C7A0', t: '#B9A57E',
+      B: '#6B4A2E', b: '#C9772A', P: '#3E4A63', p: '#2F3A50', F: '#5A3E2B'
+    });
+    const toPx = (rows, p) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: p[ch] || 'transparent' }); });
+      return out;
+    };
+    const hair = { dark: '#3B2A20', red: '#C46A3A', blond: '#E0C27A', black: '#1F1A16' };
+    const skin = { light: '#F2D0B0', medium: '#E8B892', tan: '#C98E68', deep: '#8C5A3C' };
+    const base = pal('#2F6B4F', hair.dark, skin.medium);
+    const palette = [
+      ['Инженер-программист', '#2F6B4F'], ['Атлет', '#B8651B'], ['Менеджер проектов', '#3E5C8A'],
+      ['Баскетболист', '#2E7D7A'], ['Промпт-инженер', '#4B3F72'], ['Своя профессия', '#8E8576']
+    ];
+    const looks = [
+      ['dark', 'medium', 'Тёмные волосы, средняя кожа'], ['red', 'light', 'Рыжие волосы, светлая кожа'],
+      ['blond', 'tan', 'Светлые волосы, смуглая кожа'], ['black', 'deep', 'Чёрные волосы, тёмная кожа']
+    ];
+    return {
+      big: toPx(DATA.dirs[0], base),
+      face: toPx(DATA.face, base),
+      dirs: ['Вниз', 'Вверх', 'Влево', 'Вправо'].map((label, i) => ({ label, cells: toPx(DATA.dirs[i], base) })),
+      cloaks: palette.map(([label, c]) => ({ label, cells: toPx(DATA.dirs[0], pal(c, hair.dark, skin.medium)) })),
+      looks: looks.map(([h, s, label]) => {
+        const p = pal('#2F6B4F', hair[h], skin[s]);
+        return { label, cells: toPx(DATA.dirs[0], p), face: toPx(DATA.face, p) };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

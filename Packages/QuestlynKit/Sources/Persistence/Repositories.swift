@@ -19,15 +19,35 @@ public struct GRDBStore: QuestlynStore {
         }
     }
 
-    public func createHero(_ hero: Hero, professions: [Profession]) async throws {
+    public func createHero(_ hero: Hero, professions: [Profession], grants: [ProgressGrant]) async throws {
         try await writer.write { db in
             try HeroRecord(hero).insert(db)
+            for profession in professions { try Self.write(profession, db) }
+            for grant in grants { try ProgressGrantRecord(grant).insert(db) }
+        }
+    }
+
+    public func save(_ hero: Hero) async throws {
+        try await writer.write { db in try HeroRecord(hero).save(db) }
+    }
+
+    public func applyProfessions(_ professions: [Profession]) async throws {
+        try await writer.write { db in
+            // Сначала отключаем все, чтобы уникальный индекс активных слотов не мешал перестановке.
+            try db.execute(sql: "UPDATE profession SET isActive = 0")
             for profession in professions {
-                try ProfessionRecord(profession).insert(db)
-                for (index, attribute) in profession.attributes.enumerated() {
-                    try ProfessionAttributeRecord(professionId: profession.id, position: index + 1, attribute: attribute.rawValue).insert(db)
-                }
+                try Self.write(profession, db)
+                try db.execute(sql: "UPDATE skill SET isActive = ? WHERE professionId = ?",
+                               arguments: [profession.isActive, profession.id.uuidString.lowercased()])
             }
+        }
+    }
+
+    private static func write(_ profession: Profession, _ db: Database) throws {
+        try ProfessionRecord(profession).save(db)
+        try ProfessionAttributeRecord.filter(Column("professionId") == profession.id.uuidString.lowercased()).deleteAll(db)
+        for (index, attribute) in profession.attributes.enumerated() {
+            try ProfessionAttributeRecord(professionId: profession.id, position: index + 1, attribute: attribute.rawValue).insert(db)
         }
     }
 
@@ -53,6 +73,14 @@ public struct GRDBStore: QuestlynStore {
 
     public func save(_ skill: Skill) async throws {
         try await writer.write { db in try SkillRecord(skill).save(db) }
+    }
+
+    public func masteries() async throws -> [SkillMastery] {
+        try await writer.read { db in try SkillMasteryRecord.order(Column("assessedAt")).fetchAll(db).map(\.domain) }
+    }
+
+    public func save(_ mastery: SkillMastery) async throws {
+        try await writer.write { db in try SkillMasteryRecord(mastery).insert(db) }
     }
 
     // MARK: Quest
@@ -218,7 +246,52 @@ public struct GRDBStore: QuestlynStore {
             try ProgressGrantRecord
                 .filter(Column("sourceType") == GrantSourceType.questCompletion.rawValue && Column("sourceId") == id)
                 .deleteAll(db)
+            // Квест, закрытый активностью: отмена убирает и эту активность — они записаны одним действием (02).
+            let linked = try String.fetchAll(db, sql: "SELECT id FROM activity WHERE questCompletionId = ? AND deletedAt IS NULL", arguments: [id])
+            for activityId in linked { try Self.deleteActivity(activityId, at: date, db) }
         }
+    }
+
+    // MARK: Activity
+
+    public func activities(from: LocalDate, through: LocalDate) async throws -> [Activity] {
+        try await writer.read { db in
+            try ActivityRecord
+                .filter(Column("deletedAt") == nil && Column("localDate") >= from.description && Column("localDate") <= through.description)
+                .order(Column("startedAt"))
+                .fetchAll(db).compactMap(\.domain)
+        }
+    }
+
+    public func record(_ activity: Activity, grants: [ProgressGrant]) async throws {
+        try await writer.write { db in
+            try ActivityRecord(activity).insert(db)
+            for grant in grants { try ProgressGrantRecord(grant).insert(db) }
+        }
+    }
+
+    public func record(_ completion: QuestCompletion, questGrants: [ProgressGrant], activity: Activity, activityGrants: [ProgressGrant]) async throws {
+        do {
+            try await writer.write { db in
+                try QuestCompletionRecord(completion).insert(db)
+                for grant in questGrants { try ProgressGrantRecord(grant).insert(db) }
+                try ActivityRecord(activity).insert(db)
+                for grant in activityGrants { try ProgressGrantRecord(grant).insert(db) }
+            }
+        } catch let error as DatabaseError where error.resultCode == .SQLITE_CONSTRAINT {
+            throw QuestlynError.alreadyCompleted
+        }
+    }
+
+    public func deleteActivity(id: UUID, at date: Date) async throws {
+        try await writer.write { db in try Self.deleteActivity(id.uuidString.lowercased(), at: date, db) }
+    }
+
+    private static func deleteActivity(_ key: String, at date: Date, _ db: Database) throws {
+        guard var record = try ActivityRecord.fetchOne(db, key: key), record.deletedAt == nil else { throw QuestlynError.notCompleted }
+        record.deletedAt = date
+        try record.update(db)
+        try ProgressGrantRecord.filter(Column("sourceType") == GrantSourceType.activity.rawValue && Column("sourceId") == key).deleteAll(db)
     }
 
     // MARK: Reset

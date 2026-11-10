@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Финальный герой — варианты</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 40px 48px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 32px; font-weight: 700;">Финальный пиксельный герой — выберите вариант</h1>
+    <p style="margin: 0; font-size: 15px; color: #4A5368; max-width: 980px; line-height: 1.45;">Волосы и кожа — выбор игрока, плащ — по основной профессии. Состояния «Ранен» и «Истощён» (этап 4) и анимацию шага на карте (этап 6) дорисую для выбранного варианта.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+    <sc-for list="{{variants}}" as="v" hint-placeholder-count="3">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <div style="font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700;">{{v.name}}</div>
+          <div style="font-size: 13px; color: #4A5368;">{{v.size}}</div>
+        </div>
+        <div style="height: 210px; border-radius: 14px; background: #E7DCC4; position: relative; overflow: hidden;">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #B9AA86; border-top: 6px solid #8E7F5C;" aria-hidden="true"></div>
+          <div style="position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: grid; grid-template-columns: repeat({{v.cols}}, {{v.px}}px); grid-auto-rows: {{v.px}}px;" role="img" aria-label="{{v.alt}}">
+            <sc-for list="{{v.big}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+          </div>
+        </div>
+        <div style="font-size: 14px; line-height: 1.45;">{{v.desc}}</div>
+
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Плащ по профессии</div>
+        <div style="display: flex; gap: 8px; justify-content: space-between;">
+          <sc-for list="{{v.cloaks}}" as="m" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; width: 52px;">
+              <div style="height: 84px; display: flex; align-items: flex-end;">
+                <div style="display: grid; grid-template-columns: repeat({{v.cols}}, {{v.mini}}px); grid-auto-rows: {{v.mini}}px;" role="img" aria-label="{{m.label}}">
+                  <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+                </div>
+              </div>
+              <div style="font-size: 10px; color: #4A5368; text-align: center; line-height: 1.2;">{{m.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Волосы и кожа</div>
+        <div style="display: flex; gap: 8px;">
+          <sc-for list="{{v.looks}}" as="m" hint-placeholder-count="4">
+            <div style="height: 84px; width: 52px; display: flex; align-items: flex-end; justify-content: center;">
+              <div style="display: grid; grid-template-columns: repeat({{v.cols}}, {{v.mini}}px); grid-auto-rows: {{v.mini}}px;" role="img" aria-label="{{m.label}}">
+                <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; gap: 16px; align-items: center; padding: 12px 16px; border-radius: 14px; background: #F1E3D3; color: #5C3410; font-size: 13px; line-height: 1.4;">
+    <b style="white-space: nowrap;">Палитра плащей — требует согласования:</b>
+    <sc-for list="{{palette}}" as="c" hint-placeholder-count="6">
+      <span style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;"><span style="width: 14px; height: 14px; border-radius: 4px; background: {{c.hex}};" aria-hidden="true"></span>{{c.label}}</span>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const shade = (hex, f) => {
+      const n = parseInt(hex.slice(1), 16);
+      const ch = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f)));
+      return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');
+    };
+    const pal = (cloak, hair = '#3B2A20', skin = '#E8B892') => ({
+      H: hair, S: skin, E: '#1F2A44', C: cloak, D: shade(cloak, 0.78), A: '#C9772A', B: '#7A4A22', P: '#3E4A63', K: '#2A2320'
+    });
+    const toPx = (rows, p) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: p[ch] || 'transparent' }); });
+      return out;
+    };
+    const A = ['....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..','..SSESSESS..','..SSSSSSSS..','...SSSSSS...','..AAAAAAAA..','.CCCAAAACCC.','.CCCCCCCCCC.','.SCCCBBCCCS.','..CDCBBCDC..','..PPPPPPPP..','..PPP..PPP..','..PPP..PPP..','.KKKK..KKKK.'];
+    const B = ['.....HHHHHH.....','....HHHHHHHH....','...HHHHHHHHHH...','...HHSSSSSSHH...','...HSSSSSSSSH...','...SSESSSSESS...','...SSSSSSSSSS...','....SSSSSSSS....','.....SSSSSS.....','...AAAAAAAAAA...','..DCCCAAAACCCD..','.DCCCCCCCCCCCCD.','.DCSCCCBBCCCSCD.','.DCSCCCBBCCCSCD.','.DD.CCCCCCCC.DD.','....PPPPPPPP....','....PPP..PPP....','....PPP..PPP....','....PPP..PPP....','...KKKK..KKKK...'];
+    const C = ['...HHHHHH...','..HHHHHHHH..','.HHHHHHHHHH.','.HHSSSSSSHH.','.HSSSSSSSSH.','.SSESSSSESS.','.SSSSSSSSSS.','..SSSSSSSS..','..AAAAAAAA..','.CCCCBBCCCC.','.SCCCBBCCCS.','..CCCCCCCC..','..PPP..PPP..','.KKKK..KKKK.'];
+    const palette = [
+      { label: 'Инженер-программист', hex: '#2F6B4F' },
+      { label: 'Атлет', hex: '#B8651B' },
+      { label: 'Менеджер проектов', hex: '#3E5C8A' },
+      { label: 'Баскетболист', hex: '#2E7D7A' },
+      { label: 'Промпт-инженер', hex: '#4B3F72' },
+      { label: 'Своя профессия', hex: '#8E8576' }
+    ];
+    const looks = [
+      ['#3B2A20', '#E8B892', 'Тёмные волосы, средняя кожа'],
+      ['#C46A3A', '#F2D0B0', 'Рыжие волосы, светлая кожа'],
+      ['#E0C27A', '#C98E68', 'Светлые волосы, смуглая кожа'],
+      ['#1F1A16', '#8C5A3C', 'Чёрные волосы, тёмная кожа']
+    ];
+    const variant = (name, size, rows, px, mini, desc) => ({
+      name, size, desc, px, mini, cols: rows[0].length,
+      alt: name + ': герой в зелёном плаще',
+      big: toPx(rows, pal('#2F6B4F')),
+      cloaks: palette.map((c) => ({ label: c.label, cells: toPx(rows, pal(c.hex)) })),
+      looks: looks.map(([h, s, label]) => ({ label, cells: toPx(rows, pal('#2F6B4F', h, s)) }))
+    });
+    return {
+      palette,
+      variants: [
+        variant('A · Классика', '12 × 16', A, 10, 4, 'Пропорции текущих макетов, руки по бокам, пояс-кушак. Самый узнаваемый силуэт в 24 pt на карте, дешевле всего дорисовать состояния.'),
+        variant('B · Путник', '16 × 20', B, 8, 3, 'Длинный плащ за спиной, больше деталей лица и пояса. Лучше смотрится на «Герое» и в онбординге, на миниатюре карты деталь теряется.'),
+        variant('C · Чиби', '12 × 14', C, 11, 4, 'Крупная голова, короткое тело — дружелюбнее и «игровее». Эмоции и статусы читаются по лицу, но меньше места для плаща профессии.')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

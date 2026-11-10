@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Шаг класса: образ героя</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="OnbAttrs.dc.html" aria-label="Назад" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1F2A44;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <div style="display: flex; gap: 6px;" aria-label="Шаг 4 из 4">
+      <div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div>
+    </div>
+    <div style="width: 44px; font-size: 13px; color: #4A5368; text-align: right;">4 / 4</div>
+  </div>
+
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15;">Класс и образ</h1>
+
+  <label style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Название класса</span>
+    <input type="text" value="Инженер-атлет" style="height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid #C9BCA2; background: #FFFCF6; font: 600 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+  </label>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Образ героя</span>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{outfits}}" as="o" hint-placeholder-count="6">
+        <button type="button" aria-pressed="{{o.on}}" style="position: relative; height: 176px; padding: 8px 4px 6px; border-radius: 14px; border: {{o.border}}; background: #FFFCF6; color: #1F2A44; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; box-sizing: border-box;">
+          <span style="position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 10px; background: #1F2A44; color: #FFFCF6; font-size: 12px; display: {{o.mark}}; align-items: center; justify-content: center;" aria-hidden="true">✓</span>
+          <span style="display: grid; grid-template-columns: repeat(32, 2.5px); grid-auto-rows: 2.5px;" aria-hidden="true"><sc-for list="{{o.cells}}" as="p" hint-placeholder-count="1792"><span style="background: {{p.c}};"></span></sc-for></span>
+          <span style="font-size: 13px; font-weight: 600;">{{o.name}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+  <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Цвет одежды — по основной профессии. Образ, профессии и название класса можно сменить позже в настройках — прогресс сохранится.</div>
+
+  <a href="TodayV2.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Начать приключение</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const G = {"mage": ["..............KKKK..............", ".............KCCCCK.............", ".............KCYYCK.............", "............KCCYYCCK............", "............KCCCCCCK............", "...........KCCCCCCCCK...........", "...........KCYCCCCYCK...........", "..........KCCCCCCCCCCK..........", "..........KCCCCCCCCCCK..........", "........KGGGGGGGGGGGGGGK........", "......KKDDDDDDDDDDDDDDDDKK......", "....KKKDDDDDDDDDDDDDDDDDDK......", "...KQQqKKKKKKKKKKKKKKKKKK.......", "...KQqqKKHHHHHhHHhHHHHHK........", "....KKK.KHHHHSSSSSSHHHHK........", "....KwK.KHHSSSSSSSSSSHHK........", "....KwK.KHSSSSSSSSSSSSHK........", "....KwK.KHSSESSSSSSESSHK........", "....KwK.KHsSESSSSSSESsHK........", "....KwK.KhsSSSSSSSSSSshK........", "....KwK..KsSSSSssSSSSsK.........", "....KwK...KssSSSSSSssK..........", "....KwK....KKssssssKK...........", "....KwK......KssssK.............", "....KwK..KKCCCCGGCCCCKK.........", "....KwKKKCCYCCCGGCCCYCCKK.......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKCCCCCGGCCCCCKCCK......", "....KwKCDKCCCCCGGCCCCCKDCK......", "....KwKCDKCCCCCGGCCCCCKDCK......", "....KwKDDKCCCCCGGCCCCCKDDK......", "....KwKDDDKCCCCGGCCCCKDDDK......", "....KwKKKKKBBBBbbBBBBKKKKK......", "....KwKSSKCCCCCGGCCCCCKSSK......", "....KwKsSKCCCCCGGCCCCCKSsK......", "....KwKKKKCCCCCGGCCCCCKKK.......", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKDCCCCCCGGCCCCCCDK.......", "....KwKKDCCCCCCGGCCCCCCDK.......", "....KwKDCCCCCCCGGCCCCCCCDK......", "....KwKDDCCCCCCGGCCCCCCDDK......", "....KwKDDCCCCCCGGCCCCCCDDK......", "....KwKDDDCCCCCGGCCCCCDDDK......", "....KwKGGGGGGGGGGGGGGGGGGK......", "....KwKKKKKKKKKKKKKKKKKKKK......", "....KwK.KFFFFFK..KFFFFFK........", "....KwK.KFFFFFK..KFFFFFK........", "....KKK.KKKKKKK..KKKKKKK........"], "warrior": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KhsSSSSSSSSSSshK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", ".........KKMMMMMMMMMMKK.........", "......KKMMKKMMMMMMMMKKMMKK......", ".....KMWMMMKMMCCCCMMKMMMWMK.....", ".....KMMMMMKMMCCCCMMKMMMMMK.....", "......KmmmKMMMCCCCMMMKmmmK......", ".......KmmKMWMCCCCMWMKmmK.......", ".......KmmKMMMCCCCMMMKKKKKK.....", ".......KmmKMMMCCCCMMMKMMMMMK....", ".......KmmKmMMCCCCMMKMCCCCCMK...", ".......KmmKmMMCCCCMMKMCCGCCMK...", ".......KmmKmmMCCCCMmKMCGGGCMK...", ".......KKKKBBBBbbBBBKMCCGCCMK...", ".......KSSKmmmCCCCmmKMCCCCCMK...", ".......KsSKmmmCCCCmmmKMCCCMK....", "......KGGGGKmmCCCCmmmKKMCMK.....", ".......KWMKmmmCCCCmmmmKKMK......", ".......KWMKmmmCCCCmmmmK.K.......", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPpK..KpPPPK.........", ".......KWMKPPpK..KpPPPK.........", ".......KWMKPPpK..KpPPPK.........", "........KKPPPpK..KpPPPK.........", ".........KpPPpK..KpPPpK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "archer": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KOOOOOOOOOOOOK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOoOOOOOOOOOOoOOK.......", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKKKKKKKKKKKKOOK.......", ".......KOKHHHSSSSSSHHHKOK.......", ".......KOKHSSSSSSSSSSHKOK.......", ".......KOKSSESSSSSSESSKOK.......", ".......KOKsSESSSSSSESsKOK.......", ".......KOKsSSSSSSSSSSsKOK.......", ".......KOOKsSSSssSSSsKOOK.......", "....K.KKoOOKsSSSSSSsKOOoKKKK....", "....RKRKKooOOKKssKKOOooK.LwwK...", "....RRRK.KooOOOOOOOOooK..L.KwK..", "........KOOOOOOOOOOOOOOK.L..KwK.", ".......KOOOOOOOOOOOOOOOOKL..KwK.", ".......KOoOOOOOOOOOOOOoOKL..KwK.", ".......KTTKVVVVTTVVVVKTTKL..KwK.", ".......KTTKVVVVTTVVVVKTTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKvVVVTTVVVvKtTKL..KwK.", ".......KTtKvVVVTTVVVvKtTKL..KwK.", ".......KTtKvvVVTTVVvvKtTKL..KwK.", ".......KKKKBBBBbbBBBBKKKKL..KwK.", ".......KSSKVVVVVVVVVVKSSKL..KwK.", ".......KsSKVVVVVVVVVVKSsKL..KwK.", "........KKKvVVVVVVVVvKKK.L..KwK.", ".........KvvVVVVVVVVvvK..L..KwK.", ".........KvvvvvKKvvvvvK..L..KwK.", ".........KPPPPK..KPPPPK..L.KwK..", ".........KPPPPK..KPPPPK..LwwK...", ".........KPPPPK..KPPPPK..KKK....", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "assassin": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KOOOOOOOOOOOOK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOoOOOOOOOOOOoOOK.......", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKKKKKKKKKKKKOOK.......", ".......KOKHHHSSSSSSHHHKOK.......", ".......KOKHSSSSSSSSSSHKOK.......", ".......KOKSSESSSSSSESSKOK.......", ".......KOKsSESSSSSSESsKOK.......", ".......KOKNNNNNNNNNNNNKOK.......", ".......KOOKNNNNNNNNNNKOOK.......", ".......KoOOKNNNNNNNNKOOoK.......", "........KooOOKNNNNKOOooK........", ".........KooOOOOOOOOooK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKOOOOOOOOOOKOOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKooOOOOOOooKoOK.......", ".......KKKKCCCCCCCCCCKKKK.......", ".......KSSKOOOOOOOKCKKSSK.......", ".......KsSKOOOOOOOKCKKSsK.......", ".......KGKKoOOOOOOKDKKKGK.......", ".......KWKooOOOOOOOKooKWK.......", ".......KWKooooOKKOooooKWK.......", ".......KWKPPPPK..KPPPPKWK.......", ".......KWKPPPPK..KPPPPKWK.......", "........KKPPPPK..KPPPPKK........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KpPPpK..KpPPpK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "baller": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KWWWWWWWWWWWWWWK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KhsSSSSSSSSSSshK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", "........KKCCCWssssWCCCKK........", ".......KSSKCCCCCCCCCCKSSK.......", ".......KSSKCCCCCCCCCCKSSK.......", ".......KSsKCCCCCCCCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSKKKK....", ".......KSsKCCCWCCWCCCKsKZZKZK...", ".......KSsKCCCCCCCCCCKKZZZKZZK..", ".......KSsKDCCCCCCCCDKKKKKKKKK..", ".......KSSKWWWWWWWWWWKKZZKZZZK..", ".......KsSKCCCCCCCCCCKKZZKZZZK..", "........KKKCCCCCCCCCCKKKZZKZK...", "........KWCCCCCCCCCCCCWKKKKK....", "........KWCCCCCKKCCCCCWK........", "........KWCCCCK..KCCCCWK........", "........KKKKKKK..KKKKKKK........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSsK..KsSSSK.........", ".........KSSSsK..KsSSSK.........", ".........KWWWWK..KWWWWK.........", ".........KWWWWK..KWWWWK.........", ".........KWWWWK..KWWWWK.........", ".........KXXXXK..KXXXXK.........", ".........KXXXXK..KXXXXK.........", "........KXXXXXK..KXXXXXK........", "........KKKKKKK..KKKKKKK........"], "coder": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHggggSSSSggggHK........", "........KHgzEggggggEzgHK........", "........KHgzEgSSSSgEzgHK........", "........KhggggSSSSgggghK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", "........KKCCCCKssKCCCCKK........", ".......KCCKDCCKKKKCCDKCCK.......", ".......KCCKCCCWCCWCCCKCCK.......", ".......KCDKCCCWCCWCCCKDCK.......", ".......KCDKCCCWCCWCCCKDCK.......", ".......KKKKKKKKKKKKKKKKKK.......", ".......KLLLLLLLLLLLLLLLLK.......", "......KSSLLLLLLLzzLLLLLSSK......", "......KsSLLLLLLLzzLLLLLSsK......", ".......KKllllllllllllllKK.......", ".......KKKKKKKKKKKKKKKKKK.......", ".......KDDKDDDDDDDDDDKDDK.......", ".......KKKKJJJJJJJJJJKKKK.......", "........KKKJJJJJJJJJJKKK........", "........KKKJJJJJJJJJJKKK........", ".........KJJJJJJJJJJJJK.........", ".........KjjjjjKKjjjjjK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KjJJjK..KjJJjK.........", ".........KXXXXK..KXXXXK.........", ".........KXXXXK..KXXXXK.........", "........KXXXXXK..KXXXXXK........", "........KKKKKKK..KKKKKKK........"]};
+    const shade = (hex, f) => {
+      const n = parseInt(hex.slice(1), 16);
+      const ch = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f)));
+      return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');
+    };
+    const pal = (name, cloak) => {
+      const p = { K: '#2A2320', H: '#3B2A20', h: shade('#3B2A20', 0.76), S: '#E8B892', s: shade('#E8B892', 0.86), E: '#1F2A44',
+        C: cloak, Y: shade(cloak, 1.3), D: shade(cloak, 0.75), T: '#D8C7A0', t: '#B9A57E', B: '#6B4A2E', b: '#C9772A',
+        P: '#3E4A63', p: '#2F3A50', F: '#5A3E2B', G: '#D9A441', W: '#F4EFE4', M: '#A9B1BC', m: '#7C8592',
+        Q: '#9FE3F0', g: '#6B5A4A', q: '#3FA7C4', w: '#8A5A34', V: '#8A5A3A', v: '#6E4529', L: '#E8E0CC', R: '#B5473A',
+        Z: '#D9772B', X: '#ECE6DA', J: '#4C6A8C', j: '#3B5573', z: '#E8EEF2', N: '#2B2B35', O: cloak, o: shade(cloak, 0.75) };
+      if (name === 'archer') Object.assign(p, { P: '#5B5240', p: '#47402F' });
+      if (name === 'assassin') Object.assign(p, { O: '#3A3A46', o: '#2C2C36', P: '#33333F', p: '#26262F', F: '#24242C' });
+      if (name === 'coder') Object.assign(p, { L: '#A8B0BA', l: '#8A929C' });
+      return p;
+    };
+    const toPx = (rows, p) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: p[ch] || 'transparent' }); });
+      return out;
+    };
+    const outfits = [
+      ['mage', 'Маг', 'Мантия, шляпа и посох с кристаллом.'],
+      ['warrior', 'Воин', 'Латы, щит с гербом и меч.'],
+      ['archer', 'Лучник', 'Капюшон, кожаный жилет и лук.'],
+      ['assassin', 'Ассасин', 'Тёмный капюшон, маска и два кинжала.'],
+      ['baller', 'Баскетболист', 'Майка с номером, шорты и мяч.'],
+      ['coder', 'Программист', 'Худи, очки и ноутбук.']
+    ];
+    const palette = [
+      ['Инженер-программист', '#2F6B4F'], ['Атлет', '#B8651B'], ['Менеджер проектов', '#3E5C8A'],
+      ['Баскетболист', '#2E7D7A'], ['Промпт-инженер', '#4B3F72'], ['Своя профессия', '#8E8576']
+    ];
+    const base = '#2F6B4F';
+    return {
+      outfits: outfits.map(([id, name, desc], i) => ({ name, desc, cells: toPx(G[id], pal(id, base)),
+        border: i === 5 ? '2px solid #1F2A44' : '1px solid #E3D9C6', on: i === 5 ? 'true' : 'false',
+        mark: i === 5 ? 'flex' : 'none' })),
+      tints: palette.map(([label, c]) => ({ label, mage: toPx(G.mage, pal('mage', c)), coder: toPx(G.coder, pal('coder', c)) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

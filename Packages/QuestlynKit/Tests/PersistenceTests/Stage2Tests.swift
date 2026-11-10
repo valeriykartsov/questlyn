@@ -46,6 +46,7 @@ struct Stage2Tests {
         }
         try await marks.unmark(habitId: habit.id, on: day("2026-11-11"), now: now, timeZone: utc)
         #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.count == 4)
+        #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.allSatisfy { $0.effectiveDate == day("2026-11-10") })
     }
 
     @Test func weeklyAllowsSeveralMarksAndCountsInStatus() async throws {
@@ -57,7 +58,7 @@ struct Stage2Tests {
         let status = try #require(overview.habits.first)
         #expect(status.weekDone == 4 && status.weekPlanned == 3)
         // Без навыка начислений нет.
-        #expect(try await store.allGrants().isEmpty)
+        #expect(try await earned(store).isEmpty)
     }
 
     /// Пишем историю отметок напрямую: через сервис можно отмечать только сегодня и вчера.
@@ -124,7 +125,7 @@ struct Stage2Tests {
         try await EpicService(store: store).complete(epicId: epic.id, now: now)
         #expect(try await store.epic(id: epic.id)?.isCompleted == true)
         // Шаги дали только FOC, сам Epic — ничего.
-        #expect(HeroProgress(grants: try await store.allGrants(), classAttributes: []).xp(.focus) == .xp(10))
+        #expect(HeroProgress(grants: try await earned(store), classAttributes: []).xp(.focus) == .xp(10))
     }
 
     @Test func completedQuestKeepsPriorityAndSkill() async throws {
@@ -147,6 +148,37 @@ struct Stage2Tests {
 
 /// Данные этапа 1 переживают миграцию v2.
 struct MigrationUpgradeTests {
+    @Test func v3BackfillsGrantDates() throws {
+        let queue = try DatabaseQueue()
+        try Migrations.migrator.migrate(queue, upTo: Migrations.habitsAndEpics)
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO hero (id, name, classTitle, createdAt) VALUES ('h', 'Г', 'К', '2026-11-01 10:00:00.000')")
+            try db.execute(sql: "INSERT INTO quest (id, title, timezoneId, createdAt) VALUES ('q', 'К', 'UTC', '2026-11-01')")
+            try db.execute(sql: "INSERT INTO questCompletion (id, questId, completedAt, localDate, timezoneId, classSnapshot) VALUES ('c', 'q', '2026-11-03 23:30:00.000', '2026-11-04', 'Europe/Moscow', '{}')")
+            try db.execute(sql: """
+                INSERT INTO progressGrant (id, sourceType, sourceId, ruleVersion, targetKind, attribute, targetKey, amountCenti, reason, createdAt) VALUES
+                ('g1', 'questCompletion', 'c', '1.1', 'attribute', 'FOC', 'attribute:FOC', 500, '', '2026-11-03 23:30:00.000'),
+                ('g2', 'weeklyDiscipline', 'd15c0000-0000-4000-8000-000020261102', '1.1', 'attribute', 'DIS', 'attribute:DIS', 3000, '', '2026-11-09 08:00:00.000')
+                """)
+        }
+        try Migrations.migrator.migrate(queue)
+        let dates = try queue.read { db in try Row.fetchAll(db, sql: "SELECT id, localDate FROM progressGrant ORDER BY id") }
+        #expect(dates.map { $0["localDate"] as String? } == ["2026-11-04", "2026-11-09"])
+        let hero = try queue.read { db in try Row.fetchOne(db, sql: "SELECT hair, skin FROM hero") }
+        #expect(hero?["hair"] == "dark" && hero?["skin"] == "medium")
+    }
+
+    @Test func v5GivesExistingHeroDefaultOutfit() throws {
+        let queue = try DatabaseQueue()
+        try Migrations.migrator.migrate(queue, upTo: Migrations.activities)
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO hero (id, name, classTitle, hair, skin, createdAt) VALUES ('h', 'Г', 'К', 'red', 'tan', '2026-11-01 10:00:00.000')")
+        }
+        try Migrations.migrator.migrate(queue)
+        let row = try queue.read { db in try Row.fetchOne(db, sql: "SELECT hair, skin, outfit FROM hero") }
+        #expect(row?["outfit"] == "coder" && row?["hair"] == "red" && row?["skin"] == "tan")
+    }
+
     @Test func v1DataSurvivesV2() throws {
         let queue = try DatabaseQueue()
         try Migrations.migrator.migrate(queue, upTo: Migrations.initial)

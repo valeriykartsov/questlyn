@@ -9,7 +9,7 @@ struct AddFlowView: View {
     @Environment(\.dismiss) private var dismiss
 
     enum Kind: Hashable, CaseIterable {
-        case quest, daily, weekly, epic
+        case quest, daily, weekly, epic, activity
 
         var title: String {
             switch self {
@@ -17,6 +17,7 @@ struct AddFlowView: View {
             case .daily: "Ежедневный квест"
             case .weekly: "Недельный квест"
             case .epic: "Epic Quest"
+            case .activity: "Активность"
             }
         }
 
@@ -26,6 +27,7 @@ struct AddFlowView: View {
             case .daily: "Повторяется по дням · растит дисциплину"
             case .weekly: "N раз за неделю · итог в воскресенье"
             case .epic: "Большая цель из шагов · веха"
+            case .activity: "Сколько времени практиковали · 10 XP в час"
             }
         }
 
@@ -35,6 +37,7 @@ struct AddFlowView: View {
             case .daily: "sunrise"
             case .weekly: "calendar"
             case .epic: "flag"
+            case .activity: "timer"
             }
         }
     }
@@ -71,6 +74,7 @@ struct AddFlowView: View {
                 case .daily: HabitFormView(model: model, kind: .daily, onDone: { dismiss() })
                 case .weekly: HabitFormView(model: model, kind: .weekly, onDone: { dismiss() })
                 case .epic: EpicFormView(model: model, onDone: { dismiss() })
+                case .activity: ActivityFormView(model: model, onDone: { dismiss() })
                 }
             }
         }
