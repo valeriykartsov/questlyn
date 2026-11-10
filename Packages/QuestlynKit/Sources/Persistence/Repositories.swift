@@ -345,6 +345,28 @@ public struct GRDBStore: QuestlynStore {
         try await writer.write { db in try SettingRecord(key: Self.settingsKey, value: json).save(db) }
     }
 
+    // MARK: Chronicle
+
+    public func chronicleEntries() async throws -> [ChronicleEntry] {
+        try await writer.read { db in try ChronicleEntryRecord.order(Column("occurredAt")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func save(_ entries: [ChronicleEntry]) async throws {
+        try await writer.write { db in for entry in entries { try ChronicleEntryRecord(entry).save(db) } }
+    }
+
+    public func allCompletions() async throws -> [QuestCompletion] {
+        try await writer.read { db in try QuestCompletionRecord.order(Column("completedAt")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func allOccurrences() async throws -> [HabitOccurrence] {
+        try await writer.read { db in try HabitOccurrenceRecord.order(Column("completedAt")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func allActivities() async throws -> [Activity] {
+        try await writer.read { db in try ActivityRecord.order(Column("startedAt")).fetchAll(db).compactMap(\.domain) }
+    }
+
     // MARK: Reset
 
     public func eraseAll() async throws {

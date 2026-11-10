@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// Журнал квестов (макет Journal): фильтры, секции, поиск.
+/// Журнал (макеты Journal и Chronicle): «Квесты · Летопись»; у квестов — фильтры, секции, поиск.
 struct JournalView: View {
     let model: AppModel
 
@@ -11,6 +11,15 @@ struct JournalView: View {
         var id: String { rawValue }
     }
 
+    enum Mode: String, CaseIterable { case quests = "Квесты", chronicle = "Летопись" }
+
+    /// В отладке режим задаётся аргументом `-QuestlynJournal Летопись` — для проверки в симуляторе.
+    @State private var mode: Mode = {
+        #if DEBUG
+        if let value = UserDefaults.standard.string(forKey: "QuestlynJournal"), let mode = Mode(rawValue: value) { return mode }
+        #endif
+        return .quests
+    }()
     @State private var filter: Filter = .all
     @State private var search = ""
     @State private var isAdding = false
@@ -52,22 +61,29 @@ struct JournalView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.m) {
                 header
-                if isSearching { searchField }
-                filterBar
-                if filter == .all || filter == .daily { dailySection }
-                if filter == .all || filter == .weekly { weeklySection }
-                if filter == .all || filter == .epic { epicSection }
-                if filter == .all || filter == .quests { questSection }
+                modePicker
+                if mode == .chronicle {
+                    ChronicleView(model: model)
+                } else {
+                    if isSearching { searchField }
+                    filterBar
+                    if filter == .all || filter == .daily { dailySection }
+                    if filter == .all || filter == .weekly { weeklySection }
+                    if filter == .all || filter == .epic { epicSection }
+                    if filter == .all || filter == .quests { questSection }
+                }
             }
             .padding(.horizontal, QSpacing.screen)
             .padding(.top, QSpacing.l)
             .padding(.bottom, 96)
         }
-        .scrollDismissesKeyboard(.interactively)
         .paperScreen()
-            .keyboardDismissal()
-        .overlay(alignment: .bottomTrailing) { AddButton { isAdding = true } }
-        .refreshable { await model.reload() }
+        .keyboardDismissal()
+        .overlay(alignment: .bottomTrailing) { if mode == .quests { AddButton { isAdding = true } } }
+        .refreshable {
+            await model.reload()
+            if mode == .chronicle { await model.loadChronicle() }
+        }
         .sheet(isPresented: $isAdding) { AddFlowView(model: model) }
         .sheet(item: $openedQuest) { QuestDetailView(model: model, questId: $0.id) { report = $0 } }
         .sheet(item: Binding(get: { openedHabit.map(IdentifiedID.init) }, set: { openedHabit = $0?.id })) {
@@ -81,11 +97,44 @@ struct JournalView: View {
 
     // MARK: Шапка
 
-    /// Literata 30 и круглые кнопки 44 pt. Кнопка «Летопись» появится на этапе 5.
+    /// Literata 30 и круглые кнопки 44 pt. Поиск — только у квестов.
     private var header: some View {
         HStack(alignment: .bottom) {
-            Text("Журнал квестов").font(QFont.title(30))
+            Text(mode == .quests ? "Журнал квестов" : "Летопись героя").font(QFont.title(30))
             Spacer()
+            if mode == .quests { searchButton }
+        }
+    }
+
+    /// Переключатель «Квесты · Летопись» (макет Chronicle).
+    private var modePicker: some View {
+        HStack(spacing: 0) {
+            ForEach(Mode.allCases, id: \.self) { item in
+                let isOn = mode == item
+                Button {
+                    withAnimation(.snappy) {
+                        mode = item
+                        isSearching = false
+                        search = ""
+                    }
+                } label: {
+                    Text(item.rawValue)
+                        .font(QFont.text(14, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .foregroundStyle(isOn ? QColor.sheet : QColor.ink)
+                        .background(isOn ? QColor.ink : Color.clear, in: RoundedRectangle(cornerRadius: QRadius.small))
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+        .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.line))
+    }
+
+    private var searchButton: some View {
+        Group {
             Button {
                 withAnimation {
                     isSearching.toggle()

@@ -8,6 +8,7 @@ enum Migrations {
     static let activities = "v4_activities"
     static let heroOutfit = "v5_heroOutfit"
     static let vitals = "v6_vitals"
+    static let chronicle = "v7_chronicle"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -222,6 +223,22 @@ enum Migrations {
             try db.create(table: "setting") { t in
                 t.primaryKey("key", .text)
                 t.column("value", .text).notNull()
+            }
+        }
+
+        // Этап 5: вехи Летописи — единственное, что Летопись хранит сама.
+        migrator.registerMigration(chronicle) { db in
+            try db.create(table: "chronicleEntry") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("key", .text).notNull().indexed()
+                t.column("title", .text).notNull()
+                t.column("occurredAt", .datetime).notNull()
+                t.column("localDate", .text).notNull().indexed()
+                t.column("ruleVersion", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+                t.column("cancelledAt", .datetime)
+                t.column("recalculatedBy", .text)
             }
         }
 

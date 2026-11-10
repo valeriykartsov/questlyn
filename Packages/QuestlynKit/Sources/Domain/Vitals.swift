@@ -203,6 +203,17 @@ public struct NightSummary: Hashable, Sendable {
     public var isAssumed: Bool { session == nil }
 }
 
+/// Запись о здоровье для Летописи: ночь или сидячий день.
+public struct VitalsLogEntry: Hashable, Sendable {
+    public enum Kind: Hashable, Sendable {
+        case night(NightSummary)
+        case sedentary(date: LocalDate, steps: Int, goal: Int, damage: Double)
+    }
+
+    public var at: Date
+    public var kind: Kind
+}
+
 public struct VitalsState: Hashable, Sendable {
     public var hp: Double
     public var maxHP: Double
@@ -210,6 +221,17 @@ public struct VitalsState: Hashable, Sendable {
     public var maxMP: Double
     /// Последняя посчитанная ночь (сегодняшнее пробуждение), если она уже наступила.
     public var lastNight: NightSummary?
+    /// Ночи и сидячие дни по порядку — для Летописи.
+    public var log: [VitalsLogEntry] = []
+
+    public init(hp: Double, maxHP: Double, mp: Double, maxMP: Double, lastNight: NightSummary? = nil, log: [VitalsLogEntry] = []) {
+        self.hp = hp
+        self.maxHP = maxHP
+        self.mp = mp
+        self.maxMP = maxMP
+        self.lastNight = lastNight
+        self.log = log
+    }
 
     public static let woundedShare = 0.3
 
@@ -284,6 +306,7 @@ public enum VitalsCalculator {
         let startLevels = levels(on: firstDay)
         var hp = maxHP(levels: startLevels), mp = maxMP(levels: startLevels)
         var lastNight: NightSummary?
+        var log: [VitalsLogEntry] = []
         for (at, event) in events {
             let current = levels(on: LocalDate(at, timeZone: timeZone))
             let topHP = maxHP(levels: current), topMP = maxMP(levels: current)
@@ -292,8 +315,10 @@ public enum VitalsCalculator {
             switch event {
             case let .spend(cost):
                 mp = max(0, mp - cost)
-            case .sedentary:
-                hp = max(0, hp - topHP * sedentaryDamageShare)
+            case let .sedentary(day):
+                let damage = min(hp, topHP * sedentaryDamageShare)
+                hp -= damage
+                log.append(VitalsLogEntry(at: at, kind: .sedentary(date: day, steps: stepsByDay[day] ?? 0, goal: settings.stepGoal, damage: damage)))
             case let .night(wakeDate, session):
                 let factors = session.map(SleepRules.quality)
                 let q = factors?.q ?? SleepRules.neutralQuality
@@ -304,12 +329,13 @@ public enum VitalsCalculator {
                 )
                 hp = summary.hpAfter
                 mp = summary.mpAfter
+                log.append(VitalsLogEntry(at: at, kind: .night(summary)))
                 if wakeDate == today { lastNight = summary }
             }
         }
         let todayLevels = levels(on: today)
         let topHP = maxHP(levels: todayLevels), topMP = maxMP(levels: todayLevels)
-        return VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight)
+        return VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight, log: log)
     }
 
     /// Момент «дата + локальное время» в часовом поясе пользователя.
