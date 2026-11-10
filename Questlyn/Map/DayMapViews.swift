@@ -111,77 +111,53 @@ struct DayStripCard: View {
     }
 }
 
-/// Большая карта (холст 8.8, макет 3.5): изометрия, листание дней, список «На карте» и «Вне карты».
+/// Большая карта — путь за неделю (02 от 11.11.2026): изометрия, привалы сна, ползунок по дороге, листание недель.
 struct MapOverviewView: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
-    @State private var date: LocalDate
+    @State private var weekStart: LocalDate
+    /// Час недели в точке ползунка (0…168).
+    @State private var position: Double = 0
+    @State private var rendered: WeekMapRenderer.Rendered?
+    @State private var week: WeekMap?
 
     init(model: AppModel) {
         self.model = model
-        _date = State(initialValue: model.today)
+        _weekStart = State(initialValue: model.today.weekStart)
     }
 
+    private var selectedDay: Int { min(6, max(0, Int(position / 24))) }
+    private var dayMap: DayMap? { week.map { $0.days[selectedDay] } }
+
     var body: some View {
-        let map = model.dayMap(for: date)
-        let rendered = PixelMapRenderer.isometric(map, appearance: model.hero?.appearance, accent: model.heroAccent)
         VStack(spacing: QSpacing.m) {
             header
             ScrollView {
                 VStack(alignment: .leading, spacing: QSpacing.l) {
-                    GeometryReader { proxy in
-                        let scale = proxy.size.width / CGFloat(PixelMapRenderer.isoSize.width)
-                        ZStack(alignment: .topLeading) {
-                            if let image = rendered.image {
-                                Image(decorative: image, scale: 1).resizable().interpolation(.none)
-                            }
-                            ForEach(Array(labelPositions(rendered.anchors, scale: scale).enumerated()), id: \.offset) { _, item in
-                                let anchor = item.anchor
-                                Text(anchor.title)
-                                    .font(QFont.text(10, weight: .semibold))
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .foregroundStyle(anchor.isCity ? QColor.sheet : QColor.ink)
-                                    .background(anchor.isCity ? QColor.ink : QColor.sheet, in: RoundedRectangle(cornerRadius: 7))
-                                    .fixedSize()
-                                    .position(x: min(max(CGFloat(anchor.x) * scale, 50), proxy.size.width - 50), y: item.y)
-                            }
-                            if let hero = rendered.hero, let hour = map.heroHour {
-                                let before = hour < rendered.window.lowerBound
-                                Text(hero.outside ? (before ? "← Вы · \(MapText.time(hour)) · дела впереди" : "Вы · \(MapText.time(hour)) · дела позади →") : "Вы · \(MapText.time(hour))")
-                                    .font(QFont.text(10, weight: .bold))
-                                    .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
-                                    .fixedSize()
-                                    .position(x: min(max(CGFloat(hero.x) * scale, 70), proxy.size.width - 70),
-                                              y: CGFloat(hero.y) * scale + 14)
-                            }
-                            Text("\(MapText.season(map)) · \(MapText.weather(map, lastMood: map.date == model.today ? model.lastMood : nil))")
-                                .font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(QColor.sheet.opacity(0.92), in: RoundedRectangle(cornerRadius: 8))
-                                .padding(8)
-                        }
-                    }
-                    .aspectRatio(CGFloat(PixelMapRenderer.isoSize.width) / CGFloat(PixelMapRenderer.isoSize.height), contentMode: .fit)
-                    .accessibilityElement()
-                    .accessibilityLabel("Изометрическая карта дня: \(map.settlements.count) поселений, \(map.questMarkers.count) квестов на дороге")
-                    .gesture(DragGesture(minimumDistance: 30).onEnded { value in
-                        withAnimation { date = date.adding(days: value.translation.width < 0 ? 1 : -1) }
-                    })
-
-                    VStack(spacing: QSpacing.xs) {
-                        timeBar(map, window: rendered.window)
-                        MapText.timeAxis()
-                    }
-                    .padding(.horizontal, QSpacing.screen)
-
-                    list(map).padding(.horizontal, QSpacing.screen)
+                    viewport
+                    slider.padding(.horizontal, QSpacing.screen)
+                    if let dayMap { dayDetails(dayMap).padding(.horizontal, QSpacing.screen) }
                 }
                 .padding(.bottom, QSpacing.screen)
             }
         }
         .paperScreen()
+        .onAppear { load(resetPosition: true) }
+        .onChange(of: weekStart) { load(resetPosition: true) }
+    }
+
+    private func load(resetPosition: Bool) {
+        let map = model.weekMap(start: weekStart)
+        week = map
+        rendered = WeekMapRenderer.render(map, appearance: model.hero?.appearance, accent: model.heroAccent, timeZone: .current)
+        // По умолчанию — «сейчас»; в другой неделе — полдень понедельника.
+        if resetPosition { position = map.heroHour ?? 12 }
+        #if DEBUG
+        // `-QuestlynMapHour 31` — открыть неделю в заданном часе (проверка в симуляторе).
+        let debugHour = UserDefaults.standard.double(forKey: "QuestlynMapHour")
+        if resetPosition, debugHour > 0 { position = debugHour }
+        #endif
+        dragStart = position
     }
 
     private var header: some View {
@@ -189,18 +165,12 @@ struct MapOverviewView: View {
             Button { dismiss() } label: {
                 Label("Сегодня", systemImage: "chevron.left").font(QFont.text(15))
             }
-            .foregroundStyle(QColor.ink)
             Spacer()
-            Button { withAnimation { date = date.adding(days: -1) } } label: {
-                Image(systemName: "chevron.left").frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("Предыдущий день")
-            Text(date.date.map { $0.formatted(.dateTime.weekday(.abbreviated).day().month(.wide).locale(Locale(identifier: "ru_RU"))) } ?? "")
-                .font(QFont.title(17))
-            Button { withAnimation { date = date.adding(days: 1) } } label: {
-                Image(systemName: "chevron.right").frame(width: 44, height: 44)
-            }
-            .accessibilityLabel("Следующий день")
+            Button { weekStart = weekStart.adding(days: -7) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
+                .accessibilityLabel("Предыдущая неделя")
+            Text(weekTitle).font(QFont.title(17)).monospacedDigit()
+            Button { weekStart = weekStart.adding(days: 7) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
+                .accessibilityLabel("Следующая неделя")
             Spacer()
             Color.clear.frame(width: 70, height: 1)
         }
@@ -209,52 +179,153 @@ struct MapOverviewView: View {
         .padding(.top, QSpacing.m)
     }
 
-    /// Подписи поселений без наложений: соседние по горизонтали отодвигаются дальше от дороги.
-    private func labelPositions(_ anchors: [PixelMapRenderer.Anchor], scale: CGFloat) -> [(anchor: PixelMapRenderer.Anchor, y: CGFloat)] {
-        var placed: [(anchor: PixelMapRenderer.Anchor, y: CGFloat)] = []
-        for anchor in anchors.sorted(by: { $0.x < $1.x }) {
-            var y = CGFloat(anchor.y) * scale
-            let step: CGFloat = anchor.above ? -22 : 22
-            while placed.contains(where: { $0.anchor.above == anchor.above && abs(CGFloat($0.anchor.x - anchor.x) * scale) < 96 && abs($0.y - y) < 20 }) {
-                y += step
-            }
-            placed.append((anchor, max(10, y)))
-        }
-        return placed
+    private var weekTitle: String {
+        let end = weekStart.adding(days: 6)
+        let ru = Locale(identifier: "ru_RU")
+        guard let first = weekStart.date, let last = end.date else { return "" }
+        let tail = last.formatted(.dateTime.day().month(.wide).locale(ru))
+        return weekStart.month == end.month ? "\(weekStart.day)–\(tail)" : "\(first.formatted(.dateTime.day().month(.abbreviated).locale(ru))) – \(tail)"
     }
 
-    /// Шкала дня: видимая часть (рамка), поселения и «сейчас».
-    private func timeBar(_ map: DayMap, window: ClosedRange<Double>) -> some View {
+    // MARK: Окно карты
+
+    private var viewport: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(QColor.track)
-                RoundedRectangle(cornerRadius: 6).strokeBorder(QColor.ink, lineWidth: 2)
-                    .frame(width: (window.upperBound - window.lowerBound) / 24 * proxy.size.width)
-                    .offset(x: window.lowerBound / 24 * proxy.size.width)
-                ForEach(Array(map.settlements.enumerated()), id: \.offset) { _, settlement in
-                    Capsule().fill(settlement.kind == .city ? QColor.ink : QColor.lineStrong)
-                        .frame(width: max(4, (settlement.endHour - settlement.startHour) / 24 * proxy.size.width))
-                        .offset(x: settlement.startHour / 24 * proxy.size.width)
+            let scale = proxy.size.width / CGFloat(WeekMapRenderer.viewport.width)
+            let center = WeekMapRenderer.roadPoint(position)
+            let originX = CGFloat(center.x) - CGFloat(WeekMapRenderer.viewport.width) / 2
+            let originY = CGFloat(center.y) - CGFloat(WeekMapRenderer.viewport.height) / 2
+            ZStack(alignment: .topLeading) {
+                if let image = rendered?.image {
+                    Image(decorative: image, scale: 1)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: CGFloat(WeekMapRenderer.size.width) * scale, height: CGFloat(WeekMapRenderer.size.height) * scale)
+                        .offset(x: -originX * scale, y: -originY * scale)
                 }
-                if let hour = map.heroHour {
-                    Rectangle().fill(QColor.amber).frame(width: 3, height: 18).offset(x: hour / 24 * proxy.size.width - 1.5)
+                // Свет — по времени в точке ползунка.
+                lightOverlay
+                ForEach(Array((rendered?.labels ?? []).enumerated()), id: \.offset) { _, label in
+                    let x = (CGFloat(label.x) - originX) * scale, y = (CGFloat(label.y) - originY) * scale
+                    if x > -60, x < proxy.size.width + 60, y > -10, y < proxy.size.height + 10 {
+                        labelView(label).position(x: x, y: y)
+                    }
+                }
+                if let hero = week?.heroHour, abs(hero - position) < 10 {
+                    let point = WeekMapRenderer.roadPoint(hero)
+                    Text("Вы · \(Date.now.formatted(date: .omitted, time: .shortened))")
+                        .font(QFont.text(10, weight: .bold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
+                        .fixedSize()
+                        .position(x: (CGFloat(point.x) - originX) * scale, y: (CGFloat(point.y) - originY) * scale + 22)
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+            .clipped()
+            .contentShape(Rectangle())
+            .gesture(DragGesture().onChanged { value in
+                // Перетаскивание карты двигает ползунок: вдоль дороги вправо-вниз — вперёд по времени.
+                let along = -(value.translation.width + value.translation.height * 2) / scale
+                position = min(WeekMap.hours, max(0, dragStart + Double(along) / 6.4))
+            }.onEnded { _ in dragStart = position })
+            .onAppear { dragStart = position }
+        }
+        .aspectRatio(CGFloat(WeekMapRenderer.viewport.width) / CGFloat(WeekMapRenderer.viewport.height), contentMode: .fit)
+        .accessibilityElement()
+        .accessibilityLabel("Карта недели, \(Format.weekPosition(position, start: weekStart))")
+    }
+
+    @State private var dragStart: Double = 0
+
+    @ViewBuilder private var lightOverlay: some View {
+        let light = DayLight.at(hour: position.truncatingRemainder(dividingBy: 24))
+        switch light {
+        case .morning: Color(hex: 0xFFD9A0).opacity(0.12)
+        case .day: Color.clear
+        case .evening: Color(hex: 0xE58A4A).opacity(0.18)
+        case .night: Color(hex: 0x1A2340).opacity(0.45)
+        }
+    }
+
+    private func labelView(_ label: WeekMapRenderer.Label) -> some View {
+        let (fg, bg): (Color, Color) = switch label.kind {
+        case .settlement(city: true): (QColor.sheet, QColor.ink)
+        case .settlement(city: false): (QColor.ink, QColor.sheet)
+        case .camp(known: true): (Color(hex: 0x5C3410), Color(hex: 0xF6D9A6))
+        case .camp(known: false): (QColor.inkSecondary, QColor.sheet.opacity(0.9))
+        case .day: (QColor.sheet, QColor.amberDeep)
+        }
+        return HStack(spacing: 3) {
+            if case .camp = label.kind { Image(systemName: "flame.fill").font(.system(size: 8)) }
+            Text(label.title)
+        }
+        .font(QFont.text(10, weight: .semibold))
+        .lineLimit(1)
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .foregroundStyle(fg)
+        .background(bg, in: RoundedRectangle(cornerRadius: 7))
+        .fixedSize()
+    }
+
+    // MARK: Ползунок
+
+    private var slider: some View {
+        VStack(spacing: QSpacing.xs) {
+            HStack {
+                Text(Format.weekPosition(position, start: weekStart)).font(QFont.text(13, weight: .semibold)).monospacedDigit()
+                Spacer()
+                if let hero = week?.heroHour {
+                    Button("К «сейчас»") { withAnimation { position = hero; dragStart = hero } }
+                        .font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.amberDeep)
+                }
+            }
+            Slider(value: Binding(get: { position }, set: { position = $0; dragStart = $0 }), in: 0...WeekMap.hours, step: 0.25)
+                .tint(QColor.amber)
+                .accessibilityLabel("Движение по дороге недели")
+                .accessibilityValue(Format.weekPosition(position, start: weekStart))
+            HStack(spacing: 0) {
+                ForEach(0..<7, id: \.self) { index in
+                    let date = weekStart.adding(days: index)
+                    Text(date.date?.formatted(.dateTime.weekday(.abbreviated).locale(Locale(identifier: "ru_RU"))) ?? "")
+                        .font(QFont.text(11, weight: index == selectedDay ? .bold : .regular))
+                        .foregroundStyle(date == model.today ? QColor.amberDeep : QColor.inkSecondary)
+                        .frame(maxWidth: .infinity)
+                        .onTapGesture { withAnimation { position = Double(index) * 24 + 12; dragStart = position } }
                 }
             }
         }
-        .frame(height: 12)
     }
 
-    @ViewBuilder private func list(_ map: DayMap) -> some View {
+    // MARK: День под ползунком
+
+    @ViewBuilder private func dayDetails(_ map: DayMap) -> some View {
         let rows = (map.settlements.map { ($0.startHour, $0.titles.joined(separator: " + "),
                                           $0.kind == .city ? ($0.density > 1 ? "Город · пересекаются" : "Город") : "Деревня",
                                           $0.attendees > 0 ? "участников: \($0.attendees)" : "", 0) }
                     + map.questMarkers.map { ($0.hour, $0.title, $0.isDone ? "Квест ✓" : "Квест", "", 1) })
             .sorted { $0.0 < $1.0 }
+        let camp = week?.camps.first { $0.wakeDate == map.date }
         VStack(alignment: .leading, spacing: QSpacing.s) {
             HStack(alignment: .firstTextBaseline) {
-                Text("На карте").font(QFont.title(17))
+                Text(map.date.date.map { Format.longDay($0) } ?? "").font(QFont.title(17))
                 Spacer()
-                Text("календарь и квесты").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                Text("\(MapText.season(map)) · \(map.weather.title.lowercased())").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            }
+            if let camp {
+                HStack(spacing: QSpacing.m) {
+                    Image(systemName: "flame.fill").foregroundStyle(camp.source == nil ? QColor.inkSecondary : QColor.amber)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Привал \(camp.start.formatted(date: .omitted, time: .shortened))–\(camp.end.formatted(date: .omitted, time: .shortened))")
+                            .font(QFont.text(13, weight: .semibold))
+                        Text(camp.source == nil ? "нет данных о сне · ночь нейтральная"
+                             : "\(WeekMapRenderer.duration(camp.minutes)) · \(camp.source == .health ? "Apple Health" : "вручную")")
+                            .font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                    }
+                }
+                .padding(QSpacing.m)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(QColor.warmFill, in: RoundedRectangle(cornerRadius: QRadius.small))
             }
             if rows.isEmpty {
                 Text(model.isCalendarAuthorized ? "Событий с точным временем нет — только дорога." : "Подключите Apple Calendar во вкладке «Календарь», чтобы события стали поселениями.")
@@ -270,13 +341,14 @@ struct MapOverviewView: View {
                     Spacer()
                     Text(row.2).font(QFont.text(11, weight: .bold))
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .foregroundStyle(row.2 == "Деревня" ? Color(hex: 0x7A3F0E) : row.4 == 1 ? QColor.ink : QColor.sheet)
-                        .background(row.2 == "Деревня" ? Color(hex: 0xF1E3D3) : row.4 == 1 ? Color(hex: 0xE6E8EE) : QColor.ink,
+                        .foregroundStyle(row.2 == "Деревня" ? QColor.warmInk : row.4 == 1 ? QColor.ink : QColor.sheet)
+                        .background(row.2 == "Деревня" ? QColor.warmFill : row.4 == 1 ? QColor.coolFill : QColor.ink,
                                     in: RoundedRectangle(cornerRadius: 6))
                 }
                 .padding(.horizontal, QSpacing.m)
                 .frame(minHeight: 36)
                 .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.small))
+                .onTapGesture { withAnimation { position = Double(selectedDay) * 24 + row.0; dragStart = position } }
             }
             if !map.offMap.isEmpty {
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
@@ -285,7 +357,7 @@ struct MapOverviewView: View {
                 }
                 .padding(QSpacing.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(Color(hex: 0xB8A98A), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+                .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.dash, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
             }
         }
     }

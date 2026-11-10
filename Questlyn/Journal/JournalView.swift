@@ -292,7 +292,7 @@ struct JournalView: View {
             }
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color(hex: 0x3E4A63))
+                    Capsule().fill(QColor.inkSecondary)
                     Capsule().fill(Color(hex: 0xE2A04A))
                         .frame(width: proxy.size.width * (status.steps.isEmpty ? 0 : Double(status.doneCount) / Double(status.steps.count)))
                 }
@@ -300,9 +300,9 @@ struct JournalView: View {
             .frame(height: 6)
             if let next = status.nextStep {
                 Text("Следующий шаг: \(next.quest.title) · \(Format.when(next.quest, today: model.today).lowercased())")
-                    .font(QFont.text(13)).foregroundStyle(Color(hex: 0xC9CFDD))
+                    .font(QFont.text(13)).foregroundStyle(QColor.muted)
             } else if status.canComplete {
-                Text("Все шаги выполнены — можно завершить").font(QFont.text(13)).foregroundStyle(Color(hex: 0xC9CFDD))
+                Text("Все шаги выполнены — можно завершить").font(QFont.text(13)).foregroundStyle(QColor.muted)
             }
         }
         .foregroundStyle(QColor.sheet)

@@ -52,7 +52,7 @@ struct PriorityBars: View {
         HStack(alignment: .bottom, spacing: 2) {
             ForEach(1...3, id: \.self) { i in
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(i <= filled ? QColor.amber : Color(hex: 0xD8CCB5))
+                    .fill(i <= filled ? QColor.amber : QColor.muted)
                     .frame(width: 3, height: CGFloat(2 + 3 * i))
             }
         }

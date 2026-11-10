@@ -8,7 +8,10 @@ enum AppEnvironment {
     static let appGroupIdentifier: String? = "group.valeravalera.Questlyn"
 
     static func live() -> Result<AppModel, Error> {
-        Result { AppModel(store: GRDBStore(try AppDatabase.onDisk(appGroupIdentifier: appGroupIdentifier))) }
+        Result {
+            let database = try AppDatabase.onDisk(appGroupIdentifier: appGroupIdentifier)
+            return AppModel(store: GRDBStore(database), backups: BackupManager(database: database))
+        }
     }
 
     static func preview() -> AppModel {

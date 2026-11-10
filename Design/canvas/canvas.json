@@ -338,6 +338,13 @@
       "w": 1280,
       "x": 8210,
       "y": 9770
+    },
+    "HeroOutfits2.dc.html": {
+      "h": 900,
+      "title": "8.10 · Новые образы: Мудрец, Иллюзионист, Мастер",
+      "w": 1280,
+      "x": 9570,
+      "y": 9770
     }
   },
   "createdOnFiles": {
@@ -461,7 +468,8 @@
     "HeroOutfits.dc.html",
     "OnbClassLook.dc.html",
     "MapStates.dc.html",
-    "MapStrip.dc.html"
+    "MapStrip.dc.html",
+    "HeroOutfits2.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"

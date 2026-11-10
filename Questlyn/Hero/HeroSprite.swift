@@ -66,6 +66,9 @@ enum HeroPalette {
         case .archer: p["P"] = 0x5B5240; p["p"] = 0x47402F
         case .assassin: p["O"] = 0x3A3A46; p["o"] = 0x2C2C36; p["P"] = 0x33333F; p["p"] = 0x26262F; p["F"] = 0x24242C
         case .coder: p["L"] = 0xA8B0BA; p["l"] = 0x8A929C
+        case .sage: p["N"] = 0x2E2A26; p["n"] = 0x221F1C
+        case .illusionist: p["N"] = 0x2B2B35; p["o"] = 0x1E1E26; p["Q"] = 0xF6D36B; p["q"] = 0xE58A2B
+        case .master: p["Y"] = 0xF2D27A; p["t"] = 0xD9D2C4; p["R"] = 0xA8432F
         case .mage, .warrior, .baller: break
         }
         return p
@@ -127,9 +130,9 @@ struct HeroStage: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(hex: 0xE7DCC4)
-            Rectangle().fill(Color(hex: 0xB9AA86)).frame(height: 22)
-                .overlay(alignment: .top) { Rectangle().fill(Color(hex: 0x8E7F5C)).frame(height: 4) }
+            QColor.stage
+            Rectangle().fill(QColor.stageGround).frame(height: 22)
+                .overlay(alignment: .top) { Rectangle().fill(QColor.stageEdge).frame(height: 4) }
             HeroSprite(appearance: appearance, accent: accent, scale: scale)
                 .padding(.bottom, 12)
         }

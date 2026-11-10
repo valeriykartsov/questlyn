@@ -32,6 +32,27 @@ public final class AppDatabase: Sendable {
         try Migrations.migrator.migrate(writer)
     }
 
+    /// Резервная копия (7.1): согласованная копия всей БД в файл, даже если в это время идут записи.
+    public func backup(to url: URL) throws {
+        try? FileManager.default.removeItem(at: url)
+        let destination = try DatabaseQueue(path: url.path(percentEncoded: false))
+        try writer.backup(to: destination)
+        try destination.close()
+    }
+
+    /// Восстановление из копии: данные копии заменяют текущие, затем — миграции до текущей схемы.
+    public func restore(from url: URL) throws {
+        // Копия из БД в режиме WAL наследует его, поэтому открываем без readonly (иначе SQLite не создаст -shm).
+        let source = try DatabaseQueue(path: url.path(percentEncoded: false))
+        let isQuestlyn = try source.read { try $0.tableExists("hero") && $0.tableExists("progressGrant") }
+        guard isQuestlyn else { throw BackupError.notQuestlynBackup }
+        try source.backup(to: writer)
+        try source.close()
+        try Migrations.migrator.migrate(writer)
+    }
+
+    public enum BackupError: Error, Sendable { case notQuestlynBackup }
+
     /// БД в памяти — для тестов и превью.
     public static func inMemory() throws -> AppDatabase {
         var configuration = Configuration()

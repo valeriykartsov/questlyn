@@ -73,7 +73,7 @@ struct OnboardingView: View {
             Spacer()
             HStack(spacing: 6) {
                 ForEach(Step.allCases, id: \.self) { s in
-                    Capsule().fill(s.rawValue <= step.rawValue ? QColor.ink : Color(hex: 0xD9CDB6)).frame(width: 28, height: 4)
+                    Capsule().fill(s.rawValue <= step.rawValue ? QColor.ink : QColor.muted).frame(width: 28, height: 4)
                 }
             }
             .accessibilityElement()

@@ -182,11 +182,11 @@ struct RewardPreview: View {
             Text("10 XP за час. Без навыка — атрибуты шаблона поровну. В XP идёт не больше 3 часов одного типа в день. Ману не тратит.")
                 .font(QFont.text(12))
         }
-        .foregroundStyle(Color(hex: 0x5C3410))
+        .foregroundStyle(QColor.warmInk)
         .padding(.horizontal, QSpacing.xl)
         .padding(.vertical, QSpacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: 0xF1E3D3), in: RoundedRectangle(cornerRadius: QRadius.card))
+        .background(QColor.warmFill, in: RoundedRectangle(cornerRadius: QRadius.card))
     }
 }
 

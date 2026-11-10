@@ -141,7 +141,7 @@ struct HeroView: View {
                 Text("ур. \(level)").font(QFont.text(15, weight: .bold)).monospacedDigit()
                 Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
             }
-            ProgressBar(fraction: step.current / Double(step.needed), color: inClass ? QColor.ink : Color(hex: 0xB3A890))
+            ProgressBar(fraction: step.current / Double(step.needed), color: inClass ? QColor.ink : QColor.muted)
             HStack {
                 Spacer()
                 Text("\(Format.xp(CentiXP(Int((step.current * 100).rounded())))) / \(step.needed) XP до ур. \(level + 1)")
