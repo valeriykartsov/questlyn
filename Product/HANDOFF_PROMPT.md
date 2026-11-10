@@ -21,7 +21,7 @@
   - атрибуты STR, END, INT, MNT, CHR, FOC, DIS (DEX убран);
   - приоритет квеста ×0,5 / ×1 / ×1,5, по умолчанию «Средний»;
   - HP и MP — состояние героя, а не прогресс: на XP и ранг не влияют и ничего не блокируют.
-- Код: шаблонный SwiftUI-проект `Questlyn.xcodeproj` (Swift 6, iOS 27, только iPhone), логики пока нет.
+- Код: шаблонный SwiftUI-проект `Questlyn.xcodeproj` (Swift 6, минимальная iOS 26.0, только iPhone), логики пока нет.
 - Стек: SwiftUI, SQLite + GRDB, модульный монолит Presentation / Application / Domain / Persistence / Integrations. Domain без SwiftUI. Факты — источник истины, начисления (`ProgressGrant`) производные, с `sourceId` и `ruleVersion`.
 - Ветка: `concept-and-design`. В `main` пока не влита — спроси меня, прежде чем мержить или пушить.
 

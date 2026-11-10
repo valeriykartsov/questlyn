@@ -65,4 +65,4 @@ and apply corrections before proceeding.
 
 ## Технический стек
 
-Swift 6, SwiftUI, iOS 27, только iPhone. SQLite + GRDB. Модульный монолит (Presentation / Application / Domain / Persistence / Integrations), Domain без SwiftUI.
+Swift 6, SwiftUI, минимальная версия iOS 26.0 (сборка в Xcode 27), только iPhone. SQLite + GRDB. Модульный монолит (Presentation / Application / Domain / Persistence / Integrations), Domain без SwiftUI.
