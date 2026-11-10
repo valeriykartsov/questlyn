@@ -26,6 +26,12 @@ public final class AppDatabase: Sendable {
         return try AppDatabase(pool)
     }
 
+    /// Удалить все таблицы и данные, затем применить миграции к пустой БД.
+    func eraseAndMigrate() async throws {
+        try await writer.erase()
+        try Migrations.migrator.migrate(writer)
+    }
+
     /// БД в памяти — для тестов и превью.
     public static func inMemory() throws -> AppDatabase {
         var configuration = Configuration()

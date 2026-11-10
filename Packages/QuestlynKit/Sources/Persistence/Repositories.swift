@@ -87,6 +87,95 @@ public struct GRDBStore: QuestlynStore {
         try await writer.write { db in try QuestRecord(quest).save(db) }
     }
 
+    public func allQuests() async throws -> [Quest] {
+        try await writer.read { db in try QuestRecord.order(QuestRecord.Columns.createdAt).fetchAll(db).map(\.domain) }
+    }
+
+    // MARK: Epic
+
+    public func epics() async throws -> [EpicQuest] {
+        try await writer.read { db in try EpicRecord.order(Column("createdAt")).fetchAll(db).map(\.domain) }
+    }
+
+    public func epic(id: UUID) async throws -> EpicQuest? {
+        try await writer.read { db in try EpicRecord.fetchOne(db, key: id.uuidString.lowercased())?.domain }
+    }
+
+    public func save(_ epic: EpicQuest) async throws {
+        try await writer.write { db in try EpicRecord(epic).save(db) }
+    }
+
+    public func createEpic(_ epic: EpicQuest, steps: [Quest]) async throws {
+        try await writer.write { db in
+            try EpicRecord(epic).insert(db)
+            for step in steps { try QuestRecord(step).insert(db) }
+        }
+    }
+
+    // MARK: Habit
+
+    public func habits() async throws -> [HabitDefinition] {
+        try await writer.read { db in try HabitRecord.order(Column("createdAt")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func habit(id: UUID) async throws -> HabitDefinition? {
+        try await writer.read { db in try HabitRecord.fetchOne(db, key: id.uuidString.lowercased())?.domain }
+    }
+
+    public func save(_ habit: HabitDefinition) async throws {
+        try await writer.write { db in try HabitRecord(habit).save(db) }
+    }
+
+    public func occurrences(from: LocalDate, through: LocalDate) async throws -> [HabitOccurrence] {
+        try await writer.read { db in
+            try HabitOccurrenceRecord
+                .filter(Column("undoneAt") == nil && Column("localDate") >= from.description && Column("localDate") <= through.description)
+                .order(Column("completedAt"))
+                .fetchAll(db)
+                .compactMap(\.domain)
+        }
+    }
+
+    public func record(_ occurrence: HabitOccurrence, grants: [ProgressGrant]) async throws {
+        try await writer.write { db in
+            try HabitOccurrenceRecord(occurrence).insert(db)
+            for grant in grants { try ProgressGrantRecord(grant).insert(db) }
+        }
+    }
+
+    public func undoOccurrence(id: UUID, at date: Date) async throws {
+        try await writer.write { db in
+            let key = id.uuidString.lowercased()
+            guard var record = try HabitOccurrenceRecord.fetchOne(db, key: key), record.undoneAt == nil else {
+                throw QuestlynError.notCompleted
+            }
+            record.undoneAt = date
+            try record.update(db)
+            try ProgressGrantRecord
+                .filter(Column("sourceType") == GrantSourceType.habitOccurrence.rawValue && Column("sourceId") == key)
+                .deleteAll(db)
+        }
+    }
+
+    // MARK: Discipline
+
+    public func disciplineGrants() async throws -> [ProgressGrant] {
+        try await writer.read { db in
+            try ProgressGrantRecord.filter(Column("sourceType") == GrantSourceType.weeklyDiscipline.rawValue)
+                .order(Column("sourceId"))
+                .fetchAll(db).compactMap(\.domain)
+        }
+    }
+
+    public func replaceDisciplineGrant(sourceId: UUID, with grant: ProgressGrant) async throws {
+        try await writer.write { db in
+            try ProgressGrantRecord
+                .filter(Column("sourceType") == GrantSourceType.weeklyDiscipline.rawValue && Column("sourceId") == sourceId.uuidString.lowercased())
+                .deleteAll(db)
+            try ProgressGrantRecord(grant).insert(db)
+        }
+    }
+
     // MARK: Completion
 
     public func activeCompletion(questId: UUID) async throws -> QuestCompletion? {
@@ -130,6 +219,12 @@ public struct GRDBStore: QuestlynStore {
                 .filter(Column("sourceType") == GrantSourceType.questCompletion.rawValue && Column("sourceId") == id)
                 .deleteAll(db)
         }
+    }
+
+    // MARK: Reset
+
+    public func eraseAll() async throws {
+        try await database.eraseAndMigrate()
     }
 
     // MARK: Grants

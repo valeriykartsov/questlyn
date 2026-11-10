@@ -61,9 +61,11 @@ public struct QuestDraft: Sendable, Equatable {
     public var skillId: UUID?
     public var dueDate: LocalDate?
     public var dueTime: LocalTime?
+    public var epicId: UUID?
 
     public init(title: String = "", details: String = "", priority: QuestPriority = .default,
-                skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil) {
+                skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil, epicId: UUID? = nil) {
+        self.epicId = epicId
         self.title = title
         self.details = details
         self.priority = priority
@@ -86,12 +88,40 @@ public struct QuestService: Sendable {
         if let skillId = draft.skillId, try await !store.skills().contains(where: { $0.id == skillId }) {
             throw QuestlynError.skillNotFound
         }
+        if let epicId = draft.epicId, try await store.epic(id: epicId) == nil { throw QuestlynError.epicNotFound }
+        let quest = try Self.makeQuest(draft, now: now, timeZone: timeZone)
+        try await store.save(quest)
+        return quest
+    }
+
+    static func makeQuest(_ draft: QuestDraft, now: Date, timeZone: TimeZone, epicId: UUID? = nil) throws -> Quest {
+        let title = trimmed(draft.title)
+        guard !title.isEmpty else { throw QuestlynError.emptyName }
+        guard draft.dueTime == nil || draft.dueDate != nil else { throw QuestlynError.timeWithoutDate }
         let details = trimmed(draft.details)
-        let quest = Quest(
+        return Quest(
             title: title, details: details.isEmpty ? nil : details, priority: draft.priority,
             skillId: draft.skillId, dueDate: draft.dueDate, dueTime: draft.dueTime,
-            timezoneId: timeZone.identifier, createdAt: now
+            timezoneId: timeZone.identifier, epicId: epicId ?? draft.epicId, createdAt: now
         )
+    }
+
+    /// Изменить и перенести квест (BACKLOG 2.7). У выполненного нельзя менять приоритет и навык:
+    /// начисления уже посчитаны по ним (рабочая гипотеза, 02).
+    @discardableResult
+    public func update(questId: UUID, with draft: QuestDraft) async throws -> Quest {
+        guard let existing = try await store.quest(id: questId) else { throw QuestlynError.questNotFound }
+        if try await store.activeCompletion(questId: questId) != nil,
+           draft.priority != existing.priority || draft.skillId != existing.skillId {
+            throw QuestlynError.lockedWhileCompleted
+        }
+        if let skillId = draft.skillId, skillId != existing.skillId, try await !store.skills().contains(where: { $0.id == skillId }) {
+            throw QuestlynError.skillNotFound
+        }
+        var quest = try Self.makeQuest(draft, now: existing.createdAt, timeZone: TimeZone(identifier: existing.timezoneId) ?? .current)
+        quest.id = existing.id
+        quest.timezoneId = existing.timezoneId
+        quest.createdAt = existing.createdAt
         try await store.save(quest)
         return quest
     }
@@ -128,6 +158,7 @@ public struct CompletionService: Sendable {
     public func complete(questId: UUID, now: Date, timeZone: TimeZone) async throws -> CompletionReport {
         guard let quest = try await store.quest(id: questId) else { throw QuestlynError.questNotFound }
         guard try await store.activeCompletion(questId: questId) == nil else { throw QuestlynError.alreadyCompleted }
+
         guard let hero = try await store.currentHero() else { throw QuestlynError.heroNotFound }
         let professions = try await store.professions(heroId: hero.id)
 
@@ -184,6 +215,13 @@ public struct TodayOverview: Sendable, Equatable {
     public var skills: [Skill]
     public var items: [TodayItem]
     public var progress: HeroProgress
+    /// Daily и Weekly со статусом на сегодня и неделю.
+    public var habits: [HabitStatus]
+    public var epics: [EpicStatus]
+    /// Все обычные квесты для журнала.
+    public var journal: [TodayItem]
+    /// DIS за прошлую неделю, если уже посчитан.
+    public var lastDiscipline: ProgressGrant?
 }
 
 /// Сборка «Сегодня» и «Героя» (BACKLOG 1.5, 1.8).
@@ -192,6 +230,7 @@ public struct TodayService: Sendable {
     public init(store: any QuestlynStore) { self.store = store }
 
     public func overview(now: Date, timeZone: TimeZone) async throws -> TodayOverview {
+        try await DisciplineService(store: store).settle(now: now, timeZone: timeZone)
         let date = LocalDate(now, timeZone: timeZone)
         let hero = try await store.currentHero()
         var professions: [Profession] = []
@@ -232,6 +271,27 @@ public struct TodayService: Sendable {
         }
 
         let progress = HeroProgress(grants: try await store.allGrants(), classAttributes: ClassRules.classAttributes(of: professions))
-        return TodayOverview(date: date, hero: hero, professions: professions, skills: skills, items: items, progress: progress)
+
+        // Журнал: все обычные квесты; выполненные — с фактом выполнения.
+        let allQuests = try await store.allQuests()
+        let allCompletions = try await store.activeCompletions(questIds: allQuests.map(\.id))
+        let journal = allQuests.map { quest in
+            let completion = allCompletions[quest.id]
+            let section: TodaySection = quest.dueDate.map { $0 < date ? .overdue : .today } ?? .undated
+            return TodayItem(quest: quest, completion: completion, section: section, skill: skills.first { $0.id == quest.skillId })
+        }
+
+        let habits = try await HabitStatusBuilder(store: store).statuses(today: date, skills: skills)
+        let epics = try await store.epics().map { epic in
+            let steps = journal.filter { $0.quest.epicId == epic.id }.sorted { lhs, rhs in
+                (lhs.quest.dueDate ?? LocalDate(year: 9999, month: 1, day: 1), lhs.quest.createdAt)
+                    < (rhs.quest.dueDate ?? LocalDate(year: 9999, month: 1, day: 1), rhs.quest.createdAt)
+            }
+            return EpicStatus(epic: epic, steps: steps)
+        }
+        let lastWeek = date.weekStart.adding(days: -7)
+        let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
+        return TodayOverview(date: date, hero: hero, professions: professions, skills: skills, items: items, progress: progress,
+                             habits: habits, epics: epics, journal: journal, lastDiscipline: lastDiscipline)
     }
 }

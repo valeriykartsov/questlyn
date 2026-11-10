@@ -34,6 +34,7 @@ struct RootView: View {
             } else {
                 TabView {
                     Tab("Сегодня", systemImage: "sun.max") { TodayView(model: model) }
+                    Tab("Журнал", systemImage: "book.closed") { JournalView(model: model) }
                     Tab("Герой", systemImage: "person.crop.circle") { HeroView(model: model) }
                 }
                 .tint(QColor.amber)

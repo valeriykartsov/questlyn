@@ -65,6 +65,39 @@ public enum GrantCalculator {
         return grants
     }
 
+    /// Базовые значения награды привычки (D1: без приоритета).
+    public static let habitSkillXP = 5
+    public static let habitAttributeXP = 5
+
+    /// Отметка Daily или Weekly: только при связанном навыке — +5 навыку и 5 атрибутам по долям профессии.
+    /// FOC привычки не дают (07, раздел 4).
+    public static func habitOccurrenceGrants(
+        occurrenceId: UUID,
+        skill: Skill?,
+        skillProfessionTitle: String?,
+        snapshot: ClassSnapshot,
+        createdAt: Date,
+        ruleVersion: RuleVersion = .current
+    ) -> [ProgressGrant] {
+        guard let skill else { return [] }
+        func grant(_ target: GrantTarget, _ amount: CentiXP, _ reason: String) -> ProgressGrant {
+            ProgressGrant(sourceType: .habitOccurrence, sourceId: occurrenceId, ruleVersion: ruleVersion,
+                          target: target, amount: amount, reason: reason, createdAt: createdAt)
+        }
+        let professionNote = skillProfessionTitle.map { "Привычка · навык профессии «\($0)»" } ?? "Привычка"
+        var grants = [grant(.skill(skill.id), .xp(habitSkillXP), professionNote)]
+        let shares = ClassRules.sharesInPercent(attributeCount: snapshot.entries.count)
+        let roles = ["Основной", "Вторичный", "Третичный"]
+        for (index, entry) in snapshot.entries.enumerated() where index < shares.count {
+            // centi = 5 · 100 · (share/100) · (m/4) = 5 · share · m / 4
+            let amount = CentiXP.roundedHalfUp(numerator: habitAttributeXP * shares[index] * entry.multiplierInQuarters, denominator: 4)
+            var reason = "Привычка · \(roles[index].lowercased()) атрибут профессии · \(shares[index])%"
+            if entry.multiplierInQuarters != 4 { reason += " · ×\(multiplierText(entry.multiplierInQuarters)) за повтор в классе" }
+            grants.append(grant(.attribute(entry.attribute), amount, reason))
+        }
+        return grants
+    }
+
     static func priorityText(_ priority: QuestPriority) -> String {
         switch priority {
         case .low: "низкий приоритет ×0,5"

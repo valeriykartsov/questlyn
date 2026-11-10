@@ -10,12 +10,12 @@ struct DatabaseTests {
 
     @Test func migrationCreatesSchema() throws {
         try database.writer.read { db in
-            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant"] {
+            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant", "epic", "habit", "habitOccurrence"] {
                 let exists = try db.tableExists(table)
                 #expect(exists, "нет таблицы \(table)")
             }
         }
-        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial])
+        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics])
     }
 
     @Test func questsForDateAreOrderedByTimeThenCreation() async throws {

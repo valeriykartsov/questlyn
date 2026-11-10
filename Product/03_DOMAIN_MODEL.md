@@ -116,11 +116,12 @@ Epic (epicId) добавится миграцией этапа 2.
 
 Не хранится. Вычисляется из уровней атрибутов и состава класса: очки S, ранг r, название (07, раздел 8). Меньше 10 очков — «Без ранга».
 
-## Сущности этапа 2 (набросок)
+## Сущности этапа 2 (миграция `v2_habitsAndEpics`)
 
-- **EpicQuest:** id, title, details?, deadline?, completedAt?. Quest.epicId → не больше одного Epic. XP нет, только веха.
-- **HabitDefinition:** id, kind (daily / weekly), title, details?, skillId?, weekdays (daily) или targetCount (weekly), timezoneId, isActive.
-- **Occurrence:** id, habitId, localDate, completedAt?, undoneAt?. Факт для DIS и начислений привычки.
+- **EpicQuest:** id, title, details?, deadline?, completedAt?, createdAt. `Quest.epicId` → не больше одного Epic. XP нет, только веха; завершается вручную, когда все шаги выполнены.
+- **HabitDefinition** (`habit`): id, kind (daily / weekly), title, details?, skillId?, weekdays (daily, «1,2,…», 1 — понедельник), targetPerWeek (weekly, 1–14), time?, timezoneId, startDate (локальная дата создания), isActive, createdAt.
+- **HabitOccurrence** (`habitOccurrence`) — факт: id (`sourceId` начислений), habitId, localDate, completedAt, timezoneId, undoneAt?, classSnapshot. У daily — не больше одной активной отметки в день (проверка в use case); у weekly — несколько.
+- **Начисление DIS** — `ProgressGrant` с `sourceType = weeklyDiscipline` и детерминированным `sourceId` недели; одна неделя — одно начисление, DIS не ниже 0.
 
 ## Список доменов — Рабочая гипотеза (обновлено 10.11.2026)
 
@@ -147,3 +148,4 @@ Epic (epicId) добавится миграцией этапа 2.
 
 - **10.11.2026** — v1: поля, связи и инварианты сущностей этапа 1, набросок этапа 2. `classSnapshot` в выполнении квеста — рабочая гипотеза.
 - **10.11.2026** — `classSnapshot` подтверждён; «Без ранга» ниже G.
+- **10.11.2026** — этап 2: Epic, привычки, отметки, начисление DIS по неделям.
