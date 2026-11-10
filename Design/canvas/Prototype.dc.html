@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Questlyn — интерактивный прототип</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 54px 16px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px;">
+
+<sc-if value="{{is.onb}}" hint-placeholder-val="{{true}}">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px;">
+    <button type="button" aria-label="Назад" onClick="{{nav.back}}" style="width: 44px; height: 44px; border: none; background: transparent; color: #1F2A44; display: flex; align-items: center; padding: 0;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    <div style="display: flex; gap: 6px;" aria-label="{{onbLabel}}">
+      <sc-for list="{{onbBars}}" as="b" hint-placeholder-count="4"><div style="width: 28px; height: 4px; border-radius: 2px; background: {{b.c}};"></div></sc-for>
+    </div>
+    <div style="width: 44px; font-size: 13px; color: #4A5368; text-align: right;">{{onbStep}} / 4</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{is.onb1}}" hint-placeholder-val="{{true}}">
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Создайте героя</h1>
+  <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A5368;">Герой будет расти вместе с вашими реальными делами.</p>
+  <div style="height: 190px; border-radius: 18px; background: #E7DCC4; position: relative; overflow: hidden; flex-shrink: 0;">
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #B9AA86; border-top: 6px solid #8E7F5C;"></div>
+    <div style="position: absolute; left: 50%; bottom: 24px; margin-left: -40px; display: grid; grid-template-columns: repeat(10, 8px); grid-auto-rows: 8px;" role="img" aria-label="Предпросмотр героя">
+      <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="160"><div style="background: {{p.c}};"></div></sc-for>
+    </div>
+  </div>
+  <label style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Имя героя</span>
+    <input type="text" value="{{heroName}}" onChange="{{onName}}" placeholder="Например, Странник" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+  </label>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="width: 64px; font-size: 14px; color: #4A5368;">Волосы</div>
+    <sc-for list="{{hairOpts}}" as="s" hint-placeholder-count="4"><button type="button" aria-label="{{s.label}}" onClick="{{s.pick}}" style="width: 44px; height: 44px; border-radius: 10px; background: {{s.c}}; border: {{s.border}}; box-sizing: border-box;"></button></sc-for>
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="width: 64px; font-size: 14px; color: #4A5368;">Кожа</div>
+    <sc-for list="{{skinOpts}}" as="s" hint-placeholder-count="4"><button type="button" aria-label="{{s.label}}" onClick="{{s.pick}}" style="width: 44px; height: 44px; border-radius: 10px; background: {{s.c}}; border: {{s.border}}; box-sizing: border-box;"></button></sc-for>
+  </div>
+  <button type="button" onClick="{{nav.onb2}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Далее</button>
+</sc-if>
+
+<sc-if value="{{is.onb2}}" hint-placeholder-val="{{false}}">
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Чем вы занимаетесь?</h1>
+  <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A5368;">Выберите до трёх профессий. Из них сложится класс.</p>
+  <sc-for list="{{catalog}}" as="p" hint-placeholder-count="5">
+    <button type="button" onClick="{{p.toggle}}" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 10px 14px; border-radius: 14px; background: #FFFCF6; border: {{p.border}}; text-align: left; font-family: Inter, sans-serif; color: #1F2A44; opacity: {{p.opacity}};">
+      <span style="width: 14px; height: 14px; background: {{p.cloak}}; flex-shrink: 0;"></span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 600;">{{p.name}}</span><span style="font-size: 13px; color: #4A5368;">{{p.attrsText}}</span></span>
+      <span style="width: 26px; height: 26px; border-radius: 13px; background: {{p.checkBg}}; border: {{p.checkBorder}}; box-sizing: border-box; color: #FFFCF6; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{p.checkMark}}</span>
+    </button>
+  </sc-for>
+  <div style="font-size: 13px; color: #4A5368; text-align: center;">Выбрано {{selCount}} из 3 · цвет плаща — от первой выбранной</div>
+  <button type="button" onClick="{{nav.onb3}}" disabled="{{noProfs}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: {{nextBg}}; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Далее</button>
+</sc-if>
+
+<sc-if value="{{is.onb3}}" hint-placeholder-val="{{false}}">
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 26px; font-weight: 700;">Что развивает профессия?</h1>
+  <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A5368;">Приоритеты из каталога. Основной получает 50% XP квеста, вторичный 30%, третичный 20%.</p>
+  <sc-for list="{{selProfs}}" as="p" hint-placeholder-count="2">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 16px; font-weight: 600;">{{p.name}}</div>
+      <sc-for list="{{p.slots}}" as="s" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; background: #F5F0E6;">
+          <span style="width: 22px; height: 22px; border-radius: 6px; background: #1F2A44; color: #FFFCF6; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{s.n}}</span>
+          <span style="flex-grow: 1; font-size: 14px; color: #4A5368;">{{s.role}} · {{s.share}}</span>
+          <span style="font-size: 15px; font-weight: 700;">{{s.attr}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+  <div style="padding: 12px 14px; border-radius: 14px; background: #F1E3D3; font-size: 13px; line-height: 1.45; color: #5C3410;">{{multNote}} FOC и DIS не выбираются — они растут от квестов и привычек.</div>
+  <button type="button" onClick="{{nav.onb4}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Далее</button>
+</sc-if>
+
+<sc-if value="{{is.onb4}}" hint-placeholder-val="{{false}}">
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Как назовём класс?</h1>
+  <label style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Название класса</span>
+    <input type="text" value="{{className}}" onChange="{{onClassName}}" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 600 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+  </label>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 16px; display: flex; gap: 16px; align-items: center;">
+    <div style="width: 84px; height: 112px; border-radius: 14px; background: #E7DCC4; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; box-sizing: border-box; flex-shrink: 0;">
+      <div style="display: grid; grid-template-columns: repeat(10, 6px); grid-auto-rows: 6px;" role="img" aria-label="Герой"><sc-for list="{{heroPx}}" as="p" hint-placeholder-count="160"><div style="background: {{p.c}};"></div></sc-for></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0;">
+      <div style="font-family: Literata, Georgia, serif; font-size: 20px; font-weight: 700;">{{classTitle}}</div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.4;">{{profNames}}</div>
+      <div style="font-size: 13px; font-weight: 600;">{{classAttrsText}}</div>
+    </div>
+  </div>
+  <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Ранг появится, когда наберётся 10 очков. В профиле есть кнопка «+ неделя демо-активности», чтобы посмотреть рост быстрее.</div>
+  <button type="button" onClick="{{startGame}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Начать приключение</button>
+</sc-if>
+
+<sc-if value="{{is.today}}" hint-placeholder-val="{{false}}">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-size: 13px; color: #4A5368;">Вторник, 10 ноября</div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Сегодня</div>
+    </div>
+    <button type="button" onClick="{{nav.mood}}" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid #C9BCA2; background: #FFFCF6; color: #1F2A44; font: 600 13px Inter, sans-serif;">Как вы?</button>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <button type="button" onClick="{{nav.map}}" aria-label="Открыть карту дня" style="height: 150px; padding: 0; border-radius: 18px; overflow: hidden; position: relative; border: 1px solid #E3D9C6; background: #E7DCC4; box-sizing: border-box; cursor: pointer;">
+      <img src="/_blob/ad1ba1a0451ba886cde5aa14ce91c2cc" alt="Карта дня" style="display: block; width: 100%; height: 100%; object-fit: cover;">
+      <span style="position: absolute; right: 8px; top: 8px; background: #FFFCF6; border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px;"><span style="font-size: 11px; color: #4A5368;">{{classTitle}}</span><span style="font-size: 14px; font-weight: 700; color: #1F2A44;">{{rank.short}}</span></span>
+      <span style="position: absolute; left: 8px; top: 8px; font-size: 12px; font-weight: 600; color: #1F2A44; background: #FFFCF6; padding: 4px 8px; border-radius: 8px;">{{weather}}</span>
+    </button>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #4A5368;"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:59</span></div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 10px 6px;">
+    <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <div style="font-size: 11px; font-weight: 600; color: #4A5368;">{{a.k}}</div>
+        <div style="font-size: 17px; font-weight: 700;">{{a.L}}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="font-weight: 600;">Дисциплина за неделю</span><span style="font-weight: 700; color: {{dis.color}};">{{dis.text}}</span></div>
+    <div style="height: 8px; border-radius: 4px; background: #E9E1D0; overflow: hidden;"><div style="width: {{dis.width}}; height: 8px; background: #2F6B4F;"></div></div>
+    <div style="font-size: 11px; color: #4A5368;">Пн 67% · Вт {{dis.today}}% · итог считается в понедельник</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Привычки</div><div style="font-size: 13px; color: #4A5368;">{{habitsDone}} из 3</div></div>
+    <sc-for list="{{habits}}" as="h" hint-placeholder-count="3">
+      <button type="button" onClick="{{h.toggle}}" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; border: none; background: #FFFCF6; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+        <span style="width: 24px; height: 24px; border-radius: 6px; background: {{h.boxBg}}; border: {{h.boxBorder}}; box-sizing: border-box; color: #FFFCF6; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{h.mark}}</span>
+        <span style="flex-grow: 1; font-size: 15px; color: {{h.color}}; text-decoration: {{h.deco}};">{{h.title}}</span>
+        <span style="font-size: 12px; font-weight: 600; color: #4A5368;">{{h.tag}}</span>
+      </button>
+    </sc-for>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Квесты</div><div style="font-size: 13px; color: #4A5368;">нажмите, чтобы выполнить</div></div>
+    <sc-for list="{{questRows}}" as="q" hint-placeholder-count="4">
+      <button type="button" onClick="{{q.complete}}" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: none; background: #FFFCF6; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+        <span style="width: 24px; height: 24px; border-radius: 6px; background: {{q.boxBg}}; border: {{q.boxBorder}}; box-sizing: border-box; color: #FFFCF6; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{q.mark}}</span>
+        <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; color: {{q.color}}; text-decoration: {{q.deco}};">{{q.title}}</span><span style="font-size: 12px; color: #4A5368;">{{q.meta}}</span></span>
+      </button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{is.mood}}" hint-placeholder-val="{{false}}">
+  <button type="button" onClick="{{nav.today}}" style="align-self: flex-start; height: 44px; border: none; background: transparent; color: #9A5214; font: 16px Inter, sans-serif; padding: 0;">Отмена</button>
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 26px; font-weight: 700;">Как вы сейчас?</h1>
+  <sc-for list="{{moods}}" as="m" hint-placeholder-count="3">
+    <button type="button" onClick="{{m.pick}}" style="display: flex; align-items: center; gap: 14px; height: 72px; padding: 0 16px; border-radius: 16px; border: {{m.border}}; background: #FFFCF6; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+      <span style="width: 18px; height: 18px; background: {{m.c}};"></span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 17px; font-weight: 700;">{{m.label}}</span><span style="font-size: 13px; color: #4A5368;">погода: {{m.weather}}</span></span>
+    </button>
+  </sc-for>
+  <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Отметка ставит флажок на карте и меняет погоду. На XP и ранг настроение не влияет.</div>
+</sc-if>
+
+<sc-if value="{{is.newq}}" hint-placeholder-val="{{false}}">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <button type="button" onClick="{{nav.back}}" style="height: 44px; border: none; background: transparent; color: #9A5214; font: 16px Inter, sans-serif; padding: 0;">Отмена</button>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Новый квест</div>
+    <div style="width: 60px;"></div>
+  </div>
+  <label style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Что нужно сделать</span>
+    <input type="text" value="{{draft.title}}" onChange="{{onDraftTitle}}" placeholder="Например, подготовить слайды" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+  </label>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Приоритет · сложность</span>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #E9E1D0;">
+      <sc-for list="{{sizeOpts}}" as="s" hint-placeholder-count="3"><button type="button" onClick="{{s.pick}}" style="height: 40px; border-radius: 9px; border: none; background: {{s.bg}}; color: #1F2A44; font: 600 14px Inter, sans-serif;">{{s.label}}</button></sc-for>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Навык</span>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <sc-for list="{{skillOpts}}" as="s" hint-placeholder-count="3"><button type="button" onClick="{{s.pick}}" style="height: 36px; padding: 0 14px; border-radius: 18px; border: {{s.border}}; background: {{s.bg}}; color: {{s.fg}}; font: 600 14px Inter, sans-serif;">{{s.label}}</button></sc-for>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Epic</span>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <sc-for list="{{epicOpts}}" as="s" hint-placeholder-count="2"><button type="button" onClick="{{s.pick}}" style="height: 36px; padding: 0 14px; border-radius: 18px; border: {{s.border}}; background: {{s.bg}}; color: {{s.fg}}; font: 600 14px Inter, sans-serif;">{{s.label}}</button></sc-for>
+    </div>
+  </div>
+  <div style="padding: 12px 14px; border-radius: 14px; background: #F1E3D3; font-size: 13px; line-height: 1.45; color: #5C3410;"><b>Награда при выполнении:</b> {{draftPreview}}. За создание награды нет.</div>
+  <button type="button" onClick="{{createQuest}}" disabled="{{draftEmpty}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: {{createBg}}; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Добавить в журнал</button>
+</sc-if>
+
+<sc-if value="{{is.reward}}" hint-placeholder-val="{{false}}">
+  <div style="height: 150px; border-radius: 20px; background: #E7DCC4; position: relative; overflow: hidden; flex-shrink: 0;">
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #B9AA86; border-top: 6px solid #8E7F5C;"></div>
+    <div style="position: absolute; left: 50%; bottom: 26px; margin-left: -35px; display: grid; grid-template-columns: repeat(10, 7px); grid-auto-rows: 7px;" role="img" aria-label="Герой радуется"><sc-for list="{{heroPx}}" as="p" hint-placeholder-count="160"><div style="background: {{p.c}};"></div></sc-for></div>
+  </div>
+  <div style="text-align: center; display: flex; flex-direction: column; gap: 4px;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #2F6B4F;">Квест выполнен</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700;">{{reward.title}}</h1>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 6px 14px; display: flex; flex-direction: column;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; padding: 10px 0 4px;">Что изменилось и почему</div>
+    <sc-for list="{{reward.rows}}" as="c" hint-placeholder-count="4">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid #EFE7D7;">
+        <div style="width: 40px; font-size: 13px; font-weight: 700; color: #9A5214;">{{c.tag}}</div>
+        <div style="flex-grow: 1; font-size: 12px; color: #4A5368; line-height: 1.35;">{{c.why}}</div>
+        <div style="font-size: 15px; font-weight: 700; color: #9A5214;">{{c.delta}}</div>
+      </div>
+    </sc-for>
+  </div>
+  <sc-if value="{{reward.hasLevelUps}}" hint-placeholder-val="{{false}}">
+    <div style="padding: 10px 14px; border-radius: 14px; background: #DDEBE3; color: #24533D; font-size: 14px; font-weight: 600; line-height: 1.5;">{{reward.levelText}}</div>
+  </sc-if>
+  <div style="padding: 10px 14px; border-radius: 14px; background: {{reward.rankBg}}; color: {{reward.rankFg}}; font-size: 14px; font-weight: 600;">{{reward.rankText}}</div>
+  <button type="button" onClick="{{nav.today}}" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Продолжить</button>
+  <button type="button" onClick="{{undoLast}}" style="height: 44px; border: none; background: transparent; color: #1F2A44; font: 500 15px Inter, sans-serif;">Отменить выполнение</button>
+</sc-if>
+
+<sc-if value="{{is.journal}}" hint-placeholder-val="{{false}}">
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Журнал квестов</h1>
+  <sc-for list="{{journal}}" as="g" hint-placeholder-count="2">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between;"><div style="display: flex; flex-direction: column;"><span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9A5214;">{{g.kind}}</span><span style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">{{g.name}}</span></div><span style="font-size: 13px; color: #4A5368;">{{g.progress}}</span></div>
+      <sc-for list="{{g.items}}" as="q" hint-placeholder-count="2">
+        <button type="button" onClick="{{q.complete}}" style="display: flex; align-items: center; gap: 12px; min-height: 40px; border: none; background: transparent; padding: 0; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+          <span style="width: 22px; height: 22px; border-radius: 6px; background: {{q.boxBg}}; border: {{q.boxBorder}}; box-sizing: border-box; color: #FFFCF6; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{q.mark}}</span>
+          <span style="flex-grow: 1; font-size: 15px; color: {{q.color}}; text-decoration: {{q.deco}};">{{q.title}}</span>
+          <span style="font-size: 12px; color: #4A5368;">{{q.sizeLabel}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-for>
+</sc-if>
+
+<sc-if value="{{is.hero}}" hint-placeholder-val="{{false}}">
+  <div style="display: flex; gap: 16px; align-items: center;">
+    <div style="width: 96px; height: 120px; border-radius: 16px; background: #E7DCC4; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; box-sizing: border-box; flex-shrink: 0;">
+      <div style="display: grid; grid-template-columns: repeat(10, 6px); grid-auto-rows: 6px;" role="img" aria-label="Герой"><sc-for list="{{heroPx}}" as="p" hint-placeholder-count="160"><div style="background: {{p.c}};"></div></sc-for></div>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px;">
+      <div style="font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700;">{{heroTitle}}</div>
+      <div style="font-size: 13px; color: #4A5368;">{{classTitle}}</div>
+      <div style="font-size: 15px; font-weight: 700;">{{rank.full}}</div>
+      <div style="height: 6px; border-radius: 3px; background: #E9E1D0; overflow: hidden;"><div style="width: {{rank.width}}; height: 6px; background: #B8651B;"></div></div>
+      <div style="font-size: 12px; color: #4A5368;">{{rank.nextText}}</div>
+    </div>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 8px 14px; display: flex; flex-direction: column;">
+    <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+      <div style="display: grid; grid-template-columns: 40px 26px minmax(0, 1fr) 70px; gap: 8px; align-items: center; height: 34px;">
+        <div style="font-size: 13px; font-weight: 700;">{{a.k}}</div>
+        <div style="font-size: 15px; font-weight: 700; text-align: right;">{{a.L}}</div>
+        <div style="height: 8px; border-radius: 4px; background: #E9E1D0; overflow: hidden;"><div style="width: {{a.pct}}; height: 8px; background: {{a.bar}};"></div></div>
+        <div style="font-size: 11px; color: #4A5368; text-align: right;">{{a.xpText}}</div>
+      </div>
+    </sc-for>
+    <div style="font-size: 12px; color: #4A5368; padding: 6px 0;">Полоса — XP до следующего уровня. Тёмные — атрибуты класса (вес в ранге 1,0), светлые — вне класса (0,5).</div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-family: Literata, Georgia, serif; font-size: 17px; font-weight: 600;">Навыки</div>
+    <sc-for list="{{skills}}" as="s" hint-placeholder-count="2">
+      <div style="display: flex; justify-content: space-between; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; background: #FFFCF6;"><span style="display: flex; flex-direction: column;"><span style="font-size: 14px; font-weight: 600;">{{s.name}}</span><span style="font-size: 12px; color: #4A5368;">{{s.prof}}</span></span><span style="font-size: 14px; font-weight: 700;">{{s.xp}} XP</span></div>
+    </sc-for>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+    <button type="button" onClick="{{addDemoWeek}}" style="height: 48px; border-radius: 14px; border: 1px dashed #B8A98A; background: transparent; color: #1F2A44; font: 600 14px Inter, sans-serif;">+ неделя демо-активности</button>
+    <button type="button" onClick="{{resetAll}}" style="height: 48px; border-radius: 14px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 14px Inter, sans-serif;">Начать заново</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{is.map}}" hint-placeholder-val="{{false}}">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <button type="button" aria-label="Предыдущий день" onClick="{{dayPrev}}" style="width: 44px; height: 44px; border: none; background: transparent; color: #1F2A44; font: 700 20px Inter, sans-serif;">‹</button>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">{{dayLabel}}</div>
+    <button type="button" aria-label="Следующий день" onClick="{{dayNext}}" style="width: 44px; height: 44px; border: none; background: transparent; color: #1F2A44; font: 700 20px Inter, sans-serif;">›</button>
+  </div>
+  <sc-if value="{{isToday}}" hint-placeholder-val="{{true}}">
+    <div style="margin: 0 -16px; height: 350px; overflow: hidden; flex-shrink: 0;"><img src="/_blob/3299bb962dd9270fb700d60c1b089942" alt="Изометрическая карта дня с 7:30 до 18:30" style="display: block; width: 390px; height: 380px;"></div>
+    <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Деревни — события до 30 минут, города — длиннее; пересечения уплотняют город. Таблички — квесты со временем. Погода: {{weatherShort}}.</div>
+  </sc-if>
+  <sc-if value="{{notToday}}" hint-placeholder-val="{{false}}">
+    <div style="height: 350px; border-radius: 18px; border: 1px dashed #B8A98A; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box; font-size: 14px; color: #4A5368; line-height: 1.5;">В прототипе демо-данные календаря есть только на сегодня. В приложении здесь будет карта выбранного дня.</div>
+  </sc-if>
+</sc-if>
+
+</div>
+
+<sc-if value="{{showFab}}" hint-placeholder-val="{{false}}">
+  <button type="button" aria-label="Новый квест" onClick="{{nav.newq}}" style="position: absolute; right: 20px; bottom: 100px; width: 56px; height: 56px; border-radius: 18px; border: none; background: #1F2A44; color: #FFFCF6; font: 400 30px Inter, sans-serif; line-height: 1;">+</button>
+</sc-if>
+
+<sc-if value="{{is.tabs}}" hint-placeholder-val="{{false}}">
+  <div style="height: 82px; flex-shrink: 0; border-top: 1px solid #E3D9C6; background: #FFFCF6; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+      <button type="button" onClick="{{t.go}}" style="border: none; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{t.color}}; font: {{t.font}}; padding: 0;">
+        <span style="width: 22px; height: 4px; border-radius: 2px; background: {{t.dot}};"></span>{{t.label}}
+      </button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 96px; padding: 12px 14px; border-radius: 12px; background: #1F2A44; color: #FFFCF6; font-size: 13px; line-height: 1.4;">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var ATTRS = ['STR', 'END', 'INT', 'MNT', 'CHR', 'FOC', 'DIS'];
+var CATALOG = [
+  { id: 'dev', name: 'Инженер-программист', attrs: ['INT', 'MNT', 'CHR'], skill: 'Отчётность', cloak: ['#2F6B4F', '#24533D'] },
+  { id: 'ath', name: 'Атлет-любитель', attrs: ['STR', 'END', 'MNT'], skill: 'Бег', cloak: ['#3B5BDB', '#2C45A8'] },
+  { id: 'pm', name: 'Менеджер проектов', attrs: ['CHR', 'MNT', 'INT'], skill: 'Планирование', cloak: ['#B8651B', '#9A5214'] },
+  { id: 'bb', name: 'Баскетболист', attrs: ['END', 'STR', 'MNT'], skill: 'Бросок', cloak: ['#A8432F', '#7F3122'] },
+  { id: 'pe', name: 'Промпт-инженер', attrs: ['INT', 'MNT', 'CHR'], skill: 'Промпты', cloak: ['#8E4FB5', '#6F3A8E'] }
+];
+var HAIR = [['#3B2A20', 'Тёмные'], ['#C46A3A', 'Рыжие'], ['#E0C27A', 'Светлые'], ['#1F1A16', 'Чёрные']];
+var SKIN = [['#F2D0B0', 'Светлая'], ['#E8B892', 'Средняя'], ['#C98E68', 'Смуглая'], ['#8C5A3C', 'Тёмная']];
+var SPLIT = { 1: [1], 2: [0.7, 0.3], 3: [0.5, 0.3, 0.2] };
+var ROLES = ['Основной', 'Вторичный', 'Третичный'];
+var RANKS = [['G', 'Новобранец'], ['F', 'Странник'], ['E', 'Следопыт'], ['D', 'Искатель'], ['C', 'Первопроходец'], ['B', 'Ветеран'], ['A', 'Хранитель'], ['S', 'Магистр'], ['SS', 'Герой'], ['SSS', 'Легенда']];
+var SIZES = [['Низкий', 0.5], ['Средний', 1], ['Высокий', 1.5]];
+var MOODS = [['good', 'Хорошее', 'ясно', '#E2A04A'], ['ok', 'Ровное', 'облачно', '#8E9AAF'], ['bad', 'Плохое', 'дождь', '#3E4A63']];
+var SPRITE = ['...HHHH...', '..HHHHHH..', '..HSSSSH..', '..SESSES..', '..SSSSSS..', '...SSSS...', '..AAAAAA..', '.CCAAAACC.', '.CCCCCCCC.', '.SCCBBCCS.', '..CCBBCC..', '..CDCCDC..', '..PPPPPP..', '..PP..PP..', '..PP..PP..', '.KKK..KKK.'];
+var DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+function fmt(n) { return (Math.round(n * 100) / 100).toString().replace('.', ','); }
+function levelInfo(xp) { var L = 0; while (xp >= 20 + 5 * L) { xp -= 20 + 5 * L; L++; } return { L: L, into: xp, cost: 20 + 5 * L }; }
+function threshold(r) { return 2.5 * r * r + 7.5 * r; }
+function prof(id) { for (var i = 0; i < CATALOG.length; i++) if (CATALOG[i].id === id) return CATALOG[i]; return null; }
+
+function initialState() {
+  return { screen: 'onb1', prev: 'today', heroName: '', hair: 0, skin: 1, sel: [], className: '', classTouched: false,
+    grants: [], quests: [], habits: {}, mood: 'good', lastSrc: null, demo: 0, dayOffset: 0, toast: '', seq: 1,
+    draft: { title: '', size: 2, skill: null, epic: true } };
+}
+
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = initialState(); }
+
+  go(s) { var self = this; return function () { self.setState({ prev: self.state.screen, screen: s, toast: '' }); }; }
+
+  classAttrs(sel) {
+    var count = {};
+    sel.forEach(function (id) { prof(id).attrs.forEach(function (a) { count[a] = (count[a] || 0) + 1; }); });
+    return count;
+  }
+
+  totals(grants) {
+    var t = { attr: {}, skill: {} };
+    ATTRS.forEach(function (a) { t.attr[a] = 0; });
+    grants.forEach(function (g) {
+      if (g.kind === 'attr') t.attr[g.key] += g.amt; else t.skill[g.key] = (t.skill[g.key] || 0) + g.amt;
+    });
+    return t;
+  }
+
+  rankOf(attrXp, sel) {
+    var count = this.classAttrs(sel);
+    var score = 0, levels = {};
+    ATTRS.forEach(function (a) {
+      var L = levelInfo(attrXp[a]).L; levels[a] = L;
+      var w = (a === 'FOC' || a === 'DIS') ? 1 : (count[a] ? 1 : 0.5);
+      score += w * L;
+    });
+    var r = 0;
+    for (var k = 1; k <= 10; k++) {
+      if (score < threshold(k)) break;
+      if (k >= 6) {
+        var ok = Object.keys(count).every(function (a) { return levels[a] >= 2 * k; });
+        if (!ok) break;
+      }
+      r = k;
+    }
+    return { r: r, score: score, levels: levels };
+  }
+
+  profGrants(src, profId, base, why0) {
+    var p = prof(profId), count = this.classAttrs(this.state.sel), out = [];
+    var shares = SPLIT[p.attrs.length];
+    p.attrs.forEach(function (a, i) {
+      var m = 1 + 0.25 * ((count[a] || 1) - 1);
+      out.push({ src: src, kind: 'attr', key: a, amt: base * shares[i] * m,
+        why: ROLES[i] + ' атрибут «' + p.name + '» · ' + Math.round(shares[i] * 100) + '%' + (m > 1 ? ' · ×' + fmt(m) + ' за повтор в классе' : '') + why0 });
+    });
+    return out;
+  }
+
+  questGrants(q) {
+    var k = SIZES[q.size - 1][1];
+    var sizeNote = ' · приоритет ' + SIZES[q.size - 1][0].toLowerCase() + ' ×' + String(k).replace('.', ',');
+    var g = [{ src: q.id, kind: 'attr', key: 'FOC', amt: 5 * k, why: 'Квест выполнен' + sizeNote }];
+    if (q.skill) {
+      g.push({ src: q.id, kind: 'skill', key: q.skill, amt: 10 * k, why: 'Навык профессии «' + prof(q.skill).name + '»' + sizeNote });
+      g = g.concat(this.profGrants(q.id, q.skill, 10 * k, sizeNote));
+    }
+    return g;
+  }
+
+  renderVals() {
+    var self = this, st = this.state;
+    var s = st.screen;
+    var is = { onb1: s === 'onb1', onb2: s === 'onb2', onb3: s === 'onb3', onb4: s === 'onb4', today: s === 'today', mood: s === 'mood', newq: s === 'newq', reward: s === 'reward', journal: s === 'journal', hero: s === 'hero', map: s === 'map' };
+    is.onb = is.onb1 || is.onb2 || is.onb3 || is.onb4;
+    is.tabs = is.today || is.journal || is.hero || is.map;
+    var onbStep = is.onb1 ? 1 : is.onb2 ? 2 : is.onb3 ? 3 : 4;
+    var backMap = { onb1: 'onb1', onb2: 'onb1', onb3: 'onb2', onb4: 'onb3', newq: st.prev };
+
+    var nav = { back: function () { self.setState({ screen: backMap[s] || 'today' }); } };
+    ['onb2', 'onb3', 'onb4', 'today', 'mood', 'newq', 'journal', 'hero', 'map'].forEach(function (k) { nav[k] = self.go(k); });
+
+    // спрайт
+    var first = st.sel.length ? prof(st.sel[0]) : null;
+    var cloak = first ? first.cloak : ['#8E8576', '#6E6658'];
+    var pal = { H: HAIR[st.hair][0], S: SKIN[st.skin][0], E: '#1F2A44', C: cloak[0], D: cloak[1], B: '#7A4A22', P: '#3E4A63', K: '#2A2320', A: '#C9772A' };
+    var heroPx = [];
+    SPRITE.forEach(function (row) { for (var i = 0; i < row.length; i++) heroPx.push({ c: pal[row[i]] || 'transparent' }); });
+
+    var pickList = function (list, sel, key) {
+      return list.map(function (x, i) {
+        return { c: x[0], label: x[1], border: i === sel ? '3px solid #1F2A44' : '1px solid #C9BCA2', pick: function () { var o = {}; o[key] = i; self.setState(o); } };
+      });
+    };
+
+    var count = this.classAttrs(st.sel);
+    var catalog = CATALOG.map(function (p) {
+      var on = st.sel.indexOf(p.id) >= 0;
+      var full = st.sel.length >= 3 && !on;
+      return { name: p.name, attrsText: p.attrs.join(' · ') + ' · навык «' + p.skill + '»', cloak: p.cloak[0],
+        border: on ? '2px solid #1F2A44' : '1px solid #E3D9C6', opacity: full ? 0.45 : 1,
+        checkBg: on ? '#1F2A44' : 'transparent', checkBorder: on ? 'none' : '2px solid #C9BCA2', checkMark: on ? '✓' : '',
+        toggle: function () {
+          var sel = st.sel.slice(), i = sel.indexOf(p.id);
+          if (i >= 0) sel.splice(i, 1); else if (sel.length < 3) sel.push(p.id);
+          self.setState({ sel: sel });
+        } };
+    });
+    var selProfs = st.sel.map(function (id) {
+      var p = prof(id);
+      return { name: p.name, slots: p.attrs.map(function (a, i) { return { n: i + 1, role: ROLES[i], attr: a, share: Math.round(SPLIT[p.attrs.length][i] * 100) + '%' }; }) };
+    });
+    var repeated = Object.keys(count).filter(function (a) { return count[a] > 1; });
+    var multNote = repeated.length ? repeated.map(function (a) { return a + ' есть в ' + count[a] + ' профессиях — растёт ×' + fmt(1 + 0.25 * (count[a] - 1)) + '.'; }).join(' ') : 'Повторов атрибутов нет — множители ×1,0.';
+    var defaultClass = (st.sel.indexOf('dev') >= 0 && st.sel.indexOf('ath') >= 0) ? 'Инженер-атлет' : (first ? first.name : 'Мой класс');
+    var className = st.classTouched ? st.className : defaultClass;
+
+    // прогресс
+    var t = this.totals(st.grants);
+    var rk = this.rankOf(t.attr, st.sel);
+    var rankName = function (r) { return r ? 'Ранг ' + RANKS[r - 1][0] + ' · ' + RANKS[r - 1][1] : 'Без ранга'; };
+    var nextT = rk.r < 10 ? threshold(rk.r + 1) : null;
+    var prevT = rk.r ? threshold(rk.r) : 0;
+    var rank = {
+      short: rk.r ? 'Ранг ' + RANKS[rk.r - 1][0] : 'Без ранга',
+      full: rankName(rk.r),
+      width: nextT ? Math.min(100, Math.round((rk.score - prevT) / (nextT - prevT) * 100)) + '%' : '100%',
+      nextText: nextT ? 'Очки ' + fmt(rk.score) + ' · до ранга ' + RANKS[rk.r][0] + ' нужно ' + nextT : 'Высший ранг'
+    };
+    var attrs = ATTRS.map(function (a) {
+      var li = levelInfo(t.attr[a]);
+      var inClass = a === 'FOC' || a === 'DIS' || !!count[a];
+      return { k: a, L: li.L, pct: Math.round(li.into / li.cost * 100) + '%', bar: inClass ? '#1F2A44' : '#B3A890', xpText: fmt(li.into) + ' / ' + li.cost };
+    });
+
+    // привычки
+    var habitDefs = [
+      { id: 'h1', title: 'Зарядка 15 минут', skill: st.sel.indexOf('ath') >= 0 ? 'ath' : null },
+      { id: 'h2', title: 'Английский: 20 слов', skill: null },
+      { id: 'h3', title: 'Чтение 30 минут', skill: null }
+    ];
+    var habitsDone = 0;
+    var habits = habitDefs.map(function (h) {
+      var done = !!st.habits[h.id];
+      if (done) habitsDone++;
+      return { title: h.title, tag: h.skill ? 'навык «' + prof(h.skill).skill + '»' : 'DIS', boxBg: done ? '#2F6B4F' : 'transparent', boxBorder: done ? 'none' : '2px solid #1F2A44', mark: done ? '✓' : '',
+        color: done ? '#4A5368' : '#1F2A44', deco: done ? 'line-through' : 'none',
+        toggle: function () {
+          var hs = Object.assign({}, st.habits), src = 'hab-' + h.id;
+          var grants = st.grants.filter(function (g) { return g.src !== src; });
+          if (hs[h.id]) { delete hs[h.id]; }
+          else {
+            hs[h.id] = true;
+            if (h.skill) {
+              grants.push({ src: src, kind: 'skill', key: h.skill, amt: 5, why: 'Привычка' });
+              grants = grants.concat(self.profGrants(src, h.skill, 5, ''));
+            }
+          }
+          self.setState({ habits: hs, grants: grants });
+        } };
+    });
+    var todayPct = Math.round(habitsDone / 3 * 100);
+    var p = (67 + todayPct) / 2;
+    var dd = Math.max(-30, 0.6 * (p - 50) * 1.5);
+    var dis = { today: todayPct, width: Math.round(p) + '%', color: dd > 0 ? '#2F6B4F' : (dd < 0 ? '#A8432F' : '#4A5368'),
+      text: Math.round(p) + '% · прогноз DIS ' + (dd > 0 ? '+' : '') + fmt(Math.round(dd)) };
+
+    // квесты
+    var questRow = function (q) {
+      return { title: q.title, sizeLabel: SIZES[q.size - 1][0],
+        meta: SIZES[q.size - 1][0] + (q.skill ? ' · навык «' + prof(q.skill).skill + '»' : ' · без навыка') + (q.epic ? ' · Повышение' : ''),
+        boxBg: q.done ? '#2F6B4F' : 'transparent', boxBorder: q.done ? 'none' : '2px solid #1F2A44', mark: q.done ? '✓' : '',
+        color: q.done ? '#4A5368' : '#1F2A44', deco: q.done ? 'line-through' : 'none',
+        complete: function () {
+          if (q.done) { self.setState({ toast: 'Квест уже выполнен. Отменить можно сразу на экране награды.' }); return; }
+          var quests = st.quests.map(function (x) { return x.id === q.id ? Object.assign({}, x, { done: true }) : x; });
+          self.setState({ quests: quests, grants: st.grants.concat(self.questGrants(q)), lastSrc: q.id, prev: st.screen, screen: 'reward', toast: '' });
+        } };
+    };
+    var ordered = st.quests.filter(function (q) { return !q.done; }).concat(st.quests.filter(function (q) { return q.done; }));
+    var questRows = ordered.map(questRow);
+    var epicQ = st.quests.filter(function (q) { return q.epic; }), soloQ = st.quests.filter(function (q) { return !q.epic; });
+    var doneCount = function (l) { return l.filter(function (q) { return q.done; }).length; };
+    var journal = [
+      { kind: 'Epic Quest', name: 'Повышение до тимлида', progress: doneCount(epicQ) + ' из ' + epicQ.length, items: epicQ.map(questRow) },
+      { kind: 'Без Epic', name: 'Отдельные квесты', progress: doneCount(soloQ) + ' из ' + soloQ.length, items: soloQ.map(questRow) }
+    ];
+
+    // награда
+    var reward = { title: '', rows: [], hasLevelUps: false, levelText: '', rankText: '', rankBg: '#E6E8EE', rankFg: '#1F2A44' };
+    if (st.lastSrc) {
+      var lq = st.quests.filter(function (q) { return q.id === st.lastSrc; })[0];
+      var mine = st.grants.filter(function (g) { return g.src === st.lastSrc; });
+      var before = this.totals(st.grants.filter(function (g) { return g.src !== st.lastSrc; }));
+      var rb = this.rankOf(before.attr, st.sel);
+      reward.title = lq ? lq.title : '';
+      reward.rows = mine.map(function (g) { return { tag: g.kind === 'skill' ? 'Навык' : g.key, why: g.why, delta: '+' + fmt(g.amt) }; });
+      var ups = ATTRS.filter(function (a) { return rk.levels[a] > rb.levels[a]; }).map(function (a) { return a + ': уровень ' + rb.levels[a] + ' → ' + rk.levels[a]; });
+      reward.hasLevelUps = ups.length > 0;
+      reward.levelText = 'Новый уровень! ' + ups.join(' · ');
+      if (rk.r > rb.r) { reward.rankText = 'Новый ранг: ' + rankName(rk.r); reward.rankBg = '#1F2A44'; reward.rankFg = '#FFFCF6'; }
+      else reward.rankText = 'Очки ранга: ' + fmt(rb.score) + ' → ' + fmt(rk.score) + (nextT ? ' из ' + nextT + ' до ранга ' + RANKS[rk.r][0] : '');
+    }
+
+    // новый квест
+    var d = st.draft;
+    var setDraft = function (patch) { return function () { self.setState({ draft: Object.assign({}, st.draft, patch) }); }; };
+    var sizeOpts = SIZES.map(function (x, i) { return { label: x[0], bg: d.size === i + 1 ? '#FFFCF6' : 'transparent', pick: setDraft({ size: i + 1 }) }; });
+    var chip = function (on) { return { border: on ? 'none' : '1px solid #C9BCA2', bg: on ? '#1F2A44' : 'transparent', fg: on ? '#FFFCF6' : '#1F2A44' }; };
+    var skillOpts = [Object.assign({ label: 'Без навыка', pick: setDraft({ skill: null }) }, chip(d.skill === null))].concat(st.sel.map(function (id) {
+      return Object.assign({ label: prof(id).skill, pick: setDraft({ skill: id }) }, chip(d.skill === id));
+    }));
+    var epicOpts = [Object.assign({ label: 'Без Epic', pick: setDraft({ epic: false }) }, chip(!d.epic)), Object.assign({ label: 'Повышение до тимлида', pick: setDraft({ epic: true }) }, chip(d.epic))];
+    var preview = this.questGrants({ id: 'preview', size: d.size, skill: d.skill });
+    var draftPreview = preview.map(function (g) { return (g.kind === 'skill' ? '«' + prof(g.key).skill + '»' : g.key) + ' +' + fmt(g.amt); }).join(', ');
+
+    // карта
+    var dayIdx = ((1 + st.dayOffset) % 7 + 7) % 7;
+    var dayLabel = DAYS[dayIdx] + ', ' + (10 + st.dayOffset) + ' ноября' + (st.dayOffset === 0 ? ' · сегодня' : '');
+    var moodRow = MOODS.filter(function (m) { return m[0] === st.mood; })[0];
+
+    var tabsDef = [['today', 'Сегодня'], ['journal', 'Журнал'], ['hero', 'Герой'], ['map', 'Карта']];
+    var tabs = tabsDef.map(function (x) { var on = s === x[0]; return { label: x[1], go: self.go(x[0]), color: on ? '#1F2A44' : '#4A5368', font: (on ? '700' : '500') + ' 11px Inter, sans-serif', dot: on ? '#B8651B' : 'transparent' }; });
+
+    return {
+      is: is, nav: nav, onbStep: onbStep, onbLabel: 'Шаг ' + onbStep + ' из 4',
+      onbBars: [1, 2, 3, 4].map(function (i) { return { c: i <= onbStep ? '#1F2A44' : '#D9CDB6' }; }),
+      heroPx: heroPx, heroName: st.heroName,
+      onName: function (e) { self.setState({ heroName: e.target.value }); },
+      hairOpts: pickList(HAIR, st.hair, 'hair'), skinOpts: pickList(SKIN, st.skin, 'skin'),
+      catalog: catalog, selCount: st.sel.length, noProfs: st.sel.length === 0, nextBg: st.sel.length ? '#1F2A44' : '#B3A890',
+      selProfs: selProfs, multNote: multNote,
+      className: className, onClassName: function (e) { self.setState({ className: e.target.value, classTouched: true }); },
+      classTitle: className || 'Мой класс', profNames: st.sel.map(function (id) { return prof(id).name; }).join(' + '),
+      classAttrsText: 'Атрибуты класса: ' + Object.keys(count).join(', '),
+      startGame: function () {
+        var sk = st.sel[0], ath = st.sel.indexOf('ath') >= 0 ? 'ath' : null;
+        self.setState({ screen: 'today', className: className, classTouched: true, quests: [
+          { id: 'q1', title: 'Сдать отчёт по проекту', size: 2, skill: sk, epic: true, done: false },
+          { id: 'q2', title: 'Провести ретро команды', size: 2, skill: sk, epic: true, done: false },
+          { id: 'q3', title: 'Позвонить в банк', size: 1, skill: null, epic: false, done: false },
+          { id: 'q4', title: 'Пробежать 5 км', size: 2, skill: ath, epic: false, done: false }
+        ] });
+      },
+      rank: rank, attrs: attrs, dis: dis, habits: habits, habitsDone: habitsDone, questRows: questRows, journal: journal,
+      weather: 'Погода: ' + moodRow[2] + ' · по отметке', weatherShort: moodRow[2],
+      moods: MOODS.map(function (m) { return { label: m[1], weather: m[2], c: m[3], border: st.mood === m[0] ? '2px solid #1F2A44' : '1px solid #E3D9C6', pick: function () { self.setState({ mood: m[0], screen: 'today', toast: 'Отмечено: ' + m[1].toLowerCase() + ' — погода «' + m[2] + '». На XP не влияет.' }); } }; }),
+      draft: d, onDraftTitle: function (e) { self.setState({ draft: Object.assign({}, st.draft, { title: e.target.value }) }); },
+      sizeOpts: sizeOpts, skillOpts: skillOpts, epicOpts: epicOpts, draftPreview: draftPreview,
+      draftEmpty: !d.title.trim(), createBg: d.title.trim() ? '#1F2A44' : '#B3A890',
+      createQuest: function () {
+        if (!d.title.trim()) return;
+        var q = { id: 'n' + st.seq, title: d.title.trim(), size: d.size, skill: d.skill, epic: d.epic, done: false };
+        self.setState({ quests: st.quests.concat([q]), seq: st.seq + 1, draft: { title: '', size: 2, skill: null, epic: true }, screen: 'journal', toast: 'Квест добавлен. За создание XP не начисляется.' });
+      },
+      reward: reward,
+      undoLast: function () {
+        var src = st.lastSrc;
+        self.setState({ grants: st.grants.filter(function (g) { return g.src !== src; }), quests: st.quests.map(function (x) { return x.id === src ? Object.assign({}, x, { done: false }) : x; }), lastSrc: null, screen: 'today', toast: 'Выполнение отменено — начисления сняты.' });
+      },
+      heroTitle: st.heroName.trim() || 'Безымянный герой',
+      skills: st.sel.map(function (id) { return { name: prof(id).skill, prof: prof(id).name, xp: fmt(t.skill[id] || 0) }; }),
+      addDemoWeek: function () {
+        var n = st.demo + 1, src = 'demo' + n, add = { STR: 20, END: 10, INT: 45, MNT: 45, CHR: 25, FOC: 75, DIS: 30 };
+        var g = Object.keys(add).map(function (a) { return { src: src, kind: 'attr', key: a, amt: add[a], why: 'Демо-неделя' }; });
+        self.setState({ grants: st.grants.concat(g), demo: n, toast: 'Добавлена демо-неделя №' + n + ' (как в симуляции 07, неделя 1).' });
+      },
+      resetAll: function () { self.setState(initialState()); },
+      dayLabel: dayLabel, isToday: st.dayOffset === 0, notToday: st.dayOffset !== 0,
+      dayPrev: function () { self.setState({ dayOffset: Math.max(-7, st.dayOffset - 1) }); },
+      dayNext: function () { self.setState({ dayOffset: Math.min(7, st.dayOffset + 1) }); },
+      showFab: is.today || is.journal, tabs: tabs, toast: st.toast, hasToast: !!st.toast && is.tabs
+    };
+  }
+}
+</script>
+</body>
+</html>

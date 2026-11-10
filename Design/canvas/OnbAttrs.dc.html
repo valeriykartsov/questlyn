@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Онбординг — атрибуты профессий</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="Onboarding.dc.html" aria-label="Назад" style="width: 44px; height: 44px; display: flex; align-items: center; color: #1F2A44;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <div style="display: flex; gap: 6px;" aria-label="Шаг 3 из 4">
+      <div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #D9CDB6;"></div>
+    </div>
+    <div style="width: 44px; font-size: 13px; color: #4A5368; text-align: right;">3 / 4</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 26px; font-weight: 700; line-height: 1.15;">Что развивает профессия?</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A5368;">От 1 до 3 атрибутов по приоритету. Мы подставили значения из каталога — поменяйте, если у вас иначе.</p>
+  </div>
+
+  <sc-for list="{{profs}}" as="p" hint-placeholder-count="2">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 16px; font-weight: 600;">{{p.name}}</div>
+      <sc-for list="{{p.slots}}" as="s" hint-placeholder-count="3">
+        <button type="button" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #E3D9C6; background: #F5F0E6; font-family: Inter, sans-serif; color: #1F2A44; text-align: left;">
+          <span style="width: 22px; height: 22px; border-radius: 6px; background: #1F2A44; color: #FFFCF6; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{s.n}}</span>
+          <span style="flex-grow: 1; font-size: 14px; color: #4A5368;">{{s.role}}</span>
+          <span style="font-size: 15px; font-weight: 700;">{{s.attr}}</span>
+          <span style="font-size: 13px; color: #4A5368;">{{s.full}}</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A5368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+      </sc-for>
+    </div>
+  </sc-for>
+
+  <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 14px; background: #F1E3D3; font-size: 13px; line-height: 1.45; color: #5C3410;">
+    <div><b>MNT</b> есть в обеих профессиях — в вашем классе он сильнее влияет на ранг.</div>
+    <div><b>FOC</b> и <b>DIS</b> не выбираются: они растут от квестов и привычек.</div>
+  </div>
+
+  <a href="OnbClass.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Далее</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const names = { STR: 'Сила', END: 'Выносливость', INT: 'Интеллект', MNT: 'Ментальность', CHR: 'Харизма' };
+    const roles = ['Основной', 'Вторичный', 'Третичный'];
+    const mk = (name, attrs) => ({ name, slots: attrs.map((a, i) => ({ n: i + 1, role: roles[i], attr: a, full: names[a] })) });
+    return {
+      profs: [mk('Инженер-программист', ['INT', 'MNT', 'CHR']), mk('Атлет-любитель', ['STR', 'END', 'MNT'])]
+    };
+  }
+}
+</script>
+</body>
+</html>

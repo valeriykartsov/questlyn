@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карточка квеста</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 50px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="Journal.dc.html" style="min-width: 44px; height: 44px; display: flex; align-items: center; gap: 2px; text-decoration: none; color: #1F2A44; font-size: 15px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>Журнал</a>
+    <button type="button" aria-label="Ещё действия" style="width: 44px; height: 44px; border: none; background: transparent; color: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9A5214;">Квест</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15;">Сдать отчёт по проекту</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #3D4354;">Собрать цифры за квартал, согласовать выводы с Сергеем и отправить руководителю.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+    <a href="Epic.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6; text-decoration: none; color: #1F2A44;">
+      <span style="width: 90px; font-size: 14px; color: #4A5368;">Epic</span><span style="flex-grow: 1; font-size: 15px; font-weight: 500;">Повышение до тимлида</span><span style="color: #4A5368;" aria-hidden="true">›</span>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 90px; font-size: 14px; color: #4A5368;">Навык</span><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 500;">Отчётность</span><span style="font-size: 12px; color: #4A5368;">Инженер-программист</span></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 90px; font-size: 14px; color: #4A5368;">Приоритет</span><span style="flex-grow: 1; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 500;"><span style="display: inline-flex; align-items: flex-end; gap: 2px;" aria-hidden="true"><span style="width: 4px; height: 6px; border-radius: 1px; background: #B8651B;"></span><span style="width: 4px; height: 9px; border-radius: 1px; background: #B8651B;"></span><span style="width: 4px; height: 12px; border-radius: 1px; background: #C9BCA2;"></span></span>Средний</span><span style="font-size: 12px; color: #4A5368;">награда ×1</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 90px; font-size: 14px; color: #4A5368;">Когда</span><span style="flex-grow: 1; font-size: 15px; font-weight: 500;">Сегодня, 18:00</span><span style="font-size: 12px; color: #4A5368;">на карте</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;">
+      <span style="width: 90px; font-size: 14px; color: #4A5368;">Создан</span><span style="flex-grow: 1; font-size: 15px;">8 ноября</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #F1E3D3;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A3F0E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"></path></svg>
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; color: #5C3410;">
+      <div style="font-weight: 700;">Награда при выполнении</div>
+      <div>FOC +5 · навык «Отчётность» +10 XP · атрибуты INT, MNT, CHR 10 XP · −6 MP · шаг Epic 4 из 7</div>
+    </div>
+  </div>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+    <a href="RewardV2.dc.html" style="height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Выполнить</a>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+      <a href="QuestNew.dc.html" style="height: 48px; border-radius: 14px; border: 1px solid #C9BCA2; color: #1F2A44; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Изменить</a>
+      <button type="button" style="height: 48px; border-radius: 14px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 15px Inter, sans-serif;">Перенести</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

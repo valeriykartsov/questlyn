@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Направление C — Пиксельный атлас</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600;700&amp;family=Golos+Text:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5BEA}a:hover{color:#1F44B8}
+</style>
+</helmet>
+<div style="width: 1280px; height: 940px; box-sizing: border-box; padding: 48px; background: #E8ECF5; color: #141A2E; font-family: 'Golos Text', system-ui, sans-serif; display: flex; gap: 48px;">
+
+  <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2F5BEA;">Направление C</div>
+      <h1 style="margin: 0; font-family: 'Pixelify Sans', monospace; font-size: 44px; font-weight: 700;">Пиксельный атлас</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #444C63; max-width: 640px;">Светлый и яркий: кобальт, коралл и жёлтый, жёсткие контуры и «пиксельная» тень. Пиксельный шрифт — только в заголовках и цифрах, текст остаётся обычным.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+      <div style="background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; box-shadow: 4px 4px 0 #141A2E; padding: 20px; display: flex; align-items: center; gap: 20px;">
+        <div style="width: 112px; height: 112px; border-radius: 26px; background: #2F5BEA; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <div style="display: grid; grid-template-columns: repeat(8, 8px); grid-auto-rows: 8px;" role="img" aria-label="Иконка приложения: жёлтая пиксельная буква Q на кобальтовом фоне">
+            <sc-for list="{{iconPx}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-family: 'Pixelify Sans', monospace; font-size: 44px; font-weight: 700;">Questlyn</div>
+          <div style="font-size: 13px; color: #444C63; line-height: 1.4;">Словесный знак Pixelify Sans, иконка в той же пиксельной сетке</div>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; box-shadow: 4px 4px 0 #141A2E; padding: 20px; display: flex; align-items: center; gap: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(12, 9px); grid-auto-rows: 9px; flex-shrink: 0;" role="img" aria-label="Пиксельный персонаж в коралловом плаще">
+          <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 16px; font-weight: 700;">Персонаж</div>
+          <div style="font-size: 13px; color: #444C63; line-height: 1.5;">Насыщенные цвета и тёмный контур, как у классических спрайтов. Самый «игровой» вариант героя.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 14px; font-weight: 700;">Палитра</div>
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #F3F5FA; border: 2px solid #141A2E; box-sizing: border-box;"></div><div style="font-size: 12px; font-weight: 700;">Карта</div><div style="font-size: 12px; color: #444C63;">#F3F5FA</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #141A2E;"></div><div style="font-size: 12px; font-weight: 700;">Контур</div><div style="font-size: 12px; color: #444C63;">#141A2E</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #2F5BEA;"></div><div style="font-size: 12px; font-weight: 700;">Кобальт</div><div style="font-size: 12px; color: #444C63;">#2F5BEA</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #FF6B4A;"></div><div style="font-size: 12px; font-weight: 700;">Коралл</div><div style="font-size: 12px; color: #444C63;">#FF6B4A</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #FFD23F;"></div><div style="font-size: 12px; font-weight: 700;">Золото</div><div style="font-size: 12px; color: #444C63;">#FFD23F</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 4px; background: #9BD94A;"></div><div style="font-size: 12px; font-weight: 700;">Трава</div><div style="font-size: 12px; color: #444C63;">#9BD94A</div></div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; flex-grow: 1;">
+      <div style="background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; box-shadow: 4px 4px 0 #141A2E; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 14px; font-weight: 700;">Типографика</div>
+        <div style="font-family: 'Pixelify Sans', monospace; font-size: 32px; font-weight: 700; line-height: 1.1;">Журнал квестов</div>
+        <div style="font-size: 12px; color: #444C63;">Pixelify Sans 700 — заголовки, ранг, цифры</div>
+        <div style="font-size: 15px; line-height: 1.5;">Сдать отчёт по проекту до пятницы и обсудить план на следующий квартал.</div>
+        <div style="font-size: 12px; color: #444C63;">Golos Text 400/700 — текст и списки</div>
+        <div style="font-family: 'Pixelify Sans', monospace; font-size: 24px; font-weight: 600;">STR 12 · INT 31 · FOC 48</div>
+      </div>
+      <div style="background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; box-shadow: 4px 4px 0 #141A2E; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 14px; font-weight: 700;">Компоненты</div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button type="button" style="height: 44px; padding: 0 20px; border-radius: 4px; border: 2px solid #141A2E; box-shadow: 3px 3px 0 #141A2E; background: #FFD23F; color: #141A2E; font: 700 15px 'Golos Text', sans-serif;">Выполнить</button>
+          <button type="button" style="height: 44px; padding: 0 20px; border-radius: 4px; border: 2px solid #141A2E; background: #FFFFFF; color: #141A2E; font: 700 15px 'Golos Text', sans-serif;">Отложить</button>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span style="padding: 3px 9px; border-radius: 4px; border: 2px solid #141A2E; background: #FFD23F; color: #141A2E; font-size: 13px; font-weight: 700;">+12 XP · Английский</span>
+          <span style="padding: 3px 9px; border-radius: 4px; border: 2px solid #141A2E; background: #9BD94A; color: #141A2E; font-size: 13px; font-weight: 700;">INT ▲</span>
+          <span style="padding: 3px 9px; border-radius: 4px; border: 2px solid #141A2E; background: #DCE4FF; color: #141A2E; font-size: 13px; font-weight: 700;">Epic · Повышение</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 4px; border: 2px solid #141A2E;">
+          <div style="width: 24px; height: 24px; border-radius: 2px; border: 2px solid #141A2E; box-sizing: border-box;"></div>
+          <div style="flex-grow: 1; font-size: 15px;">Позвонить в банк</div>
+          <div style="font-size: 13px; color: #444C63;">14:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 390px; height: 844px; flex-shrink: 0; border-radius: 48px; background: #F3F5FA; border: 2px solid #141A2E; box-sizing: border-box; padding: 54px 16px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 13px; color: #444C63;">Вторник, 10 ноября</div>
+        <div style="font-family: 'Pixelify Sans', monospace; font-size: 32px; font-weight: 700;">Сегодня</div>
+      </div>
+      <button type="button" aria-label="Отметить настроение" style="width: 44px; height: 44px; border-radius: 4px; border: 2px solid #141A2E; background: #FFFFFF; color: #141A2E; display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="3" y="3" width="18" height="18"></rect><path d="M8 15h8"></path><path d="M9 9h.01M15 9h.01"></path></svg>
+      </button>
+    </div>
+
+    <div style="height: 170px; border-radius: 6px; border: 2px solid #141A2E; box-sizing: border-box; overflow: hidden; background: #BFD8FF; position: relative; flex-shrink: 0;">
+      <div style="position: absolute; left: 28px; top: 22px; width: 56px; height: 16px; background: #FFFFFF;"></div>
+      <div style="position: absolute; left: 40px; top: 12px; width: 28px; height: 10px; background: #FFFFFF;"></div>
+      <div style="position: absolute; left: 170px; top: 40px; width: 40px; height: 12px; background: #FFFFFF;"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 42px; background: #9BD94A; border-top: 6px solid #5E9E2A;"></div>
+      <div style="position: absolute; left: 268px; bottom: 42px; width: 12px; height: 20px; background: #7A4A22;"></div>
+      <div style="position: absolute; left: 252px; bottom: 62px; width: 44px; height: 36px; background: #3FA34D;"></div>
+      <div style="position: absolute; left: 40px; bottom: 28px; display: grid; grid-template-columns: repeat(12, 6px); grid-auto-rows: 6px;" role="img" aria-label="Персонаж на зелёной поляне в облачный день">
+        <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+      </div>
+      <div style="position: absolute; right: 10px; top: 10px; background: #FFFFFF; border: 2px solid #141A2E; border-radius: 4px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; align-items: flex-end;">
+        <div style="font-size: 12px; color: #444C63;">Инженер-атлет</div>
+        <div style="font-family: 'Pixelify Sans', monospace; font-size: 17px; font-weight: 700; color: #2F5BEA;">Ранг ?</div>
+      </div>
+      <div style="position: absolute; left: 120px; top: 70px; font-size: 12px; font-weight: 700; color: #141A2E; background: #FFFFFF; border: 2px solid #141A2E; padding: 3px 8px; border-radius: 4px;">Облачно · бодро</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; padding: 8px 4px;">
+      <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+          <div style="font-size: 11px; font-weight: 700; color: #444C63;">{{a.k}}</div>
+          <div style="font-family: 'Pixelify Sans', monospace; font-size: 19px; font-weight: 700;">{{a.v}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="background: #FFFFFF; border: 2px solid #141A2E; border-radius: 6px; padding: 8px 12px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="font-weight: 700;">Дисциплина за неделю</span><span style="font-weight: 700; color: #2F5BEA;">64% · DIS растёт</span></div>
+      <div style="height: 10px; border: 2px solid #141A2E; background: #F3F5FA; display: flex;"><div style="width: 64%; background: #9BD94A;"></div></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: 'Pixelify Sans', monospace; font-size: 20px; font-weight: 700;">Ежедневные</div><div style="font-size: 13px; color: #444C63;">1 из 3</div></div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 4px; background: #FFFFFF; border: 2px solid #141A2E;">
+        <div style="width: 24px; height: 24px; border-radius: 2px; background: #9BD94A; border: 2px solid #141A2E; box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#141A2E" stroke-width="3.5" stroke-linecap="square" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+        <div style="flex-grow: 1; font-size: 15px; color: #444C63; text-decoration: line-through;">Зарядка 15 минут</div><div style="font-size: 12px; font-weight: 700; color: #2F5BEA;">END</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 4px; background: #FFFFFF; border: 2px solid #141A2E;">
+        <div style="width: 24px; height: 24px; border-radius: 2px; border: 2px solid #141A2E; box-sizing: border-box;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Английский: 20 слов</div><div style="font-size: 12px; font-weight: 700; color: #2F5BEA;">INT</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 4px; background: #FFFFFF; border: 2px solid #141A2E;">
+        <div style="width: 24px; height: 24px; border-radius: 2px; border: 2px solid #141A2E; box-sizing: border-box;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Чтение 30 минут</div><div style="font-size: 12px; font-weight: 700; color: #2F5BEA;">INT</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: 'Pixelify Sans', monospace; font-size: 20px; font-weight: 700;">Квесты</div><div style="font-size: 13px; color: #444C63;">2 на сегодня</div></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 4px; background: #FFFFFF; border: 2px solid #141A2E;">
+        <div style="width: 24px; height: 24px; border-radius: 2px; border: 2px solid #141A2E; box-sizing: border-box; flex-shrink: 0;"></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 15px;">Сдать отчёт по проекту</div><div style="font-size: 12px; color: #444C63;">Epic · Повышение · до 18:00</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top: auto; height: 82px; margin-left: -16px; margin-right: -16px; border-top: 2px solid #141A2E; background: #FFFFFF; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #2F5BEA; text-decoration: none; font-size: 11px; font-weight: 700;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="8" y="8" width="8" height="8"></rect><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>Сегодня</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #444C63; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="5" y="3" width="14" height="18"></rect><path d="M9 8h6M9 12h6"></path></svg>Журнал</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #444C63; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="8" y="3" width="8" height="8"></rect><path d="M4 21v-4h16v4"></path></svg>Герой</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #444C63; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="3" y="5" width="18" height="16"></rect><path d="M3 10h18M8 2v5M16 2v5"></path></svg>Календарь</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const hero = [
+      '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..',
+      '..SSESSESS..','..SSSSSSSS..','...SSSSSS...','..AAAAAAAA..',
+      '.CCCAAAACCC.','.CCCCCCCCCC.','.SCCCBBCCCS.','..CDCBBCDC..',
+      '..PPPPPPPP..','..PPP..PPP..','..PPP..PPP..','.KKKK..KKKK.'
+    ];
+    const q = [
+      '.XXXXX..','XX...XX.','XX...XX.','XX...XX.',
+      'XX.XXXX.','XX..XX..','.XXXXXX.','......XX'
+    ];
+    return {
+      heroPx: toPx(hero, { H: '#141A2E', S: '#F2C29B', E: '#141A2E', C: '#FF6B4A', D: '#D9452A', B: '#141A2E', P: '#2F5BEA', K: '#141A2E', A: '#FFD23F' }),
+      iconPx: toPx(q, { X: '#FFD23F' }),
+      attrs: [
+        { k: 'STR', v: 12 }, { k: 'END', v: 18 }, { k: 'INT', v: 31 }, { k: 'DEX', v: 15 },
+        { k: 'MNT', v: 20 }, { k: 'FOC', v: 48 }, { k: 'DIS', v: 27 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

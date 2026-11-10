@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Questlyn — бренд и токены</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 48px; background: #EFE9DC; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 24px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A5214;">Шаг 2 · бренд</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 36px; font-weight: 700;">Логотип, иконка и токены двух тем</h1>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; gap: 12px;">
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #1F2A44; display: flex; align-items: center; justify-content: center;">
+          <div style="display: grid; grid-template-columns: repeat(8, 6px); grid-auto-rows: 6px;" role="img" aria-label="Пиксельная Q, светлая тема"><sc-for list="{{qLight}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for></div>
+        </div>
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #0F1424; border: 1px solid #2E3A63; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <div style="display: grid; grid-template-columns: repeat(8, 6px); grid-auto-rows: 6px;" role="img" aria-label="Пиксельная Q, тёмная тема"><sc-for list="{{qDark}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for></div>
+        </div>
+      </div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Questlyn</div>
+      <div style="display: flex; align-items: center; gap: 8px;"><div style="font-size: 15px; font-weight: 600;">1 · Пиксельная Q</div><span style="padding: 2px 8px; border-radius: 999px; background: #2F6B4F; color: #FFFCF6; font-size: 12px; font-weight: 700;">Выбрано</span></div>
+      <div style="font-size: 13px; line-height: 1.5; color: #4A5368;">Прямая связь с pixel art персонажем. Хорошо читается даже на 29 pt, но выглядит самым «игровым».</div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; gap: 12px;">
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #1F2A44; display: flex; align-items: center; justify-content: center;">
+          <svg width="60" height="60" viewBox="0 0 64 64" fill="none" role="img" aria-label="Q-компас, светлая тема"><circle cx="30" cy="30" r="18" stroke="#F5F0E6" stroke-width="6"></circle><path d="M30 8v6" stroke="#F5F0E6" stroke-width="4" stroke-linecap="round"></path><path d="M38 38L54 54" stroke="#E2A04A" stroke-width="7" stroke-linecap="round"></path></svg>
+        </div>
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #0F1424; border: 1px solid #2E3A63; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <svg width="60" height="60" viewBox="0 0 64 64" fill="none" role="img" aria-label="Q-компас, тёмная тема"><circle cx="30" cy="30" r="18" stroke="#E8ECF7" stroke-width="6"></circle><path d="M30 8v6" stroke="#E8ECF7" stroke-width="4" stroke-linecap="round"></path><path d="M38 38L54 54" stroke="#4FD1C5" stroke-width="7" stroke-linecap="round"></path></svg>
+        </div>
+      </div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Questlyn</div>
+      <div style="font-size: 15px; font-weight: 600;">2 · Q-компас</div>
+      <div style="font-size: 13px; line-height: 1.5; color: #4A5368;">Хвост Q — стрелка компаса: направление и путь. Самый «взрослый» знак, легко масштабируется для watchOS и виджетов.</div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; gap: 12px;">
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #F5F0E6; border: 1px solid #D9CDB6; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-label="Журнал с закладкой, светлая тема"><rect x="12" y="8" width="40" height="48" rx="5" fill="#1F2A44"></rect><path d="M38 8h8v20l-4-4-4 4z" fill="#E2A04A"></path><text x="26" y="44" text-anchor="middle" font-family="Literata, Georgia, serif" font-weight="700" font-size="26" fill="#F5F0E6">Q</text></svg>
+        </div>
+        <div style="width: 88px; height: 88px; border-radius: 20px; background: #0F1424; border: 1px solid #2E3A63; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-label="Журнал с закладкой, тёмная тема"><rect x="12" y="8" width="40" height="48" rx="5" fill="#222B45"></rect><path d="M38 8h8v20l-4-4-4 4z" fill="#4FD1C5"></path><text x="26" y="44" text-anchor="middle" font-family="Literata, Georgia, serif" font-weight="700" font-size="26" fill="#E8ECF7">Q</text></svg>
+        </div>
+      </div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Questlyn</div>
+      <div style="font-size: 15px; font-weight: 600;">3 · Журнал с закладкой</div>
+      <div style="font-size: 13px; line-height: 1.5; color: #4A5368;">Отсылка к «журналу квестов» и тону направления A. Самый тёплый, но с мелкими деталями: на малых размерах нужна упрощённая версия.</div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 0;">
+    <div style="flex-grow: 1; background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: grid; grid-template-columns: 180px 170px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; font-size: 12px; font-weight: 600; color: #4A5368; padding-bottom: 4px;"><div>Роль</div><div>Токен</div><div>Светлая (A)</div><div>Тёмная (B)</div></div>
+      <sc-for list="{{tokens}}" as="t" hint-placeholder-count="9">
+        <div style="display: grid; grid-template-columns: 180px 170px minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; height: 32px; font-size: 13px;">
+          <div style="font-weight: 600;">{{t.role}}</div>
+          <div style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #4A5368;">{{t.id}}</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 28px; height: 22px; border-radius: 6px; border: 1px solid #C9BCA2; background: {{t.l}};"></div><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px;">{{t.l}}</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 28px; height: 22px; border-radius: 6px; border: 1px solid #C9BCA2; background: {{t.d}};"></div><span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px;">{{t.d}}</span></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width: 380px; flex-shrink: 0; background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 12px; font-weight: 600; color: #4A5368;">Шрифтовая шкала (обе темы)</div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700; line-height: 1.15;">Сегодня</div><div style="font-size: 12px; color: #4A5368;">Display · Literata 700 · 30</div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 20px; font-weight: 600;">Журнал квестов</div><div style="font-size: 12px; color: #4A5368;">Title · Literata 600 · 20</div>
+      <div style="font-size: 15px; line-height: 1.45;">Сдать отчёт по проекту</div><div style="font-size: 12px; color: #4A5368;">Body · Inter 400 · 15</div>
+      <div style="font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums;">INT 31 ▲2</div><div style="font-size: 12px; color: #4A5368;">Number · Inter 700 · 17 · tabular</div>
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Ежедневные</div><div style="font-size: 12px; color: #4A5368;">Label · Inter 600 · 12</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const q = ['.XXXXX..','XX...XX.','XX...XX.','XX...XX.','XX.XXXX.','XX..XX..','.XXXXXX.','......XX'];
+    return {
+      qLight: toPx(q, { X: '#E2A04A' }),
+      qDark: toPx(q, { X: '#4FD1C5' }),
+      tokens: [
+        { role: 'Фон', id: 'bg.base', l: '#F5F0E6', d: '#0F1424' },
+        { role: 'Поверхность', id: 'bg.surface', l: '#FFFCF6', d: '#182036' },
+        { role: 'Граница', id: 'border.default', l: '#E3D9C6', d: '#27314F' },
+        { role: 'Текст', id: 'text.primary', l: '#1F2A44', d: '#E8ECF7' },
+        { role: 'Вторичный текст', id: 'text.secondary', l: '#4A5368', d: '#AEB8D2' },
+        { role: 'Основное действие', id: 'action.primary', l: '#1F2A44', d: '#4FD1C5' },
+        { role: 'Награда, XP', id: 'accent.reward', l: '#9A5214', d: '#F2B35B' },
+        { role: 'Рост ▲', id: 'state.growth', l: '#2F6B4F', d: '#7FE3D9' },
+        { role: 'Спад ▼', id: 'state.decline', l: '#A8432F', d: '#FF9A8A' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

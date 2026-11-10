@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Направление B — Ночная экспедиция</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#4FD1C5}a:hover{color:#7FE3D9}
+</style>
+</helmet>
+<div style="width: 1280px; height: 940px; box-sizing: border-box; padding: 48px; background: #0B0F1C; color: #E8ECF7; font-family: Manrope, system-ui, sans-serif; display: flex; gap: 48px;">
+
+  <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #4FD1C5;">Направление B</div>
+      <h1 style="margin: 0; font-family: Unbounded, system-ui, sans-serif; font-size: 36px; font-weight: 700;">Ночная экспедиция</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #AEB8D2; max-width: 640px;">Тёмная тема по умолчанию: глубокий ночной синий, бирюзовое свечение и янтарь костра. Сцена с персонажем — главный элемент экрана, погода видна сразу.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+      <div style="background: #182036; border: 1px solid #27314F; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+        <div style="width: 112px; height: 112px; border-radius: 26px; background: #0F1424; border: 1px solid #2E3A63; box-sizing: border-box; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <div style="display: grid; grid-template-columns: repeat(8, 8px); grid-auto-rows: 8px;" role="img" aria-label="Иконка приложения: бирюзовая пиксельная буква Q">
+            <sc-for list="{{iconPx}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 34px; font-weight: 600;">Questlyn</div>
+          <div style="font-size: 13px; color: #AEB8D2; line-height: 1.4;">Словесный знак Unbounded + светящаяся пиксельная Q</div>
+        </div>
+      </div>
+      <div style="background: #182036; border: 1px solid #27314F; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(12, 9px); grid-auto-rows: 9px; flex-shrink: 0;" role="img" aria-label="Пиксельный персонаж в синем плаще с бирюзовым шарфом">
+          <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 16px; font-weight: 700;">Персонаж</div>
+          <div style="font-size: 13px; color: #AEB8D2; line-height: 1.5;">Светлые волосы и шарф читаются на тёмном фоне. Свечение шарфа — место для индикатора состояния.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 14px; font-weight: 700;">Палитра</div>
+      <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #0F1424; border: 1px solid #2E3A63;"></div><div style="font-size: 12px; font-weight: 700;">Ночь</div><div style="font-size: 12px; color: #AEB8D2;">#0F1424</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #182036; border: 1px solid #2E3A63;"></div><div style="font-size: 12px; font-weight: 700;">Сумерки</div><div style="font-size: 12px; color: #AEB8D2;">#182036</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #E8ECF7;"></div><div style="font-size: 12px; font-weight: 700;">Звезда</div><div style="font-size: 12px; color: #AEB8D2;">#E8ECF7</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #9AA5C2;"></div><div style="font-size: 12px; font-weight: 700;">Туман</div><div style="font-size: 12px; color: #AEB8D2;">#9AA5C2</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #4FD1C5;"></div><div style="font-size: 12px; font-weight: 700;">Сияние</div><div style="font-size: 12px; color: #AEB8D2;">#4FD1C5</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 56px; border-radius: 10px; background: #F2B35B;"></div><div style="font-size: 12px; font-weight: 700;">Костёр</div><div style="font-size: 12px; color: #AEB8D2;">#F2B35B</div></div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; flex-grow: 1;">
+      <div style="background: #182036; border: 1px solid #27314F; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 14px; font-weight: 700;">Типографика</div>
+        <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.2;">Журнал квестов</div>
+        <div style="font-size: 12px; color: #AEB8D2;">Unbounded 600 — заголовки, ранг, цифры наград</div>
+        <div style="font-size: 15px; line-height: 1.5;">Сдать отчёт по проекту до пятницы и обсудить план на следующий квартал.</div>
+        <div style="font-size: 12px; color: #AEB8D2;">Manrope 400/700 — текст и списки</div>
+        <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">STR 12 · INT 31 · FOC 48</div>
+      </div>
+      <div style="background: #182036; border: 1px solid #27314F; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="font-size: 14px; font-weight: 700;">Компоненты</div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" style="height: 44px; padding: 0 20px; border-radius: 14px; border: none; background: #4FD1C5; color: #0B0F1C; font: 700 15px Manrope, sans-serif;">Выполнить</button>
+          <button type="button" style="height: 44px; padding: 0 20px; border-radius: 14px; border: 1px solid #3A4670; background: transparent; color: #E8ECF7; font: 700 15px Manrope, sans-serif;">Отложить</button>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span style="padding: 4px 10px; border-radius: 999px; background: #3D2F1A; color: #F7C97F; font-size: 13px; font-weight: 700;">+12 XP · Английский</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #173B44; color: #7FE3D9; font-size: 13px; font-weight: 700;">INT ▲</span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: #27314F; color: #E8ECF7; font-size: 13px; font-weight: 700;">Epic · Повышение</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: #0F1424;">
+          <div style="width: 24px; height: 24px; border-radius: 7px; border: 2px solid #9AA5C2; box-sizing: border-box;"></div>
+          <div style="flex-grow: 1; font-size: 15px;">Позвонить в банк</div>
+          <div style="font-size: 13px; color: #AEB8D2;">14:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 390px; height: 844px; flex-shrink: 0; border-radius: 48px; background: #0F1424; border: 1px solid #2E3A63; box-sizing: border-box; padding: 54px 16px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 13px; color: #AEB8D2;">Вторник, 10 ноября</div>
+        <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 26px; font-weight: 700;">Сегодня</div>
+      </div>
+      <button type="button" aria-label="Отметить настроение" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #3A4670; background: #182036; color: #E8ECF7; display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg>
+      </button>
+    </div>
+
+    <div style="height: 170px; border-radius: 18px; overflow: hidden; background: #1A2140; position: relative; flex-shrink: 0; border: 1px solid #27314F; box-sizing: border-box;">
+      <div style="position: absolute; left: 30px; top: 18px; width: 4px; height: 4px; background: #E8ECF7;"></div>
+      <div style="position: absolute; left: 96px; top: 34px; width: 4px; height: 4px; background: #E8ECF7;"></div>
+      <div style="position: absolute; left: 150px; top: 14px; width: 4px; height: 4px; background: #9AA5C2;"></div>
+      <div style="position: absolute; left: 210px; top: 44px; width: 4px; height: 4px; background: #E8ECF7;"></div>
+      <div style="position: absolute; left: 120px; top: 60px; width: 20px; height: 20px; background: #F2E6C4;"></div>
+      <div style="position: absolute; left: 128px; top: 56px; width: 16px; height: 16px; background: #1A2140;"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: #232B4A; border-top: 6px solid #2E3A63;"></div>
+      <div style="position: absolute; left: 132px; bottom: 40px; width: 20px; height: 8px; background: #6B4F33;"></div>
+      <div style="position: absolute; left: 136px; bottom: 48px; width: 12px; height: 10px; background: #F2B35B;"></div>
+      <div style="position: absolute; left: 139px; bottom: 58px; width: 6px; height: 6px; background: #FFE3A6;"></div>
+      <div style="position: absolute; left: 40px; bottom: 26px; display: grid; grid-template-columns: repeat(12, 6px); grid-auto-rows: 6px;" role="img" aria-label="Персонаж у костра ясной ночью">
+        <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for>
+      </div>
+      <div style="position: absolute; right: 12px; top: 12px; background: #0F1424; border: 1px solid #2E3A63; border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; align-items: flex-end;">
+        <div style="font-size: 12px; color: #AEB8D2;">Инженер-атлет</div>
+        <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 14px; font-weight: 600; color: #4FD1C5;">Ранг ?</div>
+      </div>
+      <div style="position: absolute; right: 12px; bottom: 50px; font-size: 12px; font-weight: 700; color: #E8ECF7; background: #0F1424; padding: 4px 8px; border-radius: 8px;">Ясная ночь · спокойно</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: #182036; border: 1px solid #27314F; border-radius: 14px; padding: 10px 6px;">
+      <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+          <div style="font-size: 11px; font-weight: 700; color: #AEB8D2;">{{a.k}}</div>
+          <div style="font-family: Unbounded, system-ui, sans-serif; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums;">{{a.v}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="background: #182036; border: 1px solid #27314F; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="font-weight: 700;">Дисциплина за неделю</span><span style="font-weight: 700; color: #7FE3D9;">64% · DIS растёт</span></div>
+      <div style="height: 8px; border-radius: 4px; background: #27314F; overflow: hidden;"><div style="width: 64%; height: 8px; background: #4FD1C5;"></div></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Unbounded, system-ui, sans-serif; font-size: 15px; font-weight: 600;">Ежедневные</div><div style="font-size: 13px; color: #AEB8D2;">1 из 3</div></div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #182036;">
+        <div style="width: 24px; height: 24px; border-radius: 7px; background: #4FD1C5; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0B0F1C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+        <div style="flex-grow: 1; font-size: 15px; color: #AEB8D2; text-decoration: line-through;">Зарядка 15 минут</div><div style="font-size: 12px; font-weight: 700; color: #7FE3D9;">END</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #182036;">
+        <div style="width: 24px; height: 24px; border-radius: 7px; border: 2px solid #9AA5C2; box-sizing: border-box;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Английский: 20 слов</div><div style="font-size: 12px; font-weight: 700; color: #F7C97F;">INT</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #182036;">
+        <div style="width: 24px; height: 24px; border-radius: 7px; border: 2px solid #9AA5C2; box-sizing: border-box;"></div>
+        <div style="flex-grow: 1; font-size: 15px;">Чтение 30 минут</div><div style="font-size: 12px; font-weight: 700; color: #F7C97F;">INT</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Unbounded, system-ui, sans-serif; font-size: 15px; font-weight: 600;">Квесты</div><div style="font-size: 13px; color: #AEB8D2;">2 на сегодня</div></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #182036;">
+        <div style="width: 24px; height: 24px; border-radius: 7px; border: 2px solid #9AA5C2; box-sizing: border-box; flex-shrink: 0;"></div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 15px;">Сдать отчёт по проекту</div><div style="font-size: 12px; color: #AEB8D2;">Epic · Повышение · до 18:00</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top: auto; height: 82px; margin-left: -16px; margin-right: -16px; border-top: 1px solid #27314F; background: #121830; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4FD1C5; text-decoration: none; font-size: 11px; font-weight: 700;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Сегодня</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #AEB8D2; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>Журнал</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #AEB8D2; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Герой</a>
+      <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #AEB8D2; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Календарь</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const hero = [
+      '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..',
+      '..SSESSESS..','..SSSSSSSS..','...SSSSSS...','..AAAAAAAA..',
+      '.CCCAAAACCC.','.CCCCCCCCCC.','.SCCCBBCCCS.','..CDCBBCDC..',
+      '..PPPPPPPP..','..PPP..PPP..','..PPP..PPP..','.KKKK..KKKK.'
+    ];
+    const q = [
+      '.XXXXX..','XX...XX.','XX...XX.','XX...XX.',
+      'XX.XXXX.','XX..XX..','.XXXXXX.','......XX'
+    ];
+    return {
+      heroPx: toPx(hero, { H: '#E0A15A', S: '#F0C4A0', E: '#0F1424', C: '#3B5BDB', D: '#2C45A8', B: '#F2B35B', P: '#4A5784', K: '#8A94B8', A: '#4FD1C5' }),
+      iconPx: toPx(q, { X: '#4FD1C5' }),
+      attrs: [
+        { k: 'STR', v: 12 }, { k: 'END', v: 18 }, { k: 'INT', v: 31 }, { k: 'DEX', v: 15 },
+        { k: 'MNT', v: 20 }, { k: 'FOC', v: 48 }, { k: 'DIS', v: 27 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

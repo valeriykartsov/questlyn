@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Летопись героя</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 0; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Журнал</h1>
+    <button type="button" aria-label="Поиск" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #C9BCA2; background: #FFFCF6; color: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #E9E1D0;" role="tablist">
+    <a href="Journal.dc.html" role="tab" aria-selected="false" style="height: 34px; border-radius: 9px; color: #4A5368; font: 500 14px Inter, sans-serif; text-decoration: none; display: flex; align-items: center; justify-content: center;">Квесты</a>
+    <button type="button" role="tab" aria-selected="true" style="height: 34px; border-radius: 9px; border: none; background: #FFFCF6; color: #1F2A44; font: 600 14px Inter, sans-serif;">Летопись</button>
+  </div>
+  <div style="display: flex; gap: 6px; margin: 0 -16px; padding: 0 16px; overflow: hidden;"><button type="button" aria-pressed="true" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 13px Inter, sans-serif;">Все</button><button type="button" aria-pressed="false" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">Квесты</button><button type="button" aria-pressed="false" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">Привычки</button><button type="button" aria-pressed="false" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">Здоровье</button><button type="button" aria-pressed="false" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">Прогресс</button></div>
+  <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 0 2px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 4px; border-bottom: 1px solid #E3D9C6; padding-bottom: 4px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Сегодня, 10 ноября</span><span style="font-size: 12px; color: #4A5368;">7 записей</span></div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">21:30</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #F6E4DF; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8432F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Алкоголь — немного · похмелье на 24 ч</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #6B4FA3; white-space: nowrap;">INT −1 · MaxMP −5</span><span style="font-size: 12px; color: #4A5368;">до 21:30 завтра</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">19:10</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #F6E4DF; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8432F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Курение</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #A8432F; white-space: nowrap;">−5 HP</span><span style="font-size: 12px; color: #4A5368;">2-я отметка за день</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">18:05</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Сдать отчёт по проекту</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #9A5214; white-space: nowrap;">+5 FOC</span><span style="font-size: 12px; font-weight: 700; color: #9A5214; white-space: nowrap;">+10 Отчётность</span><span style="font-size: 12px; font-weight: 700; color: #2F6B4F; white-space: nowrap;">+5 INT</span><span style="font-size: 12px; font-weight: 700; color: #3E6FA3; white-space: nowrap;">−6 MP</span><span style="font-size: 12px; color: #4A5368;">шаг 4 из 7</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">16:41</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Отменено: «Позвонить в банк»</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #4A5368; white-space: nowrap;">начисления сняты</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">16:40</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3; text-decoration: line-through; color: #4A5368;">Позвонить в банк</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #9A5214; white-space: nowrap;">+5 FOC</span><span style="font-size: 12px; font-weight: 700; color: #3E6FA3; white-space: nowrap;">−4 MP</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">14:00</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #F1E3D3; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8651B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="8" height="8"></rect><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Настроение: хорошее</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #4A5368; white-space: nowrap;">погода: ясно</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">07:20</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #2F6B4F; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Зарядка 15 минут</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #9A5214; white-space: nowrap;">+5 ОФП</span><span style="font-size: 12px; font-weight: 700; color: #2F6B4F; white-space: nowrap;">+2,5 STR</span><span style="font-size: 12px; font-weight: 700; color: #2F6B4F; white-space: nowrap;">+1,5 END</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">07:10</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #24304D; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2A04A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Сон 7 ч 30 мин · режим соблюдён</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #A8432F; white-space: nowrap;">+105 HP</span><span style="font-size: 12px; font-weight: 700; color: #3E6FA3; white-space: nowrap;">MP 100%</span></span>
+      </span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 4px; border-bottom: 1px solid #E3D9C6; padding-bottom: 4px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Понедельник, 9 ноября</span><span style="font-size: 12px; color: #4A5368;"></span></div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">22:00</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #E2A04A; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l7 8h-4v8H9v-8H5z"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">INT · уровень 14</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #4A5368; white-space: nowrap;">ранг D · 76 / 100 до C</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">07:40</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #2F6B4F; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Пробежка 3 раза · 1 из 3</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #9A5214; white-space: nowrap;">+5 Бег</span><span style="font-size: 12px; font-weight: 700; color: #2F6B4F; white-space: nowrap;">+2,5 STR</span></span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: 38px 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0;">
+      <span style="font-size: 12px; color: #4A5368; font-variant-numeric: tabular-nums; padding-top: 7px;">00:00</span>
+      <span style="width: 30px; height: 30px; border-radius: 9px; background: #E9E1D0; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A5368" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20l-7-8h4V4h6v8h4z"></path></svg></span>
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+        <span style="font-size: 14px; font-weight: 500; line-height: 1.3;">Спад CHR −2%</span>
+        <span style="display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;"><span style="font-size: 12px; font-weight: 700; color: #4A5368; white-space: nowrap;">9 дней без практики · граница 70% пика</span></span>
+      </span>
+    </div>
+  </div>
+  <div style="margin-top: auto; height: 82px; margin-left: -16px; margin-right: -16px; border-top: 1px solid #E3D9C6; background: #FFFCF6; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+    <a href="TodayV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Сегодня</a>
+    <a href="Journal.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #1F2A44; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>Журнал</a>
+    <a href="HeroV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Герой</a>
+    <a href="Calendar.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Календарь</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

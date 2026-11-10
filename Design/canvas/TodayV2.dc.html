@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Сегодня</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 0; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-size: 13px; color: #4A5368;">Вторник, 10 ноября</div>
+      <div style="font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Сегодня</div>
+    </div>
+    <a href="MoodV2.dc.html" aria-label="Отметить настроение" style="text-decoration: none; box-sizing: border-box;height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid #C9BCA2; background: #FFFCF6; color: #1F2A44; display: flex; align-items: center; gap: 8px; font: 600 13px Inter, sans-serif;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8"></path><path d="M9 9.5h.01M15 9.5h.01"></path></svg>Как вы?
+    </a>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <a href="MapDay.dc.html" aria-label="Открыть карту дня" style="height: 150px; border-radius: 18px; overflow: hidden; position: relative; display: block; text-decoration: none; color: #1F2A44; border: 1px solid #E3D9C6; box-sizing: border-box;">
+      <img src="/_blob/ad1ba1a0451ba886cde5aa14ce91c2cc" alt="Изометрическая карта дня: дорога через деревни и города событий календаря, маркеры квестов, герой в точке 14:20" style="display: block; width: 100%; height: 100%; object-fit: cover;">
+      <div style="position: absolute; right: 8px; top: 8px; background: #FFFCF6; border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 1px; align-items: flex-end;">
+        <div style="font-size: 11px; color: #4A5368;">Инженер-атлет</div>
+        <div style="font-size: 14px; font-weight: 700;">Ранг D · Искатель</div>
+      </div>
+      <div style="position: absolute; left: 8px; top: 8px; font-size: 12px; font-weight: 600; background: #FFFCF6; padding: 4px 8px; border-radius: 8px;">Ясно · по отметке 14:00</div>
+    </a>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: #4A5368; padding: 0 2px; font-variant-numeric: tabular-nums;"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:59</span></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 10px 6px;">
+    <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <div style="font-size: 11px; font-weight: 600; color: #4A5368;">{{a.k}}</div>
+        <div style="font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums;">{{a.v}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 10px 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;"><span style="font-weight: 700; color: #A8432F;">HP</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">142 / 175</span></div>
+        <div style="height: 6px; border-radius: 3px; background: #E9E1D0; overflow: hidden;"><div style="width: 81%; height: 6px; background: #A8432F;"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;"><span style="font-weight: 700; color: #3E6FA3;">MP</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">232 / 280</span></div>
+        <div style="height: 6px; border-radius: 3px; background: #E9E1D0; overflow: hidden;"><div style="width: 83%; height: 6px; background: #3E6FA3;"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;"><span style="font-weight: 700; color: #2F6B4F;">DIS</span><span style="font-weight: 600;">64%</span></div>
+        <div style="height: 6px; border-radius: 3px; background: #E9E1D0; overflow: hidden;"><div style="width: 64%; height: 6px; background: #2F6B4F;"></div></div>
+      </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Привычки</div><div style="font-size: 13px; color: #4A5368;">1 из 3 сегодня</div></div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #FFFCF6;">
+      <div style="width: 24px; height: 24px; border-radius: 6px; background: #2F6B4F; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+      <div style="flex-grow: 1; font-size: 15px; color: #4A5368; text-decoration: line-through;">Зарядка 15 минут</div><div style="font-size: 12px; font-weight: 600; color: #2F6B4F;">END</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #FFFCF6;">
+      <div style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid #1F2A44; box-sizing: border-box;"></div>
+      <div style="flex-grow: 1; font-size: 15px;">Английский: 20 слов</div><div style="font-size: 12px; font-weight: 600; color: #9A5214;">INT</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 12px; background: #FFFCF6;">
+      <div style="width: 24px; height: 24px; border-radius: 6px; border: 2px dashed #1F2A44; box-sizing: border-box;"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column;"><div style="font-size: 15px;">Бег 3 раза</div><div style="font-size: 12px; color: #4A5368;">На неделе · 1 из 3</div></div><div style="font-size: 12px; font-weight: 600; color: #2F6B4F;">END</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Квесты</div><a href="Journal.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none;">Журнал →</a></div>
+    <a href="RewardV2.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #FFFCF6; text-decoration: none; color: #1F2A44;">
+      <div style="width: 24px; height: 24px; border-radius: 6px; border: 2px solid #1F2A44; box-sizing: border-box; flex-shrink: 0;"></div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 15px;">Сдать отчёт по проекту</div><div style="font-size: 12px; color: #4A5368;">Повышение · до 18:00</div></div>
+    </a>
+  </div>
+
+  <a href="QuestNew.dc.html" aria-label="Новый квест" style="position: absolute; right: 20px; bottom: 100px; width: 56px; height: 56px; border-radius: 18px; background: #1F2A44; color: #FFFCF6; display: flex; align-items: center; justify-content: center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+
+  <div style="margin-top: auto; height: 82px; margin-left: -16px; margin-right: -16px; border-top: 1px solid #E3D9C6; background: #FFFCF6; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+    <a href="TodayV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #1F2A44; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Сегодня</a>
+    <a href="Journal.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>Журнал</a>
+    <a href="HeroV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Герой</a>
+    <a href="Calendar.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Календарь</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const hero = [
+      '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..',
+      '..SSESSESS..','..SSSSSSSS..','...SSSSSS...','..AAAAAAAA..',
+      '.CCCAAAACCC.','.CCCCCCCCCC.','.SCCCBBCCCS.','..CDCBBCDC..',
+      '..PPPPPPPP..','..PPP..PPP..','..PPP..PPP..','.KKKK..KKKK.'
+    ];
+    return {
+      heroPx: toPx(hero, { H: '#3B2A20', S: '#E8B892', E: '#1F2A44', C: '#2F6B4F', D: '#24533D', B: '#7A4A22', P: '#3E4A63', K: '#2A2320', A: '#C9772A' }),
+      attrs: [
+        { k: 'STR', v: 9 }, { k: 'END', v: 6 }, { k: 'INT', v: 14 }, { k: 'MNT', v: 14 },
+        { k: 'CHR', v: 8 }, { k: 'FOC', v: 18 }, { k: 'DIS', v: 7 }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

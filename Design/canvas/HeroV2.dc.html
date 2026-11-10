@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Герой v2</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 0; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; overflow: hidden; position: relative;">
+  <a href="Settings.dc.html" aria-label="Настройки" style="position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #1F2A44;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"></path></svg></a>
+  <div style="display: flex; gap: 16px; align-items: center;">
+    <div style="width: 104px; height: 120px; border-radius: 16px; background: #E7DCC4; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; box-sizing: border-box; flex-shrink: 0;">
+      <div style="display: grid; grid-template-columns: repeat(12, 6px); grid-auto-rows: 6px;" role="img" aria-label="Персонаж героя"><sc-for list="{{heroPx}}" as="p" hint-placeholder-count="192"><div style="background: {{p.c}};"></div></sc-for></div>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700;">Инженер-атлет</div>
+      <div style="font-size: 13px; color: #4A5368;">Класс из 2 профессий</div>
+      <div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 15px; font-weight: 700;">Ранг D · Искатель</span><span style="font-size: 12px; color: #4A5368;">76 / 100 до C</span></div>
+      <div style="height: 6px; border-radius: 3px; background: #E9E1D0; overflow: hidden;"><div style="width: 20%; height: 6px; background: #B8651B;"></div></div>
+    </div>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;"><span style="font-weight: 700; color: #A8432F;">HP · здоровье</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">175 / 175</span></div>
+        <div style="height: 8px; border-radius: 4px; background: #E9E1D0; overflow: hidden;"><div style="width: 100%; height: 8px; background: #A8432F;"></div></div><div style="font-size: 11px; color: #4A5368;">STR + END · сон</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 12px;"><span style="font-weight: 700; color: #3E6FA3;">MP · мана</span><span style="font-weight: 600; font-variant-numeric: tabular-nums;">269 / 275</span></div>
+        <div style="height: 8px; border-radius: 4px; background: #E9E1D0; overflow: hidden;"><div style="width: 98%; height: 8px; background: #3E6FA3;"></div></div><div style="font-size: 11px; color: #4A5368;">INT + MNT + CHR · сон</div>
+      </div>
+      <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: #ECE6F5; font-size: 12px; color: #3D3156;"><b style="color: #6B4FA3;">Похмелье</b><span style="flex-grow: 1;">INT 14 → 13 · MaxMP −5</span><span style="color: #4A5368;">ещё 14 ч</span></div>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 8px 14px; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0;"><div style="font-family: Literata, Georgia, serif; font-size: 17px; font-weight: 600;">Атрибуты</div><div style="font-size: 12px; color: #4A5368;">за 7 дней</div></div>
+    <sc-for list="{{attrs}}" as="a" hint-placeholder-count="7">
+      <div style="display: grid; grid-template-columns: 40px minmax(0, 1fr) 34px 28px; gap: 10px; align-items: center; height: 26px;">
+        <div style="font-size: 13px; font-weight: 700;">{{a.k}}</div>
+        <div style="height: 8px; border-radius: 4px; background: #E9E1D0; overflow: hidden;"><div style="width: {{a.pct}}; height: 8px; background: {{a.bar}};"></div></div>
+        <div style="font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right;">{{a.v}}</div>
+        <div style="font-size: 12px; font-weight: 700; color: {{a.tc}}; text-align: right;">{{a.t}}</div>
+      </div>
+    </sc-for>
+    <div style="font-size: 12px; color: #4A5368; padding: 6px 0;">Тёмные полосы — атрибуты класса, они сильнее влияют на ранг</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 17px; font-weight: 600;">Профессии и навыки</div><a href="SkillNew.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none;">+ Навык</a></div>
+    <sc-for list="{{profs}}" as="p" hint-placeholder-count="2">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;"><div style="font-size: 15px; font-weight: 600;">{{p.name}}</div><div style="font-size: 12px; font-weight: 600; color: #4A5368;">{{p.attrs}}</div></div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 14px;">{{p.skill}}</div><div style="font-size: 12px; color: {{p.condColor}};">{{p.cond}}</div></div>
+          <div style="display: flex; gap: 3px;" aria-label="{{p.masteryLabel}}"><sc-for list="{{p.mastery}}" as="m" hint-placeholder-count="5"><div style="width: 10px; height: 10px; background: {{m.c}};"></div></sc-for></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="margin-top: auto; height: 82px; margin-left: -16px; margin-right: -16px; border-top: 1px solid #E3D9C6; background: #FFFCF6; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding-top: 8px; box-sizing: border-box;">
+    <a href="TodayV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Сегодня</a>
+    <a href="Journal.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>Журнал</a>
+    <a href="HeroV2.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #1F2A44; text-decoration: none; font-size: 11px; font-weight: 600;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Герой</a>
+    <a href="Calendar.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; color: #4A5368; text-decoration: none; font-size: 11px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Календарь</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const hero = [
+      '....HHHH....','...HHHHHH...','..HHHHHHHH..','..HSSSSSSH..',
+      '..SSESSESS..','..SSSSSSSS..','...SSSSSS...','..AAAAAAAA..',
+      '.CCCAAAACCC.','.CCCCCCCCCC.','.SCCCBBCCCS.','..CDCBBCDC..',
+      '..PPPPPPPP..','..PPP..PPP..','..PPP..PPP..','.KKKK..KKKK.'
+    ];
+    const up = { t: '▲', tc: '#2F6B4F' }, down = { t: '▼', tc: '#A8432F' }, flat = { t: '—', tc: '#4A5368' };
+    const cls = '#1F2A44', other = '#B3A890';
+    const attr = (k, v, inClass, tr) => ({ k, v, pct: Math.min(100, v * 4) + '%', bar: inClass ? cls : other, ...tr });
+    const dots = (n) => [1, 2, 3, 4, 5].map((i) => ({ c: i <= n ? '#B8651B' : '#E3D9C6' }));
+    return {
+      heroPx: toPx(hero, { H: '#3B2A20', S: '#E8B892', E: '#1F2A44', C: '#2F6B4F', D: '#24533D', B: '#7A4A22', P: '#3E4A63', K: '#2A2320', A: '#C9772A' }),
+      attrs: [
+        attr('STR', 9, true, up), attr('END', 6, true, up), attr('INT', 14, true, flat), attr('MNT', 14, true, up),
+        attr('CHR', 8, true, down), attr('FOC', 18, false, up), attr('DIS', 7, false, up)
+      ],
+      profs: [
+        { name: 'Инженер-программист', attrs: 'INT · MNT · CHR', skill: 'Отчётность', cond: 'Форма: хорошая', condColor: '#2F6B4F', mastery: dots(3), masteryLabel: 'Мастерство 3 из 5' },
+        { name: 'Атлет-любитель', attrs: 'STR · END · MNT', skill: 'Бег', cond: 'Форма снижается: 6 дней без практики', condColor: '#A8432F', mastery: dots(2), masteryLabel: 'Мастерство 2 из 5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

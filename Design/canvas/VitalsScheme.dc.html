@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Схема HP и MP</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 40px 48px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; color: #9A5214;">Подтверждено 10.11.2026 · 08_VITALS_AND_CHRONICLE.md</div>
+      <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 36px; font-weight: 700;">HP и MP — состояние героя, не прогресс</h1>
+    </div>
+    <div style="font-size: 14px; color: #3D4354; max-width: 380px; line-height: 1.5;">Считаются из фактов: сон, отметки здоровья, выполненные квесты. Никогда не отнимают XP и ранг и ничего не блокируют.</div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between;"><div style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700; color: #A8432F;">HP · здоровье</div><div style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">MaxHP = 100 + 5 · (STR + END)</div></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+        <div><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; color: #2F6B4F;">Восстанавливает</div><ul style="list-style: none; margin: 6px 0 0; padding: 0;"><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Сон: при пробуждении</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">+60% · Q</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Q = длительность × режим</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">0,2–1,0</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Нет данных о сне</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">Q = 0,5</span></li></ul></div>
+        <div><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; color: #A8432F;">Отнимает</div><ul style="list-style: none; margin: 6px 0 0; padding: 0;"><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Курение (за отметку)</span><span style="font-weight: 700; color: #A8432F; white-space: nowrap;">3%</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Фастфуд · кофеин после 16:00</span><span style="font-weight: 700; color: #A8432F; white-space: nowrap;">5%</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Шагов меньше нормы (авто)</span><span style="font-weight: 700; color: #A8432F; white-space: nowrap;">5%</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Своя привычка</span><span style="font-weight: 700; color: #A8432F; white-space: nowrap;">5 / 10 / 20%</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Алкоголь: немного / много</span><span style="font-weight: 700; color: #6B4FA3; white-space: nowrap;">INT −10% / −25%, 24 ч</span></li></ul></div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: #3D4354; background: #F5F0E6; border-radius: 12px; padding: 10px 12px;"><b>Не отнимают HP:</b> настроение, стресс, болезнь, пропуск квестов. Недосып — не урон, а слабое восстановление. Алкоголь снижает действующий INT и MaxMP, но не XP. HP не влияет на XP и ранг.</div>
+    </div>
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between;"><div style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700; color: #3E6FA3;">MP · мана</div><div style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">MaxMP = 100 + 5 · (INT + MNT + CHR)</div></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+        <div><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; color: #2F6B4F;">Восстанавливает</div><ul style="list-style: none; margin: 6px 0 0; padding: 0;"><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Сон: при пробуждении</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">+100% · Q</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Хорошая ночь</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">полностью</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Отмена квеста</span><span style="font-weight: 700; color: #2F6B4F; white-space: nowrap;">возврат</span></li></ul></div>
+        <div><div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368; color: #3E6FA3;">Отнимает</div><ul style="list-style: none; margin: 6px 0 0; padding: 0;"><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Квест низкий / средний / высокий</span><span style="font-weight: 700; color: #3E6FA3; white-space: nowrap;">2 / 4 / 6</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>…если указан навык</span><span style="font-weight: 700; color: #3E6FA3; white-space: nowrap;">3 / 6 / 9</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Шаг Epic</span><span style="font-weight: 700; color: #3E6FA3; white-space: nowrap;">как квест</span></li><li style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #EFE7D7; font-size: 14px;"><span>Daily, Weekly, Activity</span><span style="font-weight: 700; color: #3E6FA3; white-space: nowrap;">0</span></li></ul></div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.5; color: #3D4354; background: #F5F0E6; border-radius: 12px; padding: 10px 12px;"><b>MP 0 ничего не блокирует:</b> квест засчитывается полностью, герой получает статус «Истощён». Чем выше INT, MNT и CHR, тем меньшую долю маны съедает обычный день.</div>
+    </div>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Пример суток (верх шкалы — 100%, низ — 80%)</div><div style="font-size: 13px;"><span style="color: #A8432F; font-weight: 700;">━ HP</span>&nbsp;&nbsp;&nbsp;<span style="color: #3E6FA3; font-weight: 700;">━ MP</span>&nbsp;&nbsp;&nbsp;<span style="color: #4A5368;">▒ ночь</span></div></div>
+    <svg viewBox="-10 -4 1120 178" width="100%" role="img" aria-label="Пример дня: мана понемногу тратится на квесты, вечером урон от алкоголя, ночью сон восстанавливает HP и MP">
+  <rect x="733" y="0" width="367" height="150" fill="#24304D" opacity=".08"/>
+  <text x="0" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">07:00</text><line x1="0" x2="0" y1="0" y2="150" stroke="#EFE7D7"/><text x="138" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">10:00</text><line x1="138" x2="138" y1="0" y2="150" stroke="#EFE7D7"/><text x="275" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">13:00</text><line x1="275" x2="275" y1="0" y2="150" stroke="#EFE7D7"/><text x="412" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">16:00</text><line x1="412" x2="412" y1="0" y2="150" stroke="#EFE7D7"/><text x="550" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">19:00</text><line x1="550" x2="550" y1="0" y2="150" stroke="#EFE7D7"/><text x="688" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">22:00</text><line x1="688" x2="688" y1="0" y2="150" stroke="#EFE7D7"/><text x="825" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">01:00</text><line x1="825" x2="825" y1="0" y2="150" stroke="#EFE7D7"/><text x="962" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">04:00</text><line x1="962" x2="962" y1="0" y2="150" stroke="#EFE7D7"/><text x="1100" y="168" font-size="12" fill="#4A5368" text-anchor="middle" font-family="Inter">07:00</text><line x1="1100" x2="1100" y1="0" y2="150" stroke="#EFE7D7"/>
+  <polyline points="0,10 665,10 665,75 1100,75 1100,10" fill="none" stroke="#A8432F" stroke-width="3"/>
+  <polyline points="0,10 138,10 138,24 229,24 229,38 367,38 367,52 504,52 504,66 596,66 596,82 1100,82 1100,10" fill="none" stroke="#3E6FA3" stroke-width="3"/>
+  <text x="144" y="40" font-size="12" font-weight="700" fill="#3E6FA3" font-family="Inter" text-anchor="start" dx="0">квест −6 MP</text><text x="671" y="14" font-size="12" font-weight="700" fill="#A8432F" font-family="Inter" text-anchor="start" dx="0">курение −5 HP</text><text x="1106" y="14" font-size="12" font-weight="700" fill="#2F6B4F" font-family="Inter" text-anchor="end" dx="-12">сон: +HP, MP 100%</text>
+</svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

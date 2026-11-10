@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Онбординг — герой</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px;">
+    <div style="width: 44px;"></div>
+    <div style="display: flex; gap: 6px;" aria-label="Шаг 1 из 4">
+      <div style="width: 28px; height: 4px; border-radius: 2px; background: #1F2A44;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #D9CDB6;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #D9CDB6;"></div><div style="width: 28px; height: 4px; border-radius: 2px; background: #D9CDB6;"></div>
+    </div>
+    <div style="width: 44px; font-size: 13px; color: #4A5368; text-align: right;">1 / 4</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15;">Создайте героя</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4A5368;">Герой будет расти вместе с вашими реальными делами. Внешность можно поменять позже.</p>
+  </div>
+
+  <div style="height: 210px; border-radius: 18px; background: #E7DCC4; position: relative; overflow: hidden; flex-shrink: 0;">
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: #B9AA86; border-top: 6px solid #8E7F5C;"></div>
+    <div style="position: absolute; left: 50%; bottom: 26px; margin-left: -40px; display: grid; grid-template-columns: repeat(10, 8px); grid-auto-rows: 8px;" role="img" aria-label="Предпросмотр героя">
+      <sc-for list="{{heroPx}}" as="p" hint-placeholder-count="160"><div style="background: {{p.c}};"></div></sc-for>
+    </div>
+  </div>
+
+  <label style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Имя героя</span>
+    <input type="text" placeholder="Например, Странник" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+  </label>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 70px; font-size: 14px; color: #4A5368;">Волосы</div>
+      <sc-for list="{{hair}}" as="s" hint-placeholder-count="4"><button type="button" aria-label="{{s.label}}" style="width: 40px; height: 40px; border-radius: 10px; background: {{s.c}}; border: {{s.border}}; box-sizing: border-box;"></button></sc-for>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 70px; font-size: 14px; color: #4A5368;">Кожа</div>
+      <sc-for list="{{skin}}" as="s" hint-placeholder-count="4"><button type="button" aria-label="{{s.label}}" style="width: 40px; height: 40px; border-radius: 10px; background: {{s.c}}; border: {{s.border}}; box-sizing: border-box;"></button></sc-for>
+    </div>
+    <div style="font-size: 13px; color: #4A5368; line-height: 1.4;">Цвет плаща задаётся основной профессией — выберете её на следующем шаге.</div>
+  </div>
+
+  <a href="Onboarding.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Далее</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const toPx = (rows, pal) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: pal[ch] || 'transparent' }); });
+      return out;
+    };
+    const hero = ['...HHHH...','..HHHHHH..','..HSSSSH..','..SESSES..','..SSSSSS..','...SSSS...','..AAAAAA..','.CCAAAACC.','.CCCCCCCC.','.SCCBBCCS.','..CCBBCC..','..CDCCDC..','..PPPPPP..','..PP..PP..','..PP..PP..','.KKK..KKK.'];
+    const pick = (list, sel) => list.map((c, i) => ({ c: c.c, label: c.label, border: i === sel ? '3px solid #1F2A44' : '1px solid #C9BCA2' }));
+    return {
+      heroPx: toPx(hero, { H: '#3B2A20', S: '#E8B892', E: '#1F2A44', C: '#8E8576', D: '#6E6658', B: '#7A4A22', P: '#3E4A63', K: '#2A2320', A: '#C9772A' }),
+      hair: pick([{ c: '#3B2A20', label: 'Тёмные волосы' }, { c: '#C46A3A', label: 'Рыжие волосы' }, { c: '#E0C27A', label: 'Светлые волосы' }, { c: '#1F1A16', label: 'Чёрные волосы' }], 0),
+      skin: pick([{ c: '#F2D0B0', label: 'Светлая кожа' }, { c: '#E8B892', label: 'Средняя кожа' }, { c: '#C98E68', label: 'Смуглая кожа' }, { c: '#8C5A3C', label: 'Тёмная кожа' }], 1)
+    };
+  }
+}
+</script>
+</body>
+</html>

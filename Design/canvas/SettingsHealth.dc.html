@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Настройки: здоровье героя</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 50px 16px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="Settings.dc.html" style="min-width: 44px; height: 44px; display: flex; align-items: center; gap: 2px; text-decoration: none; color: #1F2A44; font-size: 15px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>Настройки</a>
+  </div>
+  <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Здоровье героя</h1>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Режим сна</span><div style="border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Окно сна</span><span style="font-size: 12px; color: #4A5368;">отбой позже на 30+ мин снижает восстановление</span></span><span style="font-size: 15px; font-weight: 600;">23:00–07:00</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+    </div></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Активность</span><div style="border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 14px;">
+        <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Норма шагов в день</span><span style="font-size: 12px; color: #4A5368;">меньше — сидячий день, −5% HP</span></span>
+        <button type="button" aria-label="Меньше на 500" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 18px Inter, sans-serif;">−</button>
+        <span style="width: 54px; text-align: center; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;">6 000</span>
+        <button type="button" aria-label="Больше на 500" style="width: 36px; height: 36px; border-radius: 10px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 18px Inter, sans-serif;">+</button>
+      </div>
+    </div></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Вредные привычки</span><div style="border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Курение</span><span style="font-size: 12px; color: #4A5368;">за каждую отметку</span></span><span style="font-size: 15px; font-weight: 600;">−3% HP</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Фастфуд</span></span><span style="font-size: 15px; font-weight: 600;">−5% HP</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Кофеин после 16:00</span></span><span style="font-size: 15px; font-weight: 600;">−5% HP</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Алкоголь</span><span style="font-size: 12px; color: #4A5368;">дебаф на 24 ч · не HP</span></span><span style="font-size: 15px; font-weight: 600;">INT −10 / −25%</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+      <div style="display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; color: #9A5214; font-size: 15px; font-weight: 600;">+ Своя привычка</div>
+    </div></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Apple Health · только чтение</span><div style="border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Сон</span><span style="font-size: 12px; color: #4A5368;">Sleep Analysis — восстановление HP и MP</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #1F2A44;"></label>
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Шаги</span><span style="font-size: 12px; color: #4A5368;">для нормы активности</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #1F2A44;"></label>
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px;"><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">State of Mind</span><span style="font-size: 12px; color: #4A5368;">настроение и погода</span></span><input type="checkbox" checked style="width: 22px; height: 22px; accent-color: #1F2A44;"></label>
+    </div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

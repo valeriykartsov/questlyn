@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Новый навык</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 788px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="HeroV2.dc.html" style="font-size: 16px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Новый навык</div>
+      <div style="width: 60px;"></div>
+    </div>
+
+    <label style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Навык</span>
+      <input type="text" value="Публичные выступления" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+    </label>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Профессия</span>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+        <button type="button" aria-pressed="true" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border: none; border-bottom: 1px solid #E3D9C6; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+          <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">Инженер-программист</span><span style="font-size: 12px; color: #4A5368;">INT · MNT · CHR</span></span>
+          <span style="width: 22px; height: 22px; border-radius: 11px; background: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+        </button>
+        <button type="button" aria-pressed="false" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border: none; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+          <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 500;">Атлет-любитель</span><span style="font-size: 12px; color: #4A5368;">STR · END · MNT</span></span>
+          <span style="width: 22px; height: 22px; border-radius: 11px; border: 2px solid #C9BCA2; box-sizing: border-box;"></span>
+        </button>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Мастерство сейчас — ваша оценка</span>
+      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+        <sc-for list="{{levels}}" as="l" hint-placeholder-count="5">
+          <button type="button" aria-label="{{l.label}}" style="height: 52px; border-radius: 10px; border: {{l.border}}; background: {{l.bg}}; color: {{l.fg}}; font: 700 17px Inter, sans-serif;">{{l.n}}</button>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Мастерство меняете только вы. XP показывает объём практики, а не уровень.</div>
+    </div>
+
+    <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #E6E8EE;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+      <div style="font-size: 13px; line-height: 1.45;">Форма навыка (Condition) начнёт считаться после первой практики и снижается, если навык долго не используется.</div>
+    </div>
+
+    <a href="HeroV2.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Добавить навык</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sel = 2;
+    return {
+      levels: [1, 2, 3, 4, 5].map((n) => ({
+        n, label: 'Мастерство ' + n + ' из 5',
+        bg: n === sel ? '#1F2A44' : '#FFFCF6',
+        fg: n === sel ? '#FFFCF6' : '#1F2A44',
+        border: n === sel ? '2px solid #1F2A44' : '1px solid #E3D9C6'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

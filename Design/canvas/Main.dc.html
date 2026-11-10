@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Questlyn — обзор направлений</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F5BEA}a:hover{color:#1F44B8}
+</style>
+</helmet>
+<div style="width: 1280px; height: 640px; box-sizing: border-box; padding: 48px 56px; background: #F6F7F9; color: #161A23; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 28px;">
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4A5163;">Questlyn · дизайн-этап · шаг 1</div>
+    <h1 style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.01em;">Три визуальных направления</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #3D4354; max-width: 880px;">Во всех трёх одинаковы контент, минимальный pixel art персонаж и экран «Сегодня». Различаются характер, цвет и шрифты. Можно выбрать одно или собрать гибрид: например, светлую тему из одного направления и тёмную из другого.</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; flex-grow: 1;">
+    <div style="background: #FFFFFF; border: 1px solid #E2E5EB; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; height: 28px; border-radius: 8px; overflow: hidden;">
+        <div style="flex-grow: 3; background: #F5F0E6;"></div><div style="flex-grow: 2; background: #1F2A44;"></div><div style="flex-grow: 1; background: #B8651B;"></div><div style="flex-grow: 1; background: #2F6B4F;"></div>
+      </div>
+      <div style="font-size: 20px; font-weight: 700;">A · Полевой журнал</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #3D4354;">Записная книжка исследователя: бумага, чернила, янтарь. Спокойно и по-взрослому — «реальная жизнь первична».</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Сильное:</b> лучшая читаемость для ежедневного таск-трекера, не выглядит детским.</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Риск:</b> меньше «игры»; пиксель нужно приглушать, чтобы он не выглядел чужеродно.</div>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #E2E5EB; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; height: 28px; border-radius: 8px; overflow: hidden;">
+        <div style="flex-grow: 3; background: #0F1424;"></div><div style="flex-grow: 2; background: #222B45;"></div><div style="flex-grow: 1; background: #4FD1C5;"></div><div style="flex-grow: 1; background: #F2B35B;"></div>
+      </div>
+      <div style="font-size: 20px; font-weight: 700;">B · Ночная экспедиция</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #3D4354;">Тёмная тема и атмосфера ночного лагеря: звёзды, свечение, погода. Мир персонажа здесь заметнее всего.</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Сильное:</b> выразительные погода и мир, сильное игровое ощущение.</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Риск:</b> тёмный интерфейс для дневных задач; светлую версию придётся проектировать отдельно; ближе к «типичной игре».</div>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #E2E5EB; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; height: 28px; border-radius: 8px; overflow: hidden;">
+        <div style="flex-grow: 3; background: #F3F5FA;"></div><div style="flex-grow: 2; background: #2F5BEA;"></div><div style="flex-grow: 1; background: #FF6B4A;"></div><div style="flex-grow: 1; background: #FFD23F;"></div>
+      </div>
+      <div style="font-size: 20px; font-weight: 700;">C · Пиксельный атлас</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #3D4354;">Светлый и яркий; пиксельный шрифт в заголовках и цифрах. Самый игровой и узнаваемый вариант.</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Сильное:</b> уникальность, единство интерфейса и pixel art персонажа.</div>
+      <div style="font-size: 13px; line-height: 1.5;"><b>Риск:</b> пиксельный шрифт хуже читается в длинных списках и может показаться детским.</div>
+    </div>
+  </div>
+  <div style="font-size: 13px; line-height: 1.5; color: #4A5163;">Шрифты в макетах — Google Fonts с кириллицей; в приложении основной текст можно перевести на SF Pro. Ранги и цифры атрибутов — пример, формулы ещё не утверждены.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Ежедневный квест</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 50px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="Journal.dc.html" style="min-width: 44px; height: 44px; display: flex; align-items: center; gap: 2px; text-decoration: none; color: #1F2A44; font-size: 15px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>Журнал</a>
+    <button type="button" aria-label="Ещё действия" style="width: 44px; height: 44px; border: none; background: transparent; color: #1F2A44; display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #2F6B4F;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"></path></svg>Ежедневный квест
+    </div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15;">Зарядка 15 минут</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #3D4354;">Сразу после подъёма, до телефона. Растяжка, планка, приседания.</p>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <div style="font-size: 14px; font-weight: 600;">Эта неделя</div>
+      <div style="font-size: 13px; color: #4A5368;">1 из 2 на сегодня · 50%</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; text-align: center;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Пн</span><span style="width: 34px; height: 34px; border-radius: 10px; background: #2F6B4F; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; font-weight: 700; color: #1F2A44;">Вт</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 2px solid #1F2A44; box-sizing: border-box;"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Ср</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 1px dashed #C9BCA2; box-sizing: border-box;"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Чт</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 1px dashed #C9BCA2; box-sizing: border-box;"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Пт</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 1px dashed #C9BCA2; box-sizing: border-box;"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Сб</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 1px dashed #C9BCA2; box-sizing: border-box;"></span></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;"><span style="font-size: 11px; color: #4A5368;">Вс</span><span style="width: 34px; height: 34px; border-radius: 10px; border: 1px dashed #C9BCA2; box-sizing: border-box;"></span></div>
+    </div>
+    <div style="font-size: 12px; line-height: 1.45; color: #4A5368;">Дисциплина пересчитается в понедельник по доле выполненных за неделю.</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 100px; font-size: 14px; color: #4A5368;">Расписание</span><span style="flex-grow: 1; font-size: 15px; font-weight: 500;">Каждый день</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 100px; font-size: 14px; color: #4A5368;">Время</span><span style="flex-grow: 1; font-size: 15px; font-weight: 500;">Без времени</span><span style="font-size: 12px; color: #4A5368;">только в списке</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="width: 100px; font-size: 14px; color: #4A5368;">Навык</span><span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 500;">ОФП</span><span style="font-size: 12px; color: #4A5368;">Атлет</span></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;">
+      <span style="width: 100px; font-size: 14px; color: #4A5368;">4 недели</span>
+      <span style="flex-grow: 1; display: flex; align-items: flex-end; gap: 6px; height: 28px;" aria-label="Соблюдение по неделям: 86, 71, 100, 57 процентов">
+        <span style="width: 22px; height: 24px; border-radius: 3px; background: #2F6B4F;"></span>
+        <span style="width: 22px; height: 20px; border-radius: 3px; background: #2F6B4F;"></span>
+        <span style="width: 22px; height: 28px; border-radius: 3px; background: #2F6B4F;"></span>
+        <span style="width: 22px; height: 16px; border-radius: 3px; background: #2F6B4F;"></span>
+      </span>
+      <span style="font-size: 13px; font-weight: 600;">79%</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #F1E3D3;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7A3F0E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"></path></svg>
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; color: #5C3410;">
+      <div style="font-weight: 700;">За каждую отметку</div>
+      <div>+5 XP навыка «ОФП» · 5 XP атрибутам Атлета (STR, END, MNT) · вклад в недельную дисциплину</div>
+    </div>
+  </div>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+    <button type="button" style="height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Выполнено сегодня</button>
+    <a href="DailyNew.dc.html" style="height: 48px; border-radius: 14px; border: 1px solid #C9BCA2; color: #1F2A44; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Изменить</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

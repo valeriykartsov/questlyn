@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Отметка настроения v2</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 788px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="TodayV2.dc.html" style="font-size: 16px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-size: 13px; color: #4A5368;">Сейчас, 21:30</div>
+    </div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700;">Как вы сейчас?</h1>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+      <button type="button" aria-pressed="true" style="height: 74px; border-radius: 16px; border: 2px solid #1F2A44; background: #FFFCF6; color: #1F2A44; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: Inter, sans-serif;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B8651B" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="8" y="8" width="8" height="8"></rect><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg><span style="font-size: 14px; font-weight: 700;">Хорошее</span><span style="font-size: 11px; color: #4A5368;">ясно</span></button>
+      <button type="button" aria-pressed="false" style="height: 74px; border-radius: 16px; border: 1px solid #E3D9C6; background: #FFFCF6; color: #1F2A44; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: Inter, sans-serif;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6478" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M6 17h12v-4h-2v-3h-4V8H8v3H6v2H4v4z"></path></svg><span style="font-size: 14px; font-weight: 600;">Ровное</span><span style="font-size: 11px; color: #4A5368;">облачно</span></button>
+      <button type="button" aria-pressed="false" style="height: 74px; border-radius: 16px; border: 1px solid #E3D9C6; background: #FFFCF6; color: #1F2A44; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: Inter, sans-serif;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3E4A63" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M6 13h12v-3h-2V7h-4V5H8v3H6v2H4v3z"></path><path d="M8 17v2M12 17v3M16 17v2"></path></svg><span style="font-size: 14px; font-weight: 600;">Плохое</span><span style="font-size: 11px; color: #4A5368;">дождь</span></button>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div style="display: flex; align-items: center; gap: 8px; font-family: Literata, Georgia, serif; font-size: 17px; font-weight: 600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="#A8432F" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"></path></svg>Здоровье сегодня</div>
+        <span style="font-size: 12px; color: #4A5368;">настроение на HP не влияет</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 500;">Курение</span><span style="font-size: 12px; color: #4A5368;">−3% HP за каждую отметку</span></span>
+        <button type="button" aria-label="Меньше" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 20px Inter, sans-serif;">−</button>
+        <span style="width: 22px; text-align: center; font-size: 18px; font-weight: 700;">2</span>
+        <button type="button" aria-label="Больше" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 600 20px Inter, sans-serif;">+</button>
+        <span style="width: 34px; text-align: right; font-size: 13px; font-weight: 700; color: #A8432F;">−10</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 13px; color: #4A5368;">Алкоголь · дебаф INT на 24 ч</span>
+        <div style="display: flex; gap: 8px;"><button type="button" aria-pressed="false" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid #C9BCA2; background: transparent; font-weight: 500; color: #1F2A44; font-family: Inter, sans-serif; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;">Нет</button><button type="button" aria-pressed="true" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font-weight: 700; color: #1F2A44; font-family: Inter, sans-serif; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;">Немного<span style="font-size: 12px; font-weight: 600; color: #6B4FA3;">INT −1</span></button><button type="button" aria-pressed="false" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid #C9BCA2; background: transparent; font-weight: 500; color: #1F2A44; font-family: Inter, sans-serif; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;">Много<span style="font-size: 12px; font-weight: 600; color: #6B4FA3;">INT −3</span></button></div>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;"><button type="button" aria-pressed="false" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid #C9BCA2; background: transparent; font-weight: 500; color: #1F2A44; font-family: Inter, sans-serif; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;">Фастфуд<span style="font-size: 12px; font-weight: 600; color: #A8432F;">−9</span></button><button type="button" aria-pressed="false" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid #C9BCA2; background: transparent; font-weight: 500; color: #1F2A44; font-family: Inter, sans-serif; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;">Кофеин после 16:00<span style="font-size: 12px; font-weight: 600; color: #A8432F;">−9</span></button><button type="button" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1px dashed #C9BCA2; background: transparent; color: #1F2A44; font: 500 14px Inter, sans-serif;">+ Своя</button></div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: #F6E4DF;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 13px; font-weight: 700; color: #A8432F; width: 28px;">HP</span>
+          <span style="flex-grow: 1; height: 8px; border-radius: 4px; background: #EBD3CD; overflow: hidden; position: relative;"><span style="position: absolute; left: 0; top: 0; height: 8px; width: 81%; background: #D9A79C;"></span><span style="position: absolute; left: 0; top: 0; height: 8px; width: 75%; background: #A8432F;"></span></span>
+          <span style="font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;">142 → 132</span>
+        </div>
+        <div style="font-size: 12px; color: #3D4354;"><b style="color: #6B4FA3;">Похмелье:</b> INT 14 → 13 до 21:30 завтра · MaxMP −5</div>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Шаги сегодня: 4 210 из 6 000. Если до 23:59 не дойти до нормы — −5% HP за сидячий день. XP и ранг не меняются.</div>
+    </div>
+
+    <a href="TodayV2.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Отметить</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
