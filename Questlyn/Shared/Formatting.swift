@@ -55,6 +55,13 @@ enum Format {
         return days.sorted().map(\.shortTitle).joined(separator: ", ")
     }
 
+    /// «40 мин», «1 ч 30 мин».
+    static func minutes(_ value: Int) -> String {
+        let h = value / 60, m = value % 60
+        if h == 0 { return "\(m) мин" }
+        return m == 0 ? "\(h) ч" : "\(h) ч \(m) мин"
+    }
+
     static func times(_ n: Int) -> String {
         let mod10 = n % 10, mod100 = n % 100
         let word = (mod10 >= 2 && mod10 <= 4 && !(12...14).contains(mod100)) ? "раза" : "раз"

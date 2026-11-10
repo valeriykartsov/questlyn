@@ -58,7 +58,8 @@ struct QuestCycleTests {
 
         let report = try await completions.complete(questId: quest.id, now: now, timeZone: moscow)
         #expect(report.after.xp(.focus) == .xp(5))
-        #expect(report.after.xp(.intelligence) == CentiXP(500))
+        // INT: стартовый бонус 20 XP (основной у «Инженер-программист») + 5 за квест.
+        #expect(report.after.xp(.intelligence) == CentiXP(2500))
         #expect(report.after.xp(.mentality) == CentiXP(375))
         #expect(report.after.xp(.charisma) == CentiXP(200))
         #expect(report.after.skillXP[skill.id] == .xp(10))
@@ -69,16 +70,16 @@ struct QuestCycleTests {
         await #expect(throws: QuestlynError.alreadyCompleted) {
             try await completions.complete(questId: quest.id, now: now, timeZone: moscow)
         }
-        #expect(try await store.allGrants().count == 5)
+        #expect(try await earned(store).count == 5)
 
         // Отмена удаляет начисления.
         try await completions.undo(questId: quest.id, now: now)
-        #expect(try await store.allGrants().isEmpty)
+        #expect(try await earned(store).isEmpty)
         #expect(try await store.activeCompletion(questId: quest.id) == nil)
 
         // Снова выполнить — начисление одно.
         _ = try await completions.complete(questId: quest.id, now: now, timeZone: moscow)
-        #expect(try await store.allGrants().count == 5)
+        #expect(try await earned(store).count == 5)
     }
 
     @Test func questWithoutSkillGivesFocusOnly() async throws {
@@ -152,8 +153,66 @@ struct RelaunchTests {
 
         let reopened = GRDBStore(try AppDatabase.onDisk(at: directory))
         #expect(try await reopened.currentHero()?.name == "Г")
-        #expect(try await reopened.allGrants().count == 1)
+        #expect(try await earned(reopened).count == 1)
         let overview = try await TodayService(store: reopened).overview(now: now, timeZone: tz)
         #expect(overview.items.first?.isCompleted == true)
+    }
+}
+
+/// Начисления без стартового бонуса онбординга.
+func earned(_ store: GRDBStore) async throws -> [ProgressGrant] {
+    try await store.allGrants().filter { $0.sourceType != .onboardingBonus }
+}
+
+struct OnboardingBonusTests {
+    @Test func onboardingWritesBonusAndCustomProfession() async throws {
+        let store = GRDBStore(try AppDatabase.inMemory())
+        let now = Date(timeIntervalSince1970: 1_794_301_200)
+        let tz = TimeZone(identifier: "UTC")!
+        try await OnboardingService(store: store).start(
+            heroName: "Арин", appearance: HeroAppearance(hair: .red, skin: .tan),
+            professions: [ProfessionChoice.catalog("software-engineer")!, ProfessionChoice(title: "Музыкант", attributes: [.charisma, .intelligence])],
+            classTitle: "Бард-инженер", now: now, timeZone: tz
+        )
+        let hero = try #require(try await store.currentHero())
+        #expect(hero.appearance == HeroAppearance(hair: .red, skin: .tan))
+        let professions = try await store.professions(heroId: hero.id)
+        #expect(professions.map(\.title) == ["Инженер-программист", "Музыкант"])
+        #expect(professions[1].catalogItemId == nil)
+        let bonus = try await store.allGrants()
+        #expect(Set(bonus.map(\.target)) == [.attribute(.intelligence), .attribute(.charisma)])
+        #expect(bonus.allSatisfy { $0.sourceType == .onboardingBonus && $0.amount == .xp(20) })
+
+        await #expect(throws: QuestlynError.invalidProfessionAttributes) {
+            try await ProfessionService(store: store).update(professions: [ProfessionChoice(title: "Пустая", attributes: [.focus])], classTitle: "", now: now)
+        }
+    }
+
+    @Test func professionChangeKeepsLevelsAndToggleSkills() async throws {
+        let store = GRDBStore(try AppDatabase.inMemory())
+        let now = Date(timeIntervalSince1970: 1_794_301_200)
+        let tz = TimeZone(identifier: "UTC")!
+        try await OnboardingService(store: store).start(heroName: "Арин", catalogItemIds: ["software-engineer", "athlete"], classTitle: "К", now: now, timeZone: tz)
+        let hero = try #require(try await store.currentHero())
+        let athlete = try await store.professions(heroId: hero.id)[1]
+        let skill = try await SkillService(store: store).create(title: "Бег", professionId: athlete.id, mastery: 3, now: now)
+        #expect(try await store.masteries().first?.value == 3)
+
+        let service = ProfessionService(store: store)
+        try await service.update(professions: [ProfessionChoice.catalog("software-engineer")!, ProfessionChoice.catalog("project-manager")!],
+                                 classTitle: "Инженер-менеджер", now: now)
+        var professions = try await store.professions(heroId: hero.id)
+        #expect(professions.filter(\.isActive).map(\.title) == ["Инженер-программист", "Менеджер проектов"])
+        #expect(try await store.skills().first { $0.id == skill.id }?.isActive == false)
+        #expect(try await store.currentHero()?.classTitle == "Инженер-менеджер")
+        // Уровни атрибутов сохраняются: стартовый бонус STR остаётся.
+        let progress = HeroProgress(grants: try await store.allGrants(), classAttributes: [])
+        #expect(progress.level(.strength) == 1)
+
+        // Вернуть «Атлета» — навык снова активен, та же запись профессии.
+        try await service.update(professions: [ProfessionChoice.catalog("athlete")!], classTitle: "", now: now)
+        professions = try await store.professions(heroId: hero.id)
+        #expect(professions.filter(\.isActive).map(\.id) == [athlete.id])
+        #expect(try await store.skills().first { $0.id == skill.id }?.isActive == true)
     }
 }

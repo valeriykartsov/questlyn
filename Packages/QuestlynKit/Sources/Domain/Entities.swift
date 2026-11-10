@@ -6,13 +6,64 @@ public struct Hero: Identifiable, Hashable, Codable, Sendable {
     public var id: UUID
     public var name: String
     public var classTitle: String
+    public var appearance: HeroAppearance
     public var createdAt: Date
 
-    public init(id: UUID = UUID(), name: String, classTitle: String, createdAt: Date) {
+    public init(id: UUID = UUID(), name: String, classTitle: String, appearance: HeroAppearance = .default, createdAt: Date) {
         self.id = id
         self.name = name
         self.classTitle = classTitle
+        self.appearance = appearance
         self.createdAt = createdAt
+    }
+}
+
+/// Внешность героя (02): волосы, кожа и образ на выбор; цвет акцента одежды — по основной профессии.
+public struct HeroAppearance: Hashable, Codable, Sendable {
+    public enum Hair: String, CaseIterable, Codable, Sendable { case dark, red, blond, black }
+    public enum Skin: String, CaseIterable, Codable, Sendable { case light, medium, tan, deep }
+    /// Образ героя (02, 10.11.2026): выбирается на шаге «Класс», меняется в настройках. На начисления не влияет.
+    public enum Outfit: String, CaseIterable, Codable, Sendable {
+        case mage, warrior, archer, assassin, baller, coder
+
+        public var title: String {
+            switch self {
+            case .mage: "Маг"
+            case .warrior: "Воин"
+            case .archer: "Лучник"
+            case .assassin: "Ассасин"
+            case .baller: "Баскетболист"
+            case .coder: "Программист"
+            }
+        }
+    }
+
+    public var hair: Hair
+    public var skin: Skin
+    public var outfit: Outfit
+
+    public init(hair: Hair, skin: Skin, outfit: Outfit = .coder) {
+        self.hair = hair
+        self.skin = skin
+        self.outfit = outfit
+    }
+
+    /// Как в макетах OnbHero и OnbClassLook: тёмные волосы, средняя кожа, программист.
+    public static let `default` = HeroAppearance(hair: .dark, skin: .medium, outfit: .coder)
+}
+
+/// Самооценка мастерства навыка 1–5 — факт, меняется только вручную (07, раздел 6).
+public struct SkillMastery: Identifiable, Hashable, Codable, Sendable {
+    public var id: UUID
+    public var skillId: UUID
+    public var value: Int
+    public var assessedAt: Date
+
+    public init(id: UUID = UUID(), skillId: UUID, value: Int, assessedAt: Date) {
+        self.id = id
+        self.skillId = skillId
+        self.value = min(max(value, 1), 5)
+        self.assessedAt = assessedAt
     }
 }
 
@@ -154,6 +205,9 @@ public enum GrantSourceType: String, Codable, Sendable {
     case questCompletion
     case habitOccurrence
     case weeklyDiscipline
+    /// Стартовый бонус профессий при создании героя (02, 07).
+    case onboardingBonus
+    case activity
 }
 
 public enum GrantTarget: Hashable, Codable, Sendable {
@@ -172,11 +226,14 @@ public struct ProgressGrant: Identifiable, Hashable, Codable, Sendable {
     /// Причина для объяснимости — текст экрана «Квест выполнен».
     public var reason: String
     public var createdAt: Date
+    /// Локальная дата факта (день выполнения, отметки, недели DIS) — по ней считаются спад и форма.
+    public var effectiveDate: LocalDate
 
     public init(
         id: UUID = UUID(), sourceType: GrantSourceType, sourceId: UUID, ruleVersion: RuleVersion,
-        target: GrantTarget, amount: CentiXP, reason: String, createdAt: Date
+        target: GrantTarget, amount: CentiXP, reason: String, createdAt: Date, effectiveDate: LocalDate? = nil
     ) {
+        self.effectiveDate = effectiveDate ?? LocalDate(createdAt, timeZone: TimeZone(identifier: "UTC")!)
         self.id = id
         self.sourceType = sourceType
         self.sourceId = sourceId

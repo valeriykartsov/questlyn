@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Герой из Ninja Adventure</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 40px 48px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 32px; font-weight: 700;">Вариант D · герой из Ninja Adventure (CC0)</h1>
+    <p style="margin: 0; font-size: 15px; color: #4A5368; max-width: 1100px; line-height: 1.45;">Персонаж «Villager3» из набора Pixel-Boy и AAA, лицензия CC0: можно в коммерческом приложении, указывать авторов не обязательно. Кадр 16×16 в 4 направлениях с анимацией ходьбы, портрет 38×38. Волосы, кожа и шарф-плащ перекрашиваются подменой цветов — так работают выбор внешности и цвет профессии.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 24px;">
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">По умолчанию · Инженер-программист</div>
+      <div style="display: flex; gap: 16px; align-items: flex-end;">
+        <div style="height: 200px; width: 180px; border-radius: 14px; background: #E7DCC4; position: relative; overflow: hidden; flex-shrink: 0;">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #B9AA86; border-top: 6px solid #8E7F5C;" aria-hidden="true"></div>
+          <div style="position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: grid; grid-template-columns: repeat(16, 9px); grid-auto-rows: 9px;" role="img" aria-label="Герой в зелёном плаще, вид спереди">
+            <sc-for list="{{big}}" as="p" hint-placeholder-count="256"><div style="background: {{p.c}};"></div></sc-for>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(38, 3px); grid-auto-rows: 3px; border-radius: 10px; overflow: hidden;" role="img" aria-label="Портрет героя">
+          <sc-for list="{{face}}" as="p" hint-placeholder-count="1444"><div style="background: {{p.c}};"></div></sc-for>
+        </div>
+      </div>
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">4 направления — для карты дня</div>
+      <div style="display: flex; gap: 14px;">
+        <sc-for list="{{dirs}}" as="m" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px;" role="img" aria-label="{{m.label}}">
+              <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="256"><div style="background: {{p.c}};"></div></sc-for>
+            </div>
+            <div style="font-size: 11px; color: #4A5368;">{{m.label}}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">На карте — в натуральную величину 16 pt или ×2; на «Герое» и в онбординге — ×6 и портрет.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Плащ по основной профессии</div>
+        <div style="display: flex; gap: 18px;">
+          <sc-for list="{{cloaks}}" as="m" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 104px;">
+              <div style="display: grid; grid-template-columns: repeat(16, 5px); grid-auto-rows: 5px;" role="img" aria-label="{{m.label}}">
+                <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="256"><div style="background: {{p.c}};"></div></sc-for>
+              </div>
+              <div style="font-size: 11px; color: #4A5368; text-align: center; line-height: 1.25;">{{m.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Волосы и кожа — как в онбординге</div>
+        <div style="display: flex; gap: 18px;">
+          <sc-for list="{{looks}}" as="m" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 120px;">
+              <div style="display: flex; gap: 8px; align-items: flex-end;">
+                <div style="display: grid; grid-template-columns: repeat(16, 4px); grid-auto-rows: 4px;" role="img" aria-label="{{m.label}}">
+                  <sc-for list="{{m.cells}}" as="p" hint-placeholder-count="256"><div style="background: {{p.c}};"></div></sc-for>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(38, 1.5px); grid-auto-rows: 1.5px; border-radius: 4px; overflow: hidden;" aria-hidden="true">
+                  <sc-for list="{{m.face}}" as="p" hint-placeholder-count="1444"><div style="background: {{p.c}};"></div></sc-for>
+                </div>
+              </div>
+              <div style="font-size: 11px; color: #4A5368; text-align: center; line-height: 1.25;">{{m.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; font-size: 13px; line-height: 1.45;">
+        <div style="padding: 12px 14px; border-radius: 14px; background: #E5EEE8; color: #24533D;"><b>Плюсы.</b> Готовая анимация ходьбы и портрет, единый стиль с 45+ персонажами набора (участники событий на карте), CC0 без условий.</div>
+        <div style="padding: 12px 14px; border-radius: 14px; background: #F1E3D3; color: #5C3410;"><b>Минусы.</b> Тёмный контур и насыщенная палитра отличаются от мягкого «Полевого журнала» и текущей карты — карту, вероятно, тоже стоит перевести на тайлы этого набора.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const DATA = {"dirs": [["................", "....KKKKKKKK....", "...KHHHHHHHHK...", "..KHHHHHHHHHHK..", ".KHHHHHHHHHHHHK.", ".KHHhHhHHhHhHHK.", ".KHhhhhhhhhhhHK.", ".KHhsssssssshHK.", ".KHsSKSSSSKSsHK.", ".KHsSKSSSSKSsHK.", "..KsSSSssSSSsK..", "...KsSSSSSSsK...", "..KYYssssssYYK..", ".KYYGGGYYGGGYYK.", "KssYYGGGGGGYYssK", "KSSpggggggggpSSK"], ["................", "....KKKKKKKK....", "...KHHHHHHHHK...", "..KHHHHHHHHHHK..", ".KHHHHHHHHHHHHK.", ".KHHhHhHHhHhHHK.", ".KHhhHhHHhHhhHK.", ".KHhhhhhhhhhhHK.", ".KHhhhhhhhhhhHK.", ".KHhhhhhhhhhhHK.", "..KhhhhhhhhhhK..", "...KhhhhhhhhK...", "..KYYhhhhhhYYK..", ".KYYYGGGGGGYYYK.", "KssYGGGGGGGGYssK", "KsspggggggggpssK"], ["................", "....KKKKKKKK....", "...KHHHHHHHHK...", "..KHHHHHHHHHHK..", ".KHHHHHHHHHHHHK.", ".KHHhHhhHhHhHhK.", ".KHhhhhhhhhhhhK.", ".KKsssshhhhhhhK.", "..KSSKSShhhhhhK.", ".KSSSKSSShhhhhK.", ".KssSSSSSSShhK..", "..KSSSSSSSSsK...", "...KKKKssssK....", "...KYYGGYYGGK...", "..KYYGGKssKYYK..", "..KpgggKssKgpK.."], ["................", "....KKKKKKKK....", "...KHHHHHHHHK...", "..KHHHHHHHHHHK..", ".KHHHHHHHHHHHHK.", ".KhHhHhHhhHhHHK.", ".KhhhhhhhhhhhHK.", ".KhhhhhhhssssKK.", ".KhhhhhhSSKSSK..", ".KhhhhhSSSKSSSK.", "..KhhSSSSSSSssK.", "...KsSSSSSSSSK..", "....KssssKKKK...", "...KGGYYGGYYK...", "..KYYKssKGGYYK..", "..KpgKssKgggpK.."]], "face": ["KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK", "KKKKKKKKKKKhhHHHHHHHHHHHHhhKKKKKKKKKKK", "KKKKKKKKKKhHHHHHHHHHHHHHHHHhhKKKKKKKKK", "KKKKKKKKKhHHHHHHHHHHHHHHHHHHHhKKKKKKKK", "KKKKKKKKhHHHHHHHHHHHHHHHHHHHHHhKKKKKKK", "KKKKKKKhHHhHHHhHHHHhHHHHHHHHHHHhKKKKKK", "KKKKKKhHHhHHHhHHHHhHHHHHHHHHHHHHKKKKKK", "KKKKKKhHHhHHHhHHHHhHHHHhHHHHHHHHhKKKKK", "KKKKKhhHHhhhhhhhhhhhhhHhHHHHHHHHhhKKKK", "KKKKKhhhhhhhsssssshhhhhhhhHHHHHHhhKKKK", "KKKKKhhhhsssssssssssssshhhhhHHhhhhKKKK", "KKKKKhhhhsKKKSSSSSSKKKSShhhhhhhhhhKKKK", "KKKKKhhhsSWKKKSSSSKKKWSSshhhhhhhhhKKKK", "KKKKKhhhsSWKKWSSSSWKKWSSshhhhhhhhhKKKK", "KKKKKhhhsSWKKWSSSSWKKWSSshhhhhhhhhKKKK", "KKKKKhshSSWKKWSSSSWKKWSSshhhhhhhhhKKKK", "KKKKKhshSSSSSSSSSSSSSSSShhhssshhhKKKKK", "KKKKKKsSSSSSSSSSSSSSSSSShhsssshhhKKKKK", "KKKKKKKSSSSSsssssSSSSSSSSSssshhhKKKKKK", "KKKKKKKSSSSSSSSSSSSSSSSSSSsshhhKKKKKKK", "KKKKKKKKSSSSSSSSSSSSSSSSSshhhhKKKKKKKK", "KKKKKKKKKSSSSSSSSSSSSSSShhhhhKKKKKKKKK", "KKKKKKKKKKSSSSSSSSSSSSSshhKKKKKKKKKKKK", "KKKKKKKKKKKsSSSSSSSSsKKKKKKKKKKKKKKKKK", "KKKKKKKYYKKKKKKsssssKKKKKKKKKKKKKKKKKK", "KKKKKKKYYYYYYKKKKKKYYYYYYGGGGGGGKKKKKK", "KKKKKKGKYYYYYYYYYYYYYYYYKKKKGGGGGKKKKK", "KKKKKGGGKKYYYYYYYYYYYYYYYYYYGGGGGGKKKK", "KKKKGGGGYYKKGYYYYYYGGYYYYYYYGGKKKKKKKK", "KKKGGGKGGYYYGGGGGGGGYYYYGGGGKKGGGGGKKK", "KKGGGGKGGGYYYGGGGYYYYYGGGGGKGGGGGGGGKK", "KKGGGGGKGGGGGGGGGGGGGGGGKKKGGGGGGGGGKK", "KGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGK", "KGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGK"]};
+    const shade = (hex, f) => {
+      const n = parseInt(hex.slice(1), 16);
+      const ch = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f)));
+      return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');
+    };
+    const pal = (cloak, hair, skin) => ({
+      K: '#141B1B', H: hair, h: shade(hair, 0.76), S: skin, s: shade(skin, 0.86),
+      G: cloak, Y: shade(cloak, 1.35), g: '#8D977F', p: '#ABC2BC', W: '#FFFFFF'
+    });
+    const toPx = (rows, p) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: p[ch] || 'transparent' }); });
+      return out;
+    };
+    const hair = { dark: '#3B2A20', red: '#C46A3A', blond: '#E0C27A', black: '#1F1A16' };
+    const skin = { light: '#F2D0B0', medium: '#E8B892', tan: '#C98E68', deep: '#8C5A3C' };
+    const base = pal('#2F6B4F', hair.dark, skin.tan);
+    const palette = [
+      ['Инженер-программист', '#2F6B4F'], ['Атлет', '#B8651B'], ['Менеджер проектов', '#3E5C8A'],
+      ['Баскетболист', '#2E7D7A'], ['Промпт-инженер', '#4B3F72'], ['Своя профессия', '#8E8576']
+    ];
+    const looks = [
+      ['dark', 'medium', 'Тёмные волосы, средняя кожа'], ['red', 'light', 'Рыжие волосы, светлая кожа'],
+      ['blond', 'tan', 'Светлые волосы, смуглая кожа'], ['black', 'deep', 'Чёрные волосы, тёмная кожа']
+    ];
+    return {
+      big: toPx(DATA.dirs[0], base),
+      face: toPx(DATA.face, base),
+      dirs: ['Вниз', 'Вверх', 'Влево', 'Вправо'].map((label, i) => ({ label, cells: toPx(DATA.dirs[i], base) })),
+      cloaks: palette.map(([label, c]) => ({ label, cells: toPx(DATA.dirs[0], pal(c, hair.dark, skin.tan)) })),
+      looks: looks.map(([h, s, label]) => {
+        const p = pal('#2F6B4F', hair[h], skin[s]);
+        return { label, cells: toPx(DATA.dirs[0], p), face: toPx(DATA.face, p) };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

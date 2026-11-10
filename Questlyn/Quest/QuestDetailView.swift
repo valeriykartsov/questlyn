@@ -11,6 +11,7 @@ struct QuestDetailView: View {
     @State private var isWorking = false
     @State private var isEditing = false
     @State private var isRescheduling = false
+    @State private var isCompletingWithActivity = false
     @State private var newDay = Date.now
 
     private var item: TodayItem? { model.questItem(id: questId) }
@@ -35,6 +36,14 @@ struct QuestDetailView: View {
                 if let quest = item?.quest { NavigationStack { QuestFormView(model: model, editing: quest) } }
             }
             .sheet(isPresented: $isRescheduling) { rescheduleSheet }
+            .sheet(isPresented: $isCompletingWithActivity) {
+                if let quest = item?.quest {
+                    QuestActivitySheet(model: model, quest: quest) { report in
+                        dismiss()
+                        onComplete(report)
+                    }
+                }
+            }
         }
         .presentationDetents([.large])
     }
@@ -104,6 +113,8 @@ struct QuestDetailView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(isWorking)
+                Button("Выполнить с активностью") { isCompletingWithActivity = true }
+                    .buttonStyle(SecondaryButtonStyle())
                 Button("Перенести") {
                     newDay = quest.dueDate?.date ?? .now
                     isRescheduling = true

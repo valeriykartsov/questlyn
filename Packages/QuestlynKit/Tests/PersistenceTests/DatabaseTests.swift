@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import GRDB
 import Domain
+import Application
 @testable import Persistence
 
 struct DatabaseTests {
@@ -10,12 +11,12 @@ struct DatabaseTests {
 
     @Test func migrationCreatesSchema() throws {
         try database.writer.read { db in
-            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant", "epic", "habit", "habitOccurrence"] {
+            for table in ["hero", "profession", "professionAttribute", "skill", "quest", "questCompletion", "progressGrant", "epic", "habit", "habitOccurrence", "skillMastery", "activity"] {
                 let exists = try db.tableExists(table)
                 #expect(exists, "нет таблицы \(table)")
             }
         }
-        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics])
+        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics, Migrations.honestProgress, Migrations.activities, Migrations.heroOutfit])
     }
 
     @Test func questsForDateAreOrderedByTimeThenCreation() async throws {
@@ -39,9 +40,23 @@ struct DatabaseTests {
         #expect(try await repository.currentHero() == nil)
         let hero = Hero(name: "Арин", classTitle: "Инженер-атлет", createdAt: Date(timeIntervalSince1970: 1_800_000_000))
         let profession = Profession(heroId: hero.id, title: "Атлет", slot: 1, attributes: [.strength, .endurance, .mentality], createdAt: hero.createdAt)
-        try await repository.createHero(hero, professions: [profession])
+        try await repository.createHero(hero, professions: [profession], grants: [])
         #expect(try await repository.currentHero() == hero)
         #expect(try await repository.professions(heroId: hero.id) == [profession])
+    }
+
+    @Test func appearanceChangeKeepsProgress() async throws {
+        let store = GRDBStore(database)
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let hero = try await OnboardingService(store: store).start(
+            heroName: "Арин", appearance: HeroAppearance(hair: .dark, skin: .medium, outfit: .mage),
+            professions: [.catalog("software-engineer")!], classTitle: "Инженер", now: now, timeZone: .gmt)
+        #expect(try await store.currentHero()?.appearance.outfit == .mage)
+        let grantsBefore = try await store.allGrants()
+        let updated = try await HeroService(store: store).updateAppearance(HeroAppearance(hair: .blond, skin: .deep, outfit: .warrior))
+        #expect(updated.id == hero.id)
+        #expect(try await store.currentHero()?.appearance == HeroAppearance(hair: .blond, skin: .deep, outfit: .warrior))
+        #expect(try await store.allGrants() == grantsBefore)
     }
 
     @Test func schemaRejectsFocusInProfession() throws {
@@ -91,7 +106,7 @@ struct UUIDStorageTests {
     @Test func uuidsAreStoredAsLowercaseText() async throws {
         let database = try AppDatabase.inMemory()
         let hero = Hero(name: "Г", classTitle: "К", createdAt: .now)
-        try await GRDBStore(database).createHero(hero, professions: [])
+        try await GRDBStore(database).createHero(hero, professions: [], grants: [])
         let stored = try await database.writer.read { db in
             try String.fetchOne(db, sql: "SELECT typeof(id) || ':' || id FROM hero")
         }

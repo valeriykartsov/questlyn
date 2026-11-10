@@ -17,6 +17,7 @@ public enum GrantCalculator {
         skillProfessionTitle: String?,
         snapshot: ClassSnapshot,
         createdAt: Date,
+        effectiveDate: LocalDate? = nil,
         ruleVersion: RuleVersion = .current
     ) -> [ProgressGrant] {
         let k = priority.multiplierInHalves
@@ -24,7 +25,7 @@ public enum GrantCalculator {
         func grant(_ target: GrantTarget, _ amount: CentiXP, _ reason: String) -> ProgressGrant {
             ProgressGrant(
                 sourceType: .questCompletion, sourceId: completionId, ruleVersion: ruleVersion,
-                target: target, amount: amount, reason: reason, createdAt: createdAt
+                target: target, amount: amount, reason: reason, createdAt: createdAt, effectiveDate: effectiveDate
             )
         }
 
@@ -77,12 +78,13 @@ public enum GrantCalculator {
         skillProfessionTitle: String?,
         snapshot: ClassSnapshot,
         createdAt: Date,
+        effectiveDate: LocalDate? = nil,
         ruleVersion: RuleVersion = .current
     ) -> [ProgressGrant] {
         guard let skill else { return [] }
         func grant(_ target: GrantTarget, _ amount: CentiXP, _ reason: String) -> ProgressGrant {
             ProgressGrant(sourceType: .habitOccurrence, sourceId: occurrenceId, ruleVersion: ruleVersion,
-                          target: target, amount: amount, reason: reason, createdAt: createdAt)
+                          target: target, amount: amount, reason: reason, createdAt: createdAt, effectiveDate: effectiveDate)
         }
         let professionNote = skillProfessionTitle.map { "Привычка · навык профессии «\($0)»" } ?? "Привычка"
         var grants = [grant(.skill(skill.id), .xp(habitSkillXP), professionNote)]
@@ -96,6 +98,27 @@ public enum GrantCalculator {
             grants.append(grant(.attribute(entry.attribute), amount, reason))
         }
         return grants
+    }
+
+    /// Стартовый бонус (02, 07): основной атрибут каждой профессии +1 уровень, совпадения складываются.
+    /// Начисление — XP до нужного уровня: +1 → 20 XP, +2 → 45 XP.
+    public static func onboardingBonusGrants(
+        heroId: UUID, professions: [Profession], createdAt: Date, effectiveDate: LocalDate, ruleVersion: RuleVersion = .current
+    ) -> [ProgressGrant] {
+        var levels: [Attribute: [String]] = [:]
+        for profession in professions where profession.isActive {
+            if let primary = profession.attributes.first { levels[primary, default: []].append(profession.title) }
+        }
+        return Attribute.allCases.compactMap { attribute in
+            guard let titles = levels[attribute] else { return nil }
+            let names = titles.map { "«\($0)»" }.joined(separator: ", ")
+            return ProgressGrant(
+                sourceType: .onboardingBonus, sourceId: heroId, ruleVersion: ruleVersion, target: .attribute(attribute),
+                amount: .xp(LevelCurve.totalXP(forLevel: titles.count)),
+                reason: "Стартовый бонус: основной атрибут профессии \(names) · +\(titles.count) ур.",
+                createdAt: createdAt, effectiveDate: effectiveDate
+            )
+        }
     }
 
     static func priorityText(_ priority: QuestPriority) -> String {

@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// «Настройки» (макет Settings). Этап 2: только сброс данных; здоровье героя, тема и бэкап — этапы 4 и 7.
+/// «Настройки» (макет Settings): внешность героя и сброс данных; здоровье героя, тема и бэкап — этапы 4 и 7.
 struct SettingsView: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -19,6 +19,23 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    NavigationLink {
+                        AppearanceEditorView(model: model)
+                    } label: {
+                        LabeledContent {
+                            Text(model.hero?.appearance.outfit.title ?? "")
+                        } label: {
+                            Label("Внешность и образ", systemImage: "person.crop.square")
+                        }
+                    }
+                } header: {
+                    Text("Герой")
+                } footer: {
+                    Text("Образ, волосы и кожа. На атрибуты и прогресс не влияют.")
+                }
+                .listRowBackground(QColor.sheet)
+
                 Section {
                     Button(role: .destructive) {
                         confirmation = ""

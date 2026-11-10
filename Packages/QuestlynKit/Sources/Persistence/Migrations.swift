@@ -4,6 +4,9 @@ import GRDB
 enum Migrations {
     static let initial = "v1_initial"
     static let habitsAndEpics = "v2_habitsAndEpics"
+    static let honestProgress = "v3_honestProgress"
+    static let activities = "v4_activities"
+    static let heroOutfit = "v5_heroOutfit"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -142,6 +145,59 @@ enum Migrations {
                 t.column("classSnapshot", .jsonText).notNull()
             }
             try db.create(index: "habitOccurrence_habitDate", on: "habitOccurrence", columns: ["habitId", "localDate"])
+        }
+
+        // Этап 3: дата начисления для спада, внешность героя, мастерство навыка.
+        migrator.registerMigration(honestProgress) { db in
+            try db.alter(table: "hero") { t in
+                t.add(column: "hair", .text).notNull().defaults(to: "dark")
+                t.add(column: "skin", .text).notNull().defaults(to: "medium")
+            }
+            try db.alter(table: "progressGrant") { t in
+                t.add(column: "localDate", .text)
+            }
+            // Дата факта для уже записанных начислений.
+            try db.execute(sql: """
+                UPDATE progressGrant SET localDate = (SELECT localDate FROM questCompletion WHERE questCompletion.id = progressGrant.sourceId)
+                WHERE sourceType = 'questCompletion';
+                UPDATE progressGrant SET localDate = (SELECT localDate FROM habitOccurrence WHERE habitOccurrence.id = progressGrant.sourceId)
+                WHERE sourceType = 'habitOccurrence';
+                UPDATE progressGrant SET localDate = date(substr(sourceId, 29, 4) || '-' || substr(sourceId, 33, 2) || '-' || substr(sourceId, 35, 2), '+7 days')
+                WHERE sourceType = 'weeklyDiscipline';
+                UPDATE progressGrant SET localDate = substr(createdAt, 1, 10) WHERE localDate IS NULL;
+                """)
+            try db.create(index: "progressGrant_localDate", on: "progressGrant", columns: ["localDate"])
+
+            try db.create(table: "skillMastery") { t in
+                t.primaryKey("id", .text)
+                t.belongsTo("skill", onDelete: .cascade).notNull()
+                t.column("value", .integer).notNull().check { $0 >= 1 && $0 <= 5 }
+                t.column("assessedAt", .datetime).notNull()
+            }
+        }
+
+        // Этап 3.3: Activity — факт практики по шаблону.
+        migrator.registerMigration(activities) { db in
+            try db.create(table: "activity") { t in
+                t.primaryKey("id", .text)
+                t.column("templateId", .text).notNull()
+                t.belongsTo("skill", onDelete: .setNull)
+                t.column("durationMinutes", .integer).notNull().check { $0 > 0 && $0 <= 1440 }
+                t.column("creditedMinutes", .integer).notNull().check { $0 >= 0 && $0 <= 180 }
+                t.column("localDate", .text).notNull().indexed()
+                t.column("startedAt", .datetime).notNull()
+                t.column("timezoneId", .text).notNull()
+                t.column("questCompletionId", .text).references("questCompletion", onDelete: .setNull)
+                t.column("classSnapshot", .jsonText).notNull()
+                t.column("deletedAt", .datetime)
+            }
+        }
+
+        // Этап 3.6: образ героя. Уже созданным героям — «Программист», как в макете выбора.
+        migrator.registerMigration(heroOutfit) { db in
+            try db.alter(table: "hero") { t in
+                t.add(column: "outfit", .text).notNull().defaults(to: "coder")
+            }
         }
 
         return migrator

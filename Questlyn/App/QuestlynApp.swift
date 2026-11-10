@@ -37,6 +37,31 @@ struct RootView: View {
 
     var body: some View {
         Group {
+            #if DEBUG
+            // `-QuestlynPreview onboardingClass | appearance` — экраны, до которых в симуляторе не дойти без нажатий.
+            if let preview = UserDefaults.standard.string(forKey: "QuestlynPreview"), model.isLoaded {
+                switch preview {
+                case "appearance": NavigationStack { AppearanceEditorView(model: model) }
+                default: OnboardingView(model: model, debugClassStep: true)
+                }
+            } else { content }
+            #else
+            content
+            #endif
+        }
+        .task { await model.reload() }
+        .alert("Не получилось", isPresented: Binding(
+            get: { model.errorMessage != nil },
+            set: { if !$0 { model.errorMessage = nil } }
+        )) {
+            Button("Понятно", role: .cancel) {}
+        } message: {
+            Text(model.errorMessage ?? "")
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        Group {
             if !model.isLoaded {
                 QColor.paper.ignoresSafeArea()
             } else if model.hero == nil {
@@ -49,15 +74,6 @@ struct RootView: View {
                 }
                 .tint(QColor.amber)
             }
-        }
-        .task { await model.reload() }
-        .alert("Не получилось", isPresented: Binding(
-            get: { model.errorMessage != nil },
-            set: { if !$0 { model.errorMessage = nil } }
-        )) {
-            Button("Понятно", role: .cancel) {}
-        } message: {
-            Text(model.errorMessage ?? "")
         }
     }
 }

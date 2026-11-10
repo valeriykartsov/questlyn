@@ -9,6 +9,7 @@ struct SkillFormView: View {
 
     @State private var title = ""
     @State private var professionId: UUID?
+    @State private var mastery = 0
     @State private var isSaving = false
 
     var body: some View {
@@ -37,6 +38,14 @@ struct SkillFormView: View {
                     Text("XP показывает объём практики, а не уровень мастерства.")
                 }
                 .listRowBackground(QColor.sheet)
+                Section {
+                    MasteryPicker(value: $mastery)
+                } header: {
+                    Text("Мастерство сейчас — ваша оценка")
+                } footer: {
+                    Text("Форма навыка начнёт считаться после первой практики и снижается, если навык долго не используется.")
+                }
+                .listRowBackground(QColor.sheet)
             }
             .tint(QColor.amber)
             .paperScreen()
@@ -59,7 +68,7 @@ struct SkillFormView: View {
         guard let professionId else { return }
         isSaving = true
         Task {
-            if let skill = await model.createSkill(title: title, professionId: professionId) {
+            if let skill = await model.createSkill(title: title, professionId: professionId, mastery: mastery == 0 ? nil : mastery) {
                 onCreate(skill)
                 dismiss()
             }
