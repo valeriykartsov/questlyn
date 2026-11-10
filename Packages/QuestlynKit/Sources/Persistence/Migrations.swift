@@ -3,6 +3,7 @@ import GRDB
 /// Миграции схемы. Старые миграции не меняются — только новые сверху вниз.
 enum Migrations {
     static let initial = "v1_initial"
+    static let habitsAndEpics = "v2_habitsAndEpics"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -97,6 +98,50 @@ enum Migrations {
                     """)
             }
             try db.create(index: "progressGrant_source", on: "progressGrant", columns: ["sourceType", "sourceId"])
+        }
+
+        // Этап 2: Epic, Daily и Weekly Quest, отметки привычек.
+        migrator.registerMigration(habitsAndEpics) { db in
+            try db.create(table: "epic") { t in
+                t.primaryKey("id", .text)
+                t.column("title", .text).notNull().check { length($0) > 0 }
+                t.column("details", .text)
+                t.column("deadline", .text)
+                t.column("completedAt", .datetime)
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.alter(table: "quest") { t in
+                t.add(column: "epicId", .text).references("epic", onDelete: .setNull)
+            }
+            try db.create(index: "quest_epicId", on: "quest", columns: ["epicId"])
+
+            try db.create(table: "habit") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull().check(sql: "kind IN ('daily', 'weekly')")
+                t.column("title", .text).notNull().check { length($0) > 0 }
+                t.column("details", .text)
+                t.belongsTo("skill", onDelete: .setNull)
+                // Дни недели через запятую, 1 — понедельник.
+                t.column("weekdays", .text).notNull()
+                t.column("targetPerWeek", .integer).notNull().check { $0 >= 1 }
+                t.column("time", .text)
+                t.column("timezoneId", .text).notNull()
+                t.column("startDate", .text).notNull()
+                t.column("isActive", .boolean).notNull().defaults(to: true)
+                t.column("createdAt", .datetime).notNull()
+            }
+
+            // Факт: отметка привычки. Отмена ставит undoneAt (Летопись).
+            try db.create(table: "habitOccurrence") { t in
+                t.primaryKey("id", .text)
+                t.belongsTo("habit", onDelete: .cascade).notNull()
+                t.column("localDate", .text).notNull()
+                t.column("completedAt", .datetime).notNull()
+                t.column("timezoneId", .text).notNull()
+                t.column("undoneAt", .datetime)
+                t.column("classSnapshot", .jsonText).notNull()
+            }
+            try db.create(index: "habitOccurrence_habitDate", on: "habitOccurrence", columns: ["habitId", "localDate"])
         }
 
         return migrator

@@ -92,6 +92,7 @@ struct QuestRecord: QuestlynRecord {
     var dueDate: String?
     var dueTime: String?
     var timezoneId: String
+    var epicId: UUID?
     var createdAt: Date
 
     enum Columns {
@@ -109,6 +110,7 @@ struct QuestRecord: QuestlynRecord {
         dueDate = quest.dueDate?.description
         dueTime = quest.dueTime?.description
         timezoneId = quest.timezoneId
+        epicId = quest.epicId
         createdAt = quest.createdAt
     }
 
@@ -119,7 +121,7 @@ struct QuestRecord: QuestlynRecord {
             skillId: skillId,
             dueDate: dueDate.flatMap(LocalDate.init(string:)),
             dueTime: dueTime.flatMap(LocalTime.init(string:)),
-            timezoneId: timezoneId, createdAt: createdAt
+            timezoneId: timezoneId, epicId: epicId, createdAt: createdAt
         )
     }
 }
@@ -199,5 +201,95 @@ struct ProgressGrantRecord: QuestlynRecord {
         }
         return ProgressGrant(id: id, sourceType: source, sourceId: sourceId, ruleVersion: RuleVersion(rawValue: ruleVersion),
                              target: target, amount: CentiXP(amountCenti), reason: reason, createdAt: createdAt)
+    }
+}
+
+struct EpicRecord: QuestlynRecord {
+    static let databaseTableName = "epic"
+    var id: UUID
+    var title: String
+    var details: String?
+    var deadline: String?
+    var completedAt: Date?
+    var createdAt: Date
+
+    init(_ e: EpicQuest) {
+        id = e.id
+        title = e.title
+        details = e.details
+        deadline = e.deadline?.description
+        completedAt = e.completedAt
+        createdAt = e.createdAt
+    }
+
+    var domain: EpicQuest {
+        EpicQuest(id: id, title: title, details: details, deadline: deadline.flatMap(LocalDate.init(string:)),
+                  completedAt: completedAt, createdAt: createdAt)
+    }
+}
+
+struct HabitRecord: QuestlynRecord {
+    static let databaseTableName = "habit"
+    var id: UUID
+    var kind: String
+    var title: String
+    var details: String?
+    var skillId: UUID?
+    var weekdays: String
+    var targetPerWeek: Int
+    var time: String?
+    var timezoneId: String
+    var startDate: String
+    var isActive: Bool
+    var createdAt: Date
+
+    init(_ h: HabitDefinition) {
+        id = h.id
+        kind = h.kind.rawValue
+        title = h.title
+        details = h.details
+        skillId = h.skillId
+        weekdays = h.weekdays.sorted().map { String($0.rawValue) }.joined(separator: ",")
+        targetPerWeek = h.targetPerWeek
+        time = h.time?.description
+        timezoneId = h.timezoneId
+        startDate = h.startDate.description
+        isActive = h.isActive
+        createdAt = h.createdAt
+    }
+
+    var domain: HabitDefinition? {
+        guard let kind = HabitKind(rawValue: kind), let start = LocalDate(string: startDate) else { return nil }
+        let days = Set(weekdays.split(separator: ",").compactMap { Int($0).flatMap(Weekday.init(rawValue:)) })
+        return HabitDefinition(id: id, kind: kind, title: title, details: details, skillId: skillId, weekdays: days,
+                               targetPerWeek: targetPerWeek, time: time.flatMap(LocalTime.init(string:)),
+                               timezoneId: timezoneId, startDate: start, isActive: isActive, createdAt: createdAt)
+    }
+}
+
+struct HabitOccurrenceRecord: QuestlynRecord {
+    static let databaseTableName = "habitOccurrence"
+    var id: UUID
+    var habitId: UUID
+    var localDate: String
+    var completedAt: Date
+    var timezoneId: String
+    var undoneAt: Date?
+    var classSnapshot: ClassSnapshot
+
+    init(_ o: HabitOccurrence) {
+        id = o.id
+        habitId = o.habitId
+        localDate = o.localDate.description
+        completedAt = o.completedAt
+        timezoneId = o.timezoneId
+        undoneAt = o.undoneAt
+        classSnapshot = o.classSnapshot
+    }
+
+    var domain: HabitOccurrence? {
+        guard let date = LocalDate(string: localDate) else { return nil }
+        return HabitOccurrence(id: id, habitId: habitId, localDate: date, completedAt: completedAt,
+                               timezoneId: timezoneId, undoneAt: undoneAt, classSnapshot: classSnapshot)
     }
 }

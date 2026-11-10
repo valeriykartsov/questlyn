@@ -2,15 +2,18 @@ import SwiftUI
 import Domain
 import Application
 
-/// Карточка квеста (макет QuestDetail). «Изменить» и «Перенести» — этап 2.7.
+/// Карточка квеста (макет QuestDetail): выполнить, изменить, перенести.
 struct QuestDetailView: View {
     let model: AppModel
     let questId: UUID
     let onComplete: (CompletionReport) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var isWorking = false
+    @State private var isEditing = false
+    @State private var isRescheduling = false
+    @State private var newDay = Date.now
 
-    private var item: TodayItem? { model.overview?.items.first { $0.quest.id == questId } }
+    private var item: TodayItem? { model.questItem(id: questId) }
 
     var body: some View {
         NavigationStack {
@@ -26,7 +29,12 @@ struct QuestDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
+                ToolbarItem(placement: .primaryAction) { Button("Изменить") { isEditing = true }.disabled(item == nil) }
             }
+            .sheet(isPresented: $isEditing) {
+                if let quest = item?.quest { NavigationStack { QuestFormView(model: model, editing: quest) } }
+            }
+            .sheet(isPresented: $isRescheduling) { rescheduleSheet }
         }
         .presentationDetents([.large])
     }
@@ -43,6 +51,10 @@ struct QuestDetailView: View {
             }
 
             VStack(spacing: 0) {
+                if let epic = model.epic(id: quest.epicId) {
+                    InfoRow(label: "Epic", value: epic.epic.title, note: "шаг \(epic.doneCount) из \(epic.steps.count) выполнено")
+                    Divider().overlay(QColor.line)
+                }
                 InfoRow(label: "Навык", value: item.skill?.title ?? "Без навыка", note: profession?.title)
                 Divider().overlay(QColor.line)
                 InfoRow(label: "Приоритет", value: Format.priority(quest.priority), note: "награда \(Format.multiplier(quest.priority))")
@@ -92,9 +104,51 @@ struct QuestDetailView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(isWorking)
+                Button("Перенести") {
+                    newDay = quest.dueDate?.date ?? .now
+                    isRescheduling = true
+                }
+                .buttonStyle(SecondaryButtonStyle())
             }
         }
         .padding(QSpacing.screen)
+    }
+
+    private var rescheduleSheet: some View {
+        NavigationStack {
+            VStack(spacing: QSpacing.l) {
+                HStack(spacing: QSpacing.m) {
+                    Button("Сегодня") { reschedule(to: model.today) }
+                    Button("Завтра") { reschedule(to: model.today.adding(days: 1)) }
+                    Button("Без даты") { reschedule(to: nil) }
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                DatePicker("Дата", selection: $newDay, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .environment(\.locale, Locale(identifier: "ru_RU"))
+                    .tint(QColor.amber)
+                Button("Перенести на \(Format.shortDay(LocalDate(newDay, timeZone: .current)))") {
+                    reschedule(to: LocalDate(newDay, timeZone: .current))
+                }
+                .buttonStyle(PrimaryButtonStyle())
+            }
+            .padding(QSpacing.screen)
+            .paperScreen()
+            .navigationTitle("Перенести")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Отмена") { isRescheduling = false } } }
+        }
+        .presentationDetents([.large])
+    }
+
+    /// Перенос сохраняет время, если новая дата есть; без даты — без времени.
+    private func reschedule(to date: LocalDate?) {
+        guard let quest = item?.quest else { return }
+        let draft = QuestDraft(title: quest.title, details: quest.details ?? "", priority: quest.priority, skillId: quest.skillId,
+                               dueDate: date, dueTime: date == nil ? nil : quest.dueTime, epicId: quest.epicId)
+        Task {
+            if await model.updateQuest(quest.id, with: draft) { isRescheduling = false }
+        }
     }
 
     /// Предпросмотр по тем же правилам, что и начисление.

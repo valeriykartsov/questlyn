@@ -1,10 +1,12 @@
 import SwiftUI
 import Domain
+import Application
 
 /// «Герой» этапа 1 (макет HeroV2 без HP/MP, внешности и формы навыка).
 struct HeroView: View {
     let model: AppModel
     @State private var isCreatingSkill = false
+    @State private var isShowingSettings = false
 
     private var progress: HeroProgress { model.progress }
 
@@ -22,13 +24,24 @@ struct HeroView: View {
         }
         .paperScreen()
         .sheet(isPresented: $isCreatingSkill) { SkillFormView(model: model) }
+        .sheet(isPresented: $isShowingSettings) { SettingsView(model: model) }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: QSpacing.xxs) {
-            Text(model.hero?.name ?? "")
-                .font(QFont.text(13))
-                .foregroundStyle(QColor.inkSecondary)
+            HStack {
+                Text(model.hero?.name ?? "")
+                    .font(QFont.text(13))
+                    .foregroundStyle(QColor.inkSecondary)
+                Spacer()
+                Button { isShowingSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 20))
+                        .foregroundStyle(QColor.ink)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Настройки")
+            }
             Text(model.hero?.classTitle ?? "Герой")
                 .font(QFont.title(30))
             Text(classNote)
@@ -76,7 +89,12 @@ struct HeroView: View {
             }
             .padding(QSpacing.xl)
             .sheetCard()
-            Text("Тёмные полосы — атрибуты класса, они сильнее влияют на ранг.")
+            if let dis = model.overview?.lastDiscipline {
+                Text("Дисциплина за прошлую неделю: \(Format.signedXP(dis.amount)) XP · \(dis.reason)")
+                    .font(QFont.text(12))
+                    .foregroundStyle(QColor.inkSecondary)
+            }
+            Text("Тёмные полосы — атрибуты класса, они сильнее влияют на ранг. DIS пересчитывается по понедельникам.")
                 .font(QFont.text(12))
                 .foregroundStyle(QColor.inkSecondary)
         }

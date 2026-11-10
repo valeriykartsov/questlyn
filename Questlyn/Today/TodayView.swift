@@ -8,6 +8,7 @@ struct TodayView: View {
 
     @State private var isCreating = false
     @State private var openedQuest: Quest?
+    @State private var openedHabit: UUID?
     @State private var report: CompletionReport?
 
     private var items: [TodayItem] { model.overview?.items ?? [] }
@@ -18,6 +19,7 @@ struct TodayView: View {
                 header
                 rankCard
                 AttributeStrip(progress: model.progress)
+                habitsSection
                 section(.overdue, title: "Просрочено")
                 section(.today, title: "Квесты на сегодня", showEmpty: true)
                 section(.undated, title: "Без даты")
@@ -27,9 +29,12 @@ struct TodayView: View {
             .padding(.bottom, 96)
         }
         .paperScreen()
-        .overlay(alignment: .bottomTrailing) { addButton }
+        .overlay(alignment: .bottomTrailing) { AddButton { isCreating = true } }
         .refreshable { await model.reload() }
-        .sheet(isPresented: $isCreating) { QuestFormView(model: model) }
+        .sheet(isPresented: $isCreating) { AddFlowView(model: model) }
+        .sheet(item: Binding(get: { openedHabit.map(IdentifiedID.init) }, set: { openedHabit = $0?.id })) {
+            HabitDetailView(model: model, habitId: $0.id)
+        }
         .sheet(item: $openedQuest) { quest in
             QuestDetailView(model: model, questId: quest.id) { report = $0 }
         }
@@ -87,17 +92,16 @@ struct TodayView: View {
                 if rows.isEmpty {
                     emptyState
                 } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(rows.enumerated()), id: \.element.id) { index, item in
-                            if index > 0 { Divider().overlay(QColor.line).padding(.leading, 52) }
-                            QuestRow(item: item, today: model.overview?.date, profession: model.profession(id: item.skill?.professionId)) {
+                    VStack(spacing: QSpacing.s) {
+                        ForEach(rows) { item in
+                            QuestRow(item: item, today: model.overview?.date, profession: model.profession(id: item.skill?.professionId),
+                                     epicTitle: model.epic(id: item.quest.epicId)?.epic.title) {
                                 toggle(item)
                             } open: {
                                 openedQuest = item.quest
                             }
                         }
                     }
-                    .sheetCard()
                 }
             }
         }
@@ -107,7 +111,7 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: QSpacing.xs) {
             Text("Квестов на сегодня нет")
                 .font(QFont.text(15, weight: .semibold))
-            Text("Нажмите «+», чтобы добавить квест. Выполненные квесты растят героя.")
+            Text("Нажмите «+», чтобы добавить квест, привычку или Epic. Выполненные квесты растят героя.")
                 .font(QFont.text(13))
                 .foregroundStyle(QColor.inkSecondary)
         }
@@ -117,17 +121,33 @@ struct TodayView: View {
         .sheetCard()
     }
 
-    private var addButton: some View {
-        Button { isCreating = true } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(QColor.sheet)
-                .frame(width: 56, height: 56)
-                .background(QColor.amber, in: Circle())
-                .shadow(color: QColor.ink.opacity(0.15), radius: 6, y: 3)
+    @ViewBuilder
+    private var habitsSection: some View {
+        let habits = model.habits.filter(\.isScheduledToday)
+        if !habits.isEmpty {
+            let daily = habits.filter { $0.habit.kind == .daily }
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Привычки").font(QFont.title(18))
+                    Spacer()
+                    if !daily.isEmpty {
+                        Text("\(daily.filter(\.doneToday).count) из \(daily.count) сегодня")
+                            .font(QFont.text(12, weight: .semibold))
+                            .foregroundStyle(QColor.inkSecondary)
+                    }
+                }
+                VStack(spacing: QSpacing.s) {
+                    ForEach(habits) { status in
+                        HabitRow(status: status, attribute: model.profession(id: status.skill?.professionId)?.attributes.first) {
+                            Task {
+                                if status.doneToday { await model.unmarkHabit(status.id, on: status.today) }
+                                else { await model.markHabit(status.id, on: status.today) }
+                            }
+                        } open: { openedHabit = status.id }
+                    }
+                }
+            }
         }
-        .accessibilityLabel("Новый квест")
-        .padding(QSpacing.screen)
     }
 
     private func toggle(_ item: TodayItem) {
@@ -146,15 +166,14 @@ struct QuestRow: View {
     let item: TodayItem
     let today: LocalDate?
     let profession: Profession?
+    var epicTitle: String?
     let toggle: () -> Void
     let open: () -> Void
 
     var body: some View {
         HStack(spacing: QSpacing.l) {
             Button(action: toggle) {
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 26))
-                    .foregroundStyle(item.isCompleted ? QColor.forest : QColor.lineStrong)
+                QCheckbox(isOn: item.isCompleted)
                     .frame(width: 32, height: 44)
             }
             .buttonStyle(.plain)
@@ -163,7 +182,7 @@ struct QuestRow: View {
             Button(action: open) {
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
                     Text(item.quest.title)
-                        .font(QFont.text(15, weight: .semibold))
+                        .font(QFont.text(15))
                         .strikethrough(item.isCompleted, color: QColor.inkSecondary)
                         .foregroundStyle(item.isCompleted ? QColor.inkSecondary : QColor.ink)
                         .multilineTextAlignment(.leading)
@@ -176,14 +195,21 @@ struct QuestRow: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, QSpacing.l)
-        .padding(.vertical, QSpacing.s)
+        .padding(.leading, QSpacing.xs)
+        .padding(.trailing, QSpacing.l)
+        .padding(.vertical, QSpacing.xs)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 
     private var subtitle: String {
         var parts: [String] = []
-        if item.section != .undated { parts.append(Format.when(item.quest, today: today)) }
-        if let skill = item.skill { parts.append(skill.title) }
+        if let epicTitle { parts.append(epicTitle) }
+        if item.section == .today, let time = item.quest.dueTime {
+            parts.append("до \(time)")
+        } else if item.section != .undated {
+            parts.append(Format.when(item.quest, today: today))
+        }
+        if epicTitle == nil, let skill = item.skill { parts.append(skill.title) }
         if item.quest.priority != .medium { parts.append(Format.priority(item.quest.priority)) }
         return parts.isEmpty ? "Без навыка" : parts.joined(separator: " · ")
     }

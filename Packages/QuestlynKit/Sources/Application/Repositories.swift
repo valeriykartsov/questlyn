@@ -20,6 +20,32 @@ public protocol QuestRepository: Sendable {
     func questsForToday(_ date: LocalDate) async throws -> [Quest]
     func quest(id: UUID) async throws -> Quest?
     func save(_ quest: Quest) async throws
+    func allQuests() async throws -> [Quest]
+}
+
+public protocol EpicRepository: Sendable {
+    func epics() async throws -> [EpicQuest]
+    func epic(id: UUID) async throws -> EpicQuest?
+    func save(_ epic: EpicQuest) async throws
+    /// Epic и его шаги — одной транзакцией.
+    func createEpic(_ epic: EpicQuest, steps: [Quest]) async throws
+}
+
+public protocol HabitRepository: Sendable {
+    func habits() async throws -> [HabitDefinition]
+    func habit(id: UUID) async throws -> HabitDefinition?
+    func save(_ habit: HabitDefinition) async throws
+    /// Активные (не отменённые) отметки в диапазоне дат включительно.
+    func occurrences(from: LocalDate, through: LocalDate) async throws -> [HabitOccurrence]
+    func record(_ occurrence: HabitOccurrence, grants: [ProgressGrant]) async throws
+    func undoOccurrence(id: UUID, at date: Date) async throws
+}
+
+public protocol DisciplineRepository: Sendable {
+    /// Начисления DIS по неделям (sourceType = weeklyDiscipline).
+    func disciplineGrants() async throws -> [ProgressGrant]
+    /// Заменить начисление недели (удалить старое, записать новое).
+    func replaceDisciplineGrant(sourceId: UUID, with grant: ProgressGrant) async throws
 }
 
 public protocol CompletionRepository: Sendable {
@@ -36,4 +62,10 @@ public protocol GrantRepository: Sendable {
     func grants(sourceId: UUID) async throws -> [ProgressGrant]
 }
 
+public protocol ResetRepository: Sendable {
+    /// Удалить все данные и создать пустую схему заново.
+    func eraseAll() async throws
+}
+
 public typealias QuestlynStore = HeroRepository & SkillRepository & QuestRepository & CompletionRepository & GrantRepository
+    & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository

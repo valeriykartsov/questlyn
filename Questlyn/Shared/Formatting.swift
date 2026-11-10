@@ -34,11 +34,31 @@ enum Format {
         guard let due = quest.dueDate else { return "Без даты" }
         var day: String
         if due == today { day = "Сегодня" }
-        else if let today, let yesterday = today.adding(days: -1), due == yesterday { day = "Вчера" }
-        else if let today, let tomorrow = today.adding(days: 1), due == tomorrow { day = "Завтра" }
+        else if let today, due == today.adding(days: -1) { day = "Вчера" }
+        else if let today, due == today.adding(days: 1) { day = "Завтра" }
         else { day = shortDay(due) }
         if let time = quest.dueTime { day += ", \(time)" }
         return day
+    }
+
+    /// «9–15 ноября».
+    static func week(_ start: LocalDate) -> String {
+        let end = start.adding(days: 6)
+        guard let endDate = end.date else { return start.description }
+        let month = endDate.formatted(.dateTime.day().month(.wide).locale(ru))
+        return "\(start.day)–\(month)"
+    }
+
+    static func weekdays(_ days: Set<Weekday>) -> String {
+        if days == Weekday.everyDay { return "Каждый день" }
+        if days == Weekday.workdays { return "Будни" }
+        return days.sorted().map(\.shortTitle).joined(separator: ", ")
+    }
+
+    static func times(_ n: Int) -> String {
+        let mod10 = n % 10, mod100 = n % 100
+        let word = (mod10 >= 2 && mod10 <= 4 && !(12...14).contains(mod100)) ? "раза" : "раз"
+        return "\(n) \(word)"
     }
 
     static func priority(_ priority: QuestPriority) -> String {
@@ -70,8 +90,4 @@ extension LocalDate {
         LocalDate.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))
     }
 
-    func adding(days: Int) -> LocalDate? {
-        guard let date, let shifted = LocalDate.calendar.date(byAdding: .day, value: days, to: date) else { return nil }
-        return LocalDate(shifted, timeZone: .current)
-    }
 }

@@ -78,13 +78,16 @@ public struct Quest: Identifiable, Hashable, Codable, Sendable {
     /// Только вместе с `dueDate`.
     public var dueTime: LocalTime?
     public var timezoneId: String
+    /// Шаг Epic: квест принадлежит не более чем одному Epic (02).
+    public var epicId: UUID?
     public var createdAt: Date
 
     public init(
         id: UUID = UUID(), title: String, details: String? = nil, priority: QuestPriority = .default,
         skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil,
-        timezoneId: String, createdAt: Date
+        timezoneId: String, epicId: UUID? = nil, createdAt: Date
     ) {
+        self.epicId = epicId
         self.id = id
         self.title = title
         self.details = details
@@ -149,6 +152,8 @@ public struct QuestCompletion: Identifiable, Hashable, Codable, Sendable {
 
 public enum GrantSourceType: String, Codable, Sendable {
     case questCompletion
+    case habitOccurrence
+    case weeklyDiscipline
 }
 
 public enum GrantTarget: Hashable, Codable, Sendable {
