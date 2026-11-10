@@ -90,6 +90,16 @@ public protocol VitalsRepository: Sendable {
     func save(_ settings: VitalSettings) async throws
 }
 
+/// Летопись: вехи и полная история фактов, включая отменённые (08, раздел 4).
+public protocol ChronicleRepository: Sendable {
+    func chronicleEntries() async throws -> [ChronicleEntry]
+    /// Новые и изменённые вехи — одной транзакцией.
+    func save(_ entries: [ChronicleEntry]) async throws
+    func allCompletions() async throws -> [QuestCompletion]
+    func allOccurrences() async throws -> [HabitOccurrence]
+    func allActivities() async throws -> [Activity]
+}
+
 public protocol ResetRepository: Sendable {
     /// Удалить все данные и создать пустую схему заново.
     func eraseAll() async throws
@@ -97,3 +107,4 @@ public protocol ResetRepository: Sendable {
 
 public typealias QuestlynStore = HeroRepository & SkillRepository & QuestRepository & CompletionRepository & GrantRepository
     & EpicRepository & HabitRepository & DisciplineRepository & ResetRepository & ActivityRepository & VitalsRepository
+    & ChronicleRepository

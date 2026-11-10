@@ -25,6 +25,16 @@ final class AppModel {
     func skill(id: UUID?) -> Skill? { skills.first { $0.id == id } }
     func profession(id: UUID?) -> Profession? { overview?.professions.first { $0.id == id } }
 
+    // MARK: Летопись — этап 5
+
+    private(set) var chronicle: [ChronicleDay] = []
+
+    func loadChronicle() async {
+        await run { [self] in
+            chronicle = try await ChronicleService(store: store).feed(now: .now, timeZone: timeZone)
+        }
+    }
+
     // MARK: Состояние героя — этап 4
 
     var vitals: VitalsState? { overview?.vitals }
@@ -75,6 +85,9 @@ final class AppModel {
                 try? await HealthSyncService(store: store, source: health).sync(now: .now, timeZone: timeZone)
             }
             overview = try await TodayService(store: store).overview(now: .now, timeZone: timeZone)
+            // Вехи фиксируются при каждом обновлении — в момент, когда они случились.
+            try await ChronicleService(store: store).syncMilestones(now: .now, timeZone: timeZone)
+            if !chronicle.isEmpty { chronicle = try await ChronicleService(store: store).feed(now: .now, timeZone: timeZone) }
         }
         isLoaded = true
     }

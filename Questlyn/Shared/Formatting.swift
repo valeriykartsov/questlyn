@@ -62,6 +62,19 @@ enum Format {
         return m == 0 ? "\(h) ч" : "\(h) ч \(m) мин"
     }
 
+    /// «7 записей», «1 запись», «3 записи».
+    static func records(_ n: Int) -> String {
+        let mod10 = n % 10, mod100 = n % 100
+        let word = (11...14).contains(mod100) ? "записей" : mod10 == 1 ? "запись" : (2...4).contains(mod10) ? "записи" : "записей"
+        return "\(n) \(word)"
+    }
+
+    /// «+105», «−4» — целые HP и MP со знаком.
+    static func signedWhole(_ value: Double) -> String {
+        let whole = Int(value.rounded())
+        return whole > 0 ? "+\(whole)" : whole < 0 ? "−\(-whole)" : "0"
+    }
+
     static func times(_ n: Int) -> String {
         let mod10 = n % 10, mod100 = n % 100
         let word = (mod10 >= 2 && mod10 <= 4 && !(12...14).contains(mod100)) ? "раза" : "раз"

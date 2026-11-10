@@ -412,3 +412,37 @@ struct SettingRecord: QuestlynRecord {
     var key: String
     var value: String
 }
+
+struct ChronicleEntryRecord: QuestlynRecord {
+    static let databaseTableName = "chronicleEntry"
+    var id: UUID
+    var kind: String
+    var key: String
+    var title: String
+    var occurredAt: Date
+    var localDate: String
+    var ruleVersion: String
+    var createdAt: Date
+    var cancelledAt: Date?
+    var recalculatedBy: String?
+
+    init(_ e: ChronicleEntry) {
+        id = e.id
+        kind = e.kind.rawValue
+        key = e.key
+        title = e.title
+        occurredAt = e.occurredAt
+        localDate = e.localDate.description
+        ruleVersion = e.ruleVersion.rawValue
+        createdAt = e.createdAt
+        cancelledAt = e.cancelledAt
+        recalculatedBy = e.recalculatedBy?.rawValue
+    }
+
+    var domain: ChronicleEntry? {
+        guard let kind = ChronicleEntry.Kind(rawValue: kind), let date = LocalDate(string: localDate) else { return nil }
+        return ChronicleEntry(id: id, kind: kind, key: key, title: title, occurredAt: occurredAt, localDate: date,
+                              ruleVersion: RuleVersion(rawValue: ruleVersion), createdAt: createdAt, cancelledAt: cancelledAt,
+                              recalculatedBy: recalculatedBy.map(RuleVersion.init(rawValue:)))
+    }
+}
