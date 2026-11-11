@@ -43,15 +43,71 @@ public struct HeroAppearance: Hashable, Codable, Sendable {
         }
     }
 
+    /// Низ: деталь одного из образов или латная юбка (12.11.2026).
+    public enum Bottom: Hashable, Codable, Sendable, RawRepresentable {
+        case outfit(Outfit)
+        case plateSkirt
+
+        public init?(rawValue: String) {
+            if rawValue == "plateSkirt" { self = .plateSkirt } else if let outfit = Outfit(rawValue: rawValue) { self = .outfit(outfit) } else { return nil }
+        }
+        public var rawValue: String {
+            switch self {
+            case let .outfit(outfit): outfit.rawValue
+            case .plateSkirt: "plateSkirt"
+            }
+        }
+        public var title: String {
+            switch self {
+            case let .outfit(outfit): outfit.title
+            case .plateSkirt: "Латная юбка"
+            }
+        }
+        public static var all: [Bottom] { Outfit.allCases.map(Bottom.outfit) + [.plateSkirt] }
+    }
+
+    /// Детали героя (10.1): каждая — из одного из девяти образов; головной убор необязателен.
+    public struct Parts: Hashable, Codable, Sendable {
+        public var hair: Outfit
+        public var hat: Outfit?
+        public var top: Outfit
+        public var bottom: Bottom
+        public var shoes: Outfit
+        public var item: Outfit
+
+        public init(hair: Outfit, hat: Outfit? = nil, top: Outfit, bottom: Bottom, shoes: Outfit, item: Outfit) {
+            self.hair = hair
+            self.hat = hat
+            self.top = top
+            self.bottom = bottom
+            self.shoes = shoes
+            self.item = item
+        }
+
+        /// Готовый набор — все детали одного образа.
+        public static func preset(_ outfit: Outfit) -> Parts {
+            Parts(hair: outfit, top: outfit, bottom: .outfit(outfit), shoes: outfit, item: outfit)
+        }
+    }
+
     public var hair: Hair
     public var skin: Skin
+    /// Готовый образ — с него начинается настройка; без своих деталей герой рисуется этим образом.
     public var outfit: Outfit
+    /// Свои детали (nil — набор образа `outfit`).
+    public var parts: Parts?
+    /// Свой цвет акцента одежды (nil — цвет основной профессии).
+    public var accent: UInt32?
 
-    public init(hair: Hair, skin: Skin, outfit: Outfit = .coder) {
+    public init(hair: Hair, skin: Skin, outfit: Outfit = .coder, parts: Parts? = nil, accent: UInt32? = nil) {
         self.hair = hair
         self.skin = skin
         self.outfit = outfit
+        self.parts = parts
+        self.accent = accent
     }
+
+    public var resolvedParts: Parts { parts ?? .preset(outfit) }
 
     /// Как в макетах OnbHero и OnbClassLook: тёмные волосы, средняя кожа, программист.
     public static let `default` = HeroAppearance(hair: .dark, skin: .medium, outfit: .coder)

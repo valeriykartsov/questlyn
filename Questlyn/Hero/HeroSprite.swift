@@ -27,23 +27,19 @@ struct HeroSprite: View {
 
     private struct Run { let x: Int; let y: Int; let length: Int; let color: UInt32 }
 
-    /// Соседние пиксели одного цвета склеиваются в полосы — меньше фигур и нет швов.
+    /// Соседние пиксели одного цвета склеиваются в полосы — меньше фигур и нет швов. Герой собирается из деталей (10.1).
     private static func runs(appearance: HeroAppearance, accent: UInt32) -> [Run] {
-        let palette = HeroPalette.colors(for: appearance, accent: accent)
         var result: [Run] = []
-        for (y, row) in appearance.outfit.spriteRows.enumerated() {
+        for (y, row) in HeroComposer.colors(appearance, accent: accent).enumerated() {
             var current: (x: Int, color: UInt32)?
-            var x = 0
-            for character in row {
-                let color = palette[character]
+            for (x, color) in row.enumerated() {
                 if let open = current, open.color != color {
                     result.append(Run(x: open.x, y: y, length: x - open.x, color: open.color))
                     current = nil
                 }
                 if current == nil, let color { current = (x, color) }
-                x += 1
             }
-            if let open = current { result.append(Run(x: open.x, y: y, length: x - open.x, color: open.color)) }
+            if let open = current { result.append(Run(x: open.x, y: y, length: row.count - open.x, color: open.color)) }
         }
         return result
     }
@@ -127,12 +123,17 @@ struct HeroStage: View {
     var accent: UInt32 = HeroAccent.fallback
     var scale: CGFloat = 2
     var height: CGFloat = 140
+    /// Ступень ауры ранга (10.3); 0 — без ауры.
+    var aura: Int = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
             QColor.stage
             Rectangle().fill(QColor.stageGround).frame(height: 22)
                 .overlay(alignment: .top) { Rectangle().fill(QColor.stageEdge).frame(height: 4) }
+            AuraView(tier: aura, width: CGFloat(HeroSprite.size.width) * scale * 1.25, dot: max(2, scale * 1.2))
+                .frame(width: CGFloat(HeroSprite.size.width) * scale * 1.6, height: CGFloat(HeroSprite.size.height) * scale * 1.1)
+                .padding(.bottom, 4)
             HeroSprite(appearance: appearance, accent: accent, scale: scale)
                 .padding(.bottom, 12)
         }
@@ -149,8 +150,8 @@ struct OutfitPicker: View {
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: QSpacing.m), count: 3), spacing: QSpacing.m) {
             ForEach(HeroAppearance.Outfit.allCases, id: \.self) { outfit in
-                let selected = appearance.outfit == outfit
-                Button { appearance.outfit = outfit } label: {
+                let selected = appearance.outfit == outfit && appearance.parts == nil
+                Button { appearance.outfit = outfit; appearance.parts = nil } label: {
                     VStack(spacing: QSpacing.s) {
                         HeroSprite(appearance: appearance(wearing: outfit), accent: accent, scale: 2)
                         Text(outfit.title).font(QFont.text(13, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
@@ -180,6 +181,7 @@ struct OutfitPicker: View {
     private func appearance(wearing outfit: HeroAppearance.Outfit) -> HeroAppearance {
         var look = appearance
         look.outfit = outfit
+        look.parts = nil
         return look
     }
 }
@@ -210,31 +212,82 @@ struct SwatchRow<Option: AppearanceSwatch>: View {
     }
 }
 
-/// Смена внешности из настроек: образ, волосы, кожа. Прогресс не меняется.
+/// Внешность (10.2, макет HeroEditor): готовые образы, детали из девяти образов и латная юбка, волосы, кожа, акцент.
+/// Все детали доступны сразу; на прогресс не влияет.
 struct AppearanceEditorView: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var appearance: HeroAppearance
     @State private var isSaving = false
+    @State private var tab: Tab = .top
+
+    enum Tab: String, CaseIterable { case hair = "Причёска", hat = "Убор", top = "Верх", bottom = "Низ", shoes = "Обувь", item = "В руке" }
+
+    static let accents: [UInt32] = [0x2F6B4F, 0xB8651B, 0x3E5C8A, 0x2E7D7A, 0x6B4FA3, 0xA8432F, 0x1F2A44]
 
     init(model: AppModel) {
         self.model = model
         _appearance = State(initialValue: model.hero?.appearance ?? .default)
     }
 
+    private var professionAccent: UInt32 { model.professionAccent }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.screen) {
-                HeroStage(appearance: appearance, accent: model.heroAccent, scale: 3, height: 200)
+                HeroStage(appearance: appearance, accent: professionAccent, scale: 3, height: 210, aura: model.auraTier)
+                    .overlay(alignment: .bottomLeading) {
+                        Text("Аура ранга: \(AuraArt.title(model.auraTier))").font(QFont.text(11, weight: .bold))
+                            .padding(.horizontal, QSpacing.s).padding(.vertical, 2)
+                            .background(QColor.sheet, in: Capsule()).padding(QSpacing.m)
+                    }
+                VStack(alignment: .leading, spacing: QSpacing.s) {
+                    CapsHeader(title: "Готовые образы")
+                    OutfitPicker(appearance: $appearance, accent: professionAccent)
+                }
+                VStack(alignment: .leading, spacing: QSpacing.s) {
+                    CapsHeader(title: "Детали")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: QSpacing.xs) {
+                            ForEach(Tab.allCases, id: \.self) { item in
+                                let isOn = tab == item
+                                Button(item.rawValue) { tab = item }
+                                    .font(QFont.text(13, weight: isOn ? .semibold : .medium))
+                                    .padding(.horizontal, QSpacing.m).frame(height: 34)
+                                    .foregroundStyle(QColor.ink)
+                                    .background(isOn ? QColor.sheet : Color.clear, in: RoundedRectangle(cornerRadius: QRadius.small))
+                                    .buttonStyle(.plain)
+                                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                            }
+                        }
+                        .padding(QSpacing.xs)
+                    }
+                    .background(QColor.track, in: RoundedRectangle(cornerRadius: QRadius.control))
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: QSpacing.s), count: 3), spacing: QSpacing.s) {
+                        ForEach(options, id: \.title) { option in
+                            let isOn = option.look.resolvedParts == appearance.resolvedParts
+                            Button { appearance = option.look } label: {
+                                VStack(spacing: QSpacing.xxs) {
+                                    HeroSprite(appearance: option.look, accent: professionAccent, scale: 1.5)
+                                    Text(option.title).font(QFont.text(11, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, QSpacing.s)
+                                .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+                                .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(isOn ? QColor.ink : QColor.line, lineWidth: isOn ? 2 : 1))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(QColor.ink)
+                            .accessibilityLabel("\(tab.rawValue): \(option.title)")
+                            .accessibilityAddTraits(isOn ? .isSelected : [])
+                        }
+                    }
+                }
                 VStack(alignment: .leading, spacing: QSpacing.l) {
                     SwatchRow(title: "Волосы", options: HeroAppearance.Hair.allCases, selected: appearance.hair) { appearance.hair = $0 }
                     SwatchRow(title: "Кожа", options: HeroAppearance.Skin.allCases, selected: appearance.skin) { appearance.skin = $0 }
+                    accentRow
                 }
-                VStack(alignment: .leading, spacing: QSpacing.s) {
-                    CapsHeader(title: "Образ героя")
-                    OutfitPicker(appearance: $appearance, accent: model.heroAccent)
-                }
-                Text("Цвет одежды — по основной профессии. Внешность не влияет на атрибуты и прогресс.")
+                Text("Все детали доступны сразу. Внешность не влияет на атрибуты и прогресс.")
                     .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
             }
             .padding(QSpacing.screen)
@@ -252,6 +305,54 @@ struct AppearanceEditorView: View {
                     }
                 }
                 .disabled(isSaving || appearance == model.hero?.appearance)
+            }
+        }
+    }
+
+    /// Варианты выбранной детали: остальные детали — как сейчас.
+    private var options: [(title: String, look: HeroAppearance)] {
+        let outfits = HeroAppearance.Outfit.allCases
+        func with(_ change: (inout HeroAppearance.Parts) -> Void) -> HeroAppearance {
+            var look = appearance
+            var parts = appearance.resolvedParts
+            change(&parts)
+            look.parts = parts
+            return look
+        }
+        switch tab {
+        case .hair: return outfits.map { o in (o.title, with { $0.hair = o }) }
+        case .hat: return [("Без убора", with { $0.hat = nil })] + outfits.map { o in (o.title, with { $0.hat = o }) }
+        case .top: return outfits.map { o in (o.title, with { $0.top = o }) }
+        case .bottom: return HeroAppearance.Bottom.all.map { b in (b.title, with { $0.bottom = b }) }
+        case .shoes: return outfits.map { o in (o.title, with { $0.shoes = o }) }
+        case .item: return outfits.map { o in (o.title, with { $0.item = o }) }
+        }
+    }
+
+    private var accentRow: some View {
+        HStack(spacing: QSpacing.m) {
+            Text("Акцент").font(QFont.text(14)).foregroundStyle(QColor.inkSecondary).frame(width: 70, alignment: .leading)
+            Button { appearance.accent = nil } label: {
+                Text("Проф.").font(QFont.text(11, weight: .bold))
+                    .frame(width: 40, height: 40)
+                    .background(Color(hex: professionAccent).opacity(0.25), in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(appearance.accent == nil ? QColor.ink : QColor.lineStrong, lineWidth: appearance.accent == nil ? 3 : 1))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(QColor.ink)
+            .accessibilityLabel("Цвет основной профессии")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: QSpacing.s) {
+                    ForEach(Self.accents, id: \.self) { hex in
+                        Button { appearance.accent = hex } label: {
+                            Circle().fill(Color(hex: hex)).frame(width: 32, height: 32)
+                                .overlay(Circle().strokeBorder(appearance.accent == hex ? QColor.ink : QColor.sheet, lineWidth: 3))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Цвет акцента")
+                        .accessibilityAddTraits(appearance.accent == hex ? .isSelected : [])
+                    }
+                }
             }
         }
     }

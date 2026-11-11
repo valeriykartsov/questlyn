@@ -10,17 +10,47 @@
 		0000000000000000000000B1 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000C1 /* Domain */; };
 		0000000000000000000000B2 /* Application in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000C2 /* Application */; };
 		0000000000000000000000B3 /* Persistence in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000C3 /* Persistence */; };
+		0000000000000000000000B4 /* Domain in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000C4 /* Domain */; };
+		0000000000000000000000B5 /* QuestlynWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 000000000000000000000121 /* QuestlynWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		000000000000000170000000 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000200000000;
+			remoteInfo = QuestlynWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		000000000000000150000000 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0000000000000000000000B5 /* QuestlynWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0000000000000000000000E1 /* Packages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Packages; sourceTree = "<group>"; };
 		000000000000000000000120 /* Questlyn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Questlyn.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000121 /* QuestlynWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = QuestlynWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* Questlyn */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Questlyn;
+			sourceTree = "<group>";
+		};
+		000000000000000000000011 /* QuestlynWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = QuestlynWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +64,12 @@
 				0000000000000000000000B3 /* Persistence in Frameworks */,
 			);
 		};
+		000000000000000230000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				0000000000000000000000B4 /* Domain in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -41,6 +77,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* Questlyn */,
+				000000000000000000000011 /* QuestlynWidgets */,
 				0000000000000000000000E1 /* Packages */,
 				000000000000000000000020 /* Products */,
 			);
@@ -50,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* Questlyn.app */,
+				000000000000000000000121 /* QuestlynWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -64,8 +102,12 @@
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
 				000000000000000140000000 /* Resources */,
+				000000000000000150000000 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				000000000000000160000000 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* Questlyn */,
@@ -80,6 +122,27 @@
 			productReference = 000000000000000000000120 /* Questlyn.app */;
 			productType = "com.apple.product-type.application";
 		};
+		000000000000000200000000 /* QuestlynWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000210000000 /* Build configuration list for PBXNativeTarget "QuestlynWidgets" */;
+			buildPhases = (
+				000000000000000220000000 /* Sources */,
+				000000000000000230000000 /* Frameworks */,
+				000000000000000240000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				000000000000000000000011 /* QuestlynWidgets */,
+			);
+			name = QuestlynWidgets;
+			packageProductDependencies = (
+				0000000000000000000000C4 /* Domain */,
+			);
+			productName = QuestlynWidgets;
+			productReference = 000000000000000000000121 /* QuestlynWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -91,6 +154,9 @@
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					000000000000000100000000 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					000000000000000200000000 = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -113,12 +179,18 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* Questlyn */,
+				000000000000000200000000 /* QuestlynWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		000000000000000140000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		000000000000000240000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -131,7 +203,20 @@
 			files = (
 			);
 		};
+		000000000000000220000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		000000000000000160000000 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000200000000 /* QuestlynWidgets */;
+			targetProxy = 000000000000000170000000 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "Questlyn" */ = {
@@ -348,6 +433,64 @@
 			};
 			name = Release;
 		};
+		000000000000000211000000 /* Debug configuration for PBXNativeTarget "QuestlynWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = QuestlynWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HAHXQ54NAZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "QuestlynWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Questlyn;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = valeravalera.Questlyn.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		000000000000000212000000 /* Release configuration for PBXNativeTarget "QuestlynWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = QuestlynWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = HAHXQ54NAZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "QuestlynWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Questlyn;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = valeravalera.Questlyn.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -364,6 +507,14 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "Questlyn" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "Questlyn" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		000000000000000210000000 /* Build configuration list for PBXNativeTarget "QuestlynWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000211000000 /* Debug configuration for PBXNativeTarget "QuestlynWidgets" */,
+				000000000000000212000000 /* Release configuration for PBXNativeTarget "QuestlynWidgets" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -388,6 +539,10 @@
 		0000000000000000000000C3 /* Persistence */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Persistence;
+		};
+		0000000000000000000000C4 /* Domain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Domain;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

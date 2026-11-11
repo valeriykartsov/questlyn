@@ -169,11 +169,10 @@ enum ExploreRenderer {
 
     /// Герой или житель в половинном масштабе (16×28), с прозрачным фоном.
     static func person(_ appearance: HeroAppearance, accent: UInt32) -> CGImage? {
-        let rows = PixelMapRenderer.heroRows(appearance)
-        let palette = HeroPalette.colors(for: appearance, accent: accent)
+        let rows = HeroComposer.half(appearance, accent: accent)
         let width = rows.map(\.count).max() ?? 16
         var canvas = RGBACanvas(width: width, height: rows.count, fill: nil)
-        for (y, row) in rows.enumerated() { for (x, ch) in row.enumerated() { if let color = palette[ch] { canvas.set(x, y, color) } } }
+        for (y, row) in rows.enumerated() { for (x, color) in row.enumerated() { if let color { canvas.set(x, y, color) } } }
         return canvas.image
     }
 

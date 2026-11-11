@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Граф героя: Созвездие</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0F1424; color: #E8ECF7; font-family: Inter, system-ui, sans-serif; position: relative; overflow: hidden;">
+  <div style="position: absolute; left: 16px; right: 16px; top: 54px; display: flex; align-items: center; justify-content: space-between;">
+    <a href="HeroV2.dc.html" style="color: #4FD1C5; text-decoration: none; font-size: 15px; min-height: 44px; display: flex; align-items: center;">‹ Герой</a>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 700;">Граф героя</div>
+    <div style="width: 60px; text-align: right; font-size: 12px; color: #AEB8D2;">Список</div>
+  </div>
+  <sc-for list="{{stars}}" as="s" hint-placeholder-count="40"><div style="position: absolute; left: {{s.x}}; top: {{s.y}}; width: 2px; height: 2px; background: #3A4566;" aria-hidden="true"></div></sc-for>
+  <sc-for list="{{lines}}" as="l" hint-placeholder-count="14"><div style="position: absolute; left: {{l.x}}; top: {{l.y}}; width: {{l.w}}; height: 1px; background: {{l.c}}; transform-origin: 0 0; transform: {{l.rot}}; opacity: {{l.o}};" aria-hidden="true"></div></sc-for>
+  <sc-for list="{{nodes}}" as="n" hint-placeholder-count="14">
+    <div style="position: absolute; left: {{n.x}}; top: {{n.y}}; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="width: {{n.s}}; height: {{n.s}}; border-radius: {{n.r}}; background: {{n.c}}; box-shadow: 0 0 {{n.glow}} {{n.c}}; border: {{n.border}}; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #0F1424;">{{n.mark}}</div>
+      <span style="font-size: {{n.fs}}; font-weight: 600; color: {{n.tc}}; white-space: nowrap;">{{n.label}}</span>
+    </div>
+  </sc-for>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #182036; border-radius: 22px 22px 0 0; padding: 14px 16px 30px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #3A4566; align-self: center;"></div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline;"><b style="font-size: 17px;">Бег</b><span style="font-size: 12px; color: #AEB8D2;">Атлет · навык</span></div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 600;">
+      <span style="padding: 2px 8px; border-radius: 999px; background: #27314F;">XP 520</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #27314F;">форма 82%</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #27314F;">мастерство 3/5</span>
+    </div>
+    <div style="font-size: 13px; color: #C9CFE0; line-height: 1.45;">Недельный «Пробежка 3 раза» · Epic «Полумарафон весной» (5 из 12)</div>
+    <div style="font-size: 11px; color: #AEB8D2;">Звезда — навык: размер по XP, яркость по форме. Ромб — Epic, точки — привычки. Касание — сведения; щипок — масштаб.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cx = 195, cy = 330;
+    const node = (x, y, s, c, label, o = {}) => ({ x: x + 'px', y: y + 'px', s: s + 'px', c, label, r: o.r || '50%', glow: (o.glow || 6) + 'px', border: o.border || 'none', mark: o.mark || '', fs: o.fs || '11px', tc: o.tc || '#C9CFE0' });
+    const line = (x1, y1, x2, y2, c, o = 0.6) => ({ x: x1 + 'px', y: y1 + 'px', w: Math.hypot(x2 - x1, y2 - y1) + 'px', rot: 'rotate(' + Math.atan2(y2 - y1, x2 - x1) + 'rad)', c, o });
+    const P = [
+      { name: 'Инженер-программист', ang: -2.4, color: '#4FD1C5', skills: [{ n: 'Отчётность', xp: 230, h: ['Английский'], e: 'Тимлид' }, { n: 'Выступления', xp: 80, h: [] }] },
+      { name: 'Атлет', ang: -0.5, color: '#F2B35B', skills: [{ n: 'Бег', xp: 520, h: ['Пробежка ×3'], e: 'Полумарафон' }, { n: 'Жим', xp: 40, h: ['Зарядка'] }] }
+    ];
+    const nodes = [node(cx, cy, 46, '#F2B35B', 'Арин · Инженер-атлет', { mark: 'D', glow: 18, fs: '12px', tc: '#E8ECF7' })];
+    const lines = [];
+    P.forEach((p, pi) => {
+      const px = cx + Math.cos(p.ang) * 90, py = cy + Math.sin(p.ang) * 90;
+      lines.push(line(cx, cy, px, py, p.color, 0.8));
+      nodes.push(node(px, py, 22, p.color, p.name, { glow: 10, tc: p.color, fs: '12px' }));
+      p.skills.forEach((s, si) => {
+        const a = p.ang + (si === 0 ? -0.45 : 0.45), d = 170;
+        const sx = cx + Math.cos(a) * d, sy = cy + Math.sin(a) * d;
+        lines.push(line(px, py, sx, sy, p.color, 0.5));
+        const size = 10 + Math.min(16, s.xp / 40);
+        nodes.push(node(sx, sy, size, '#E8ECF7', s.n + ' · ' + s.xp, { glow: 4 + size / 2, tc: '#E8ECF7' }));
+        s.h.forEach((h, hi) => {
+          const hx = sx + Math.cos(a + 0.9 + hi) * 36, hy = sy + Math.sin(a + 0.9 + hi) * 36;
+          lines.push(line(sx, sy, hx, hy, '#AEB8D2', 0.35));
+          nodes.push(node(hx, hy, 6, '#AEB8D2', h, { glow: 2, fs: '10px', tc: '#AEB8D2' }));
+        });
+        if (s.e) {
+          const ex = sx + Math.cos(a - 0.9) * 46, ey = sy + Math.sin(a - 0.9) * 46;
+          lines.push(line(sx, sy, ex, ey, '#F2B35B', 0.45));
+          nodes.push(node(ex, ey, 12, '#F2B35B', 'Epic: ' + s.e, { r: '2px', glow: 6, fs: '10px', tc: '#F2B35B' }));
+        }
+      });
+    });
+    let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const stars = Array.from({ length: 40 }, () => ({ x: Math.round(rnd() * 390) + 'px', y: Math.round(100 + rnd() * 480) + 'px' }));
+    return { nodes, lines, stars };
+  }
+}
+</script>
+</body>
+</html>

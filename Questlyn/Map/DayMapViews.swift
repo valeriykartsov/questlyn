@@ -44,7 +44,7 @@ struct DayStripCard: View {
                     let scale = proxy.size.width / CGFloat(PixelMapRenderer.stripSize.width)
                     ZStack(alignment: .topLeading) {
                         if let image = PixelMapRenderer.strip(map, appearance: model.hero?.appearance, accent: model.heroAccent,
-                                                              farm: model.farmHours(on: model.today)) {
+                                                              farm: model.farmHours(on: model.today), aura: model.auraTier) {
                             Image(decorative: image, scale: 1).resizable().interpolation(.none)
                         }
                         // Призраки просроченных задач кружат рядом с героем (9.6).
@@ -332,6 +332,10 @@ struct MapOverviewView: View {
                 // Герой идёт по дороге за ползунком и перетаскиванием (8C.3).
                 if let image = heroImage {
                     let point = WeekMapRenderer.roadPoint(position)
+                    AuraView(tier: model.auraTier, width: CGFloat(image.width) * scale * 1.3, dot: max(2, scale * 0.9))
+                        .frame(width: CGFloat(image.width) * scale * 1.8, height: CGFloat(image.height) * scale * 1.2)
+                        .position(x: (CGFloat(point.x) - originX) * scale,
+                                  y: (CGFloat(point.y + 7) - originY) * scale - CGFloat(image.height) * scale * 0.6)
                     Image(decorative: image, scale: 1).resizable().interpolation(.none)
                         .frame(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
                         .position(x: (CGFloat(point.x) - originX) * scale,

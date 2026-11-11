@@ -61,3 +61,19 @@ public enum RankCalculator {
         }
     }
 }
+
+/// Ступень ауры героя по текущему рангу (02, 11.11.2026): G — без ауры; F–E, D–C, B–A, S–SS, SSS — ступени 1–5.
+/// При спаде ранга ступень опускается или пропадает.
+public enum AuraTier {
+    public static func of(_ rank: AdventurerRank?) -> Int {
+        guard let rank else { return 0 }
+        switch rank.number {
+        case ...1: return 0
+        case 2...3: return 1
+        case 4...5: return 2
+        case 6...7: return 3
+        case 8...9: return 4
+        default: return 5
+        }
+    }
+}

@@ -1,4 +1,6 @@
 import Foundation
+import UIKit
+import WidgetKit
 import Observation
 import Domain
 import Application
@@ -254,6 +256,39 @@ final class AppModel {
         return WeekMap.build(weekStart: start, days: days, camps: camps, now: .now, timeZone: timeZone)
     }
 
+    // MARK: Виджеты — этап 12
+
+    /// Снимок для виджетов в App Group: виджеты только читают его (02, 12.11.2026).
+    func writeWidgetSnapshot() {
+        guard let hero, let overview, let vitals else { return }
+        let day = today
+        let ghostItems = ghosts
+        let quests = overview.items.filter { $0.section == .today && !$0.isCompleted }
+            .sorted { ($0.quest.dueTime?.description ?? "99") < ($1.quest.dueTime?.description ?? "99") }
+            .map { WidgetSnapshot.Quest(title: $0.quest.title, time: $0.quest.dueTime?.description,
+                                        minutes: QuestTiming.effectiveDuration($0.quest), isGhost: false) }
+        let habits = self.habits.filter(\.isScheduledToday).map { status in
+            WidgetSnapshot.Habit(id: status.id.uuidString, title: status.habit.title, isWeekly: status.habit.kind == .weekly,
+                                 doneToday: status.doneToday, weekDone: status.weekDone, weekPlanned: status.weekPlanned,
+                                 marks: day.weekDays.map { status.marks(on: $0) > 0 })
+        }
+        var sleep: WidgetSnapshot.Sleep?
+        if let night = vitals.lastNight, let session = night.session {
+            let camp = SleepCampBuilder.camps(from: vitals.log, window: vitalSettings.sleepWindow, timeZone: timeZone).last { $0.wakeDate == day }
+            let interval = camp.map { "\($0.start.formatted(date: .omitted, time: .shortened))–\($0.end.formatted(date: .omitted, time: .shortened))" }
+            sleep = .init(interval: interval, duration: WeekMapRenderer.duration(session.durationMinutes),
+                          quality: Int((night.quality * 100).rounded()), hpRestored: Int((night.hpAfter - night.hpBefore).rounded()))
+        }
+        let snapshot = WidgetSnapshot(
+            generatedAt: .now, day: Format.shortDay(day), heroName: hero.name, rankLetter: progress.rank?.letter ?? "—",
+            hp: Int(vitals.hp.rounded()), maxHP: Int(vitals.maxHP.rounded()), mp: Int(vitals.mp.rounded()), maxMP: Int(vitals.maxMP.rounded()),
+            mode: movementMode(at: .now).title, quests: quests, ghosts: ghostItems.map(\.title), habits: habits, sleep: sleep)
+        let map = PixelMapRenderer.strip(dayMap(for: day), appearance: hero.appearance, accent: heroAccent,
+                                         farm: farmHours(on: day), aura: auraTier).flatMap { UIImage(cgImage: $0).pngData() }
+        try? snapshot.save(map: map)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     // MARK: Ритм дня — этап 9
 
     private static let workScheduleKey = "workSchedule"
@@ -421,6 +456,7 @@ final class AppModel {
             if !chronicle.isEmpty { chronicle = try await ChronicleService(store: store).feed(now: .now, timeZone: timeZone) }
         }
         isLoaded = true
+        writeWidgetSnapshot()
     }
 
     func startAdventure(name: String, appearance: HeroAppearance, professions: [ProfessionChoice], classTitle: String) async -> Bool {
@@ -432,7 +468,17 @@ final class AppModel {
     }
 
     /// Цвет акцента одежды героя — по основной профессии (слот 1).
-    var heroAccent: UInt32 { HeroAccent.hex(catalogItemId: activeProfessions.min { $0.slot < $1.slot }?.catalogItemId) }
+    /// Цвет основной профессии — акцент по умолчанию.
+    var professionAccent: UInt32 { HeroAccent.hex(catalogItemId: activeProfessions.min { $0.slot < $1.slot }?.catalogItemId) }
+    /// Акцент героя: свой выбор (10.2) или цвет основной профессии.
+    var heroAccent: UInt32 { hero?.appearance.accent ?? professionAccent }
+    /// Ступень ауры по текущему рангу (10.3).
+    var auraTier: Int {
+        #if DEBUG
+        if let value = UserDefaults.standard.object(forKey: "QuestlynAura") as? String, let tier = Int(value) { return tier }
+        #endif
+        return AuraTier.of(progress.rank)
+    }
 
     func updateAppearance(_ appearance: HeroAppearance) async -> Bool {
         await run { [self] in

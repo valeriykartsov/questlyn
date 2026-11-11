@@ -9,6 +9,26 @@ final class ExploreScene: SKScene {
 
     private var side: Int { session.island.side }
     private let heroNode = SKSpriteNode()
+
+    /// Аура ранга под героем (10.3): пиксели кольца — передняя половина поверх ног, задняя и искры — за героем.
+    private func addAura(tier: Int) {
+        guard let colors = AuraArt.colors(tier) else { return }
+        func color(_ hex: UInt32) -> UIColor {
+            UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+        }
+        let shimmer = tier >= 5 && !UIAccessibility.isReduceMotionEnabled
+        for point in AuraArt.pixels(tier: tier, rx: 9, ry: 3) {
+            let dot = SKSpriteNode(color: color(point.spark ? colors.spark : colors.ring), size: CGSize(width: 1, height: 1))
+            // В SpriteKit ось Y вверх: точки пикселей (вниз) переворачиваем.
+            dot.position = CGPoint(x: point.x.rounded(), y: -point.y.rounded() + 1)
+            dot.zPosition = !point.spark && point.y > 0 ? 0.01 : -0.01
+            dot.alpha = point.spark ? 0.85 : 0.75
+            if shimmer && point.spark {
+                dot.run(.repeatForever(.sequence([.fadeAlpha(to: 0.2, duration: 0.6 + Double(abs(point.x)) / 20), .fadeAlpha(to: 0.95, duration: 0.6)])))
+            }
+            heroNode.addChild(dot)
+        }
+    }
     private let heroLabel = SKLabelNode()
     private let cameraNode = SKCameraNode()
     private let fogNode = SKSpriteNode()
@@ -148,6 +168,7 @@ final class ExploreScene: SKScene {
         heroNode.anchorPoint = CGPoint(x: 0.5, y: 0)
         heroNode.setScale(Self.characterScale)
         addChild(heroNode)
+        addAura(tier: session.aura)
         heroLabel.text = "\(session.hero.rankLetter) · Герой"
         heroLabel.fontName = "HelveticaNeue-Bold"
         heroLabel.fontSize = 6

@@ -56,6 +56,7 @@ struct ExploreFlowView: View {
                                  attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
                                  season: season, precipitation: precipitation)
         session?.ghostCount = model.ghosts.count
+        session?.aura = model.auraTier
         phase = .game
     }
 

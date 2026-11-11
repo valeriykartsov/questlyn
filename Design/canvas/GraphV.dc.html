@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Граф героя: Кольца</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; overflow: hidden;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="HeroV2.dc.html" style="text-decoration: none; font-size: 15px; min-height: 44px; display: flex; align-items: center;">‹ Герой</a>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 700;">Граф героя</div>
+    <div style="width: 60px;"></div>
+  </div>
+  <div style="display: flex; padding: 3px; border-radius: 12px; background: #FFFCF6; border: 1px solid #E3D9C6; font-size: 13px;"><span style="padding: 6px 0; flex: 1; text-align: center; font-weight: 600;">7 дней</span><span style="padding: 6px 0; flex: 1; text-align: center; border-radius: 9px; background: #1F2A44; color: #FFFCF6; font-weight: 600;">30 дней</span><span style="padding: 6px 0; flex: 1; text-align: center; font-weight: 600;">Всё время</span></div>
+  <div style="position: relative; width: 300px; height: 300px; align-self: center;">
+    <div style="position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(#C9772A 0 14%, #E9C08F 14% 22%, #2F6B4F 22% 52%, #8FBF9F 52% 60%, #5E8C74 60% 66%, #B8651B 66% 82%, #D79A5E 82% 92%, #E9E1D0 92% 100%);" aria-hidden="true"></div>
+    <div style="position: absolute; inset: 40px; border-radius: 50%; background: conic-gradient(#B8651B 0 22%, #9A5214 22% 34%, #2F6B4F 34% 82%, #24533D 82% 92%, #C9BCA2 92% 100%);" aria-hidden="true"></div>
+    <div style="position: absolute; inset: 82px; border-radius: 50%; background: conic-gradient(#9A5214 0 34%, #2F6B4F 34% 92%, #C9BCA2 92% 100%);" aria-hidden="true"></div>
+    <div style="position: absolute; inset: 110px; border-radius: 50%; background: #F5F0E6; display: flex; flex-direction: column; align-items: center; justify-content: center;"><b style="font-size: 22px;">D</b><span style="font-size: 11px; color: #4A5368;">1 240 XP</span></div>
+  </div>
+  <div style="display: flex; justify-content: center; gap: 14px; font-size: 11px; color: #4A5368;"><span>внутри — профессии</span><span>середина — навыки</span><span>снаружи — Epic и привычки</span></div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; overflow: hidden;">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px; border-bottom: 1px solid #E3D9C6; padding-left: {{r.pad}};">
+        <span style="width: 10px; height: 10px; border-radius: 3px; background: {{r.c}};"></span>
+        <span style="flex: 1; font-size: {{r.fs}}; font-weight: {{r.fw}};">{{r.name}}</span>
+        <span style="font-size: 13px; font-weight: 700;">{{r.share}}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Дуга — доля опыта за период: куда уходят силы. Касание дуги — её строка ниже. Только показ — формул не добавляет.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const r = (name, share, c, level) => ({ name, share, c, pad: (14 + level * 14) + 'px', fs: level === 0 ? '15px' : '13px', fw: level === 0 ? '700' : '500' });
+    return { rows: [
+      r('Атлет', '58%', '#2F6B4F', 0), r('Бег', '48%', '#2F6B4F', 1), r('Полумарафон весной · Epic', '30%', '#8FBF9F', 2),
+      r('Инженер-программист', '34%', '#9A5214', 0), r('Отчётность', '22%', '#B8651B', 1), r('Вне профессий (Activity)', '8%', '#C9BCA2', 0)
+    ] };
+  }
+}
+</script>
+</body>
+</html>
