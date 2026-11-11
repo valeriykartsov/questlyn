@@ -144,11 +144,7 @@ enum QFont {
 extension Color {
     /// Цвет, который сам меняется вместе с темой.
     init(light: UInt32, dark: UInt32) {
-        self.init(uiColor: UIColor { traits in
-            let hex = traits.userInterfaceStyle == .dark ? dark : light
-            return UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
-                           blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
-        })
+        self.init(uiColor: themedUIColor(light: light, dark: dark))
     }
 
     init(hex: UInt32) {
@@ -171,4 +167,14 @@ struct SheetCard: ViewModifier {
 
 extension View {
     func sheetCard() -> some View { modifier(SheetCard()) }
+}
+
+/// Цвет темы для UIKit. Функция и замыкание — вне главного актора: iOS вызывает провайдер цвета
+/// из потока отрисовки, и привязка к главному потоку роняла приложение (11.11.2026, EXC_BREAKPOINT в dispatch_assert_queue).
+nonisolated func themedUIColor(light: UInt32, dark: UInt32) -> UIColor {
+    UIColor { @Sendable traits in
+        let hex = traits.userInterfaceStyle == .dark ? dark : light
+        return UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+                       blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+    }
 }

@@ -59,6 +59,14 @@ public struct HabitService: Sendable {
         return habit
     }
 
+    /// Удаление (4): привычка уходит из списков, с текущей недели не входит в DIS; отметки и начисления остаются в Летописи.
+    public func archive(habitId: UUID, now: Date, timeZone: TimeZone) async throws {
+        guard var habit = try await store.habit(id: habitId) else { throw QuestlynError.habitNotFound }
+        habit.isActive = false
+        habit.archivedOn = LocalDate(now, timeZone: timeZone)
+        try await store.save(habit)
+    }
+
     private func validate(_ draft: HabitDraft) async throws {
         guard !trimmed(draft.title).isEmpty else { throw QuestlynError.emptyName }
         if draft.kind == .daily, draft.weekdays.isEmpty { throw QuestlynError.noWeekdays }
@@ -277,6 +285,58 @@ public struct EpicService: Sendable {
     public func reopen(epicId: UUID) async throws {
         guard var epic = try await store.epic(id: epicId) else { throw QuestlynError.epicNotFound }
         epic.completedAt = nil
+        try await store.save(epic)
+    }
+
+    /// Шаг в редактировании Epic: существующий (с id) или новый.
+    public struct StepEdit: Sendable, Equatable {
+        public var id: UUID?
+        public var draft: QuestDraft
+        public init(id: UUID? = nil, draft: QuestDraft) {
+            self.id = id
+            self.draft = draft
+        }
+    }
+
+    /// Изменение Epic (3): название, описание, срок и шаги. Убранные шаги удаляются пометкой, их начисления остаются.
+    public func update(epicId: UUID, title: String, details: String, deadline: LocalDate?, steps: [StepEdit],
+                       now: Date, timeZone: TimeZone) async throws {
+        guard var epic = try await store.epic(id: epicId) else { throw QuestlynError.epicNotFound }
+        let name = trimmed(title)
+        guard !name.isEmpty else { throw QuestlynError.emptyName }
+        let kept = steps.filter { !trimmed($0.draft.title).isEmpty }
+        guard !kept.isEmpty else { throw QuestlynError.epicNeedsStep }
+        epic.title = name
+        let text = trimmed(details)
+        epic.details = text.isEmpty ? nil : text
+        epic.deadline = deadline
+        let existing = try await store.allQuests().filter { $0.epicId == epicId }
+        let quests = QuestService(store: store)
+        for (index, step) in kept.enumerated() {
+            if let id = step.id, existing.contains(where: { $0.id == id }) {
+                _ = try await quests.update(questId: id, with: step.draft)
+            } else {
+                // Новые шаги — в конец порядка.
+                try await store.save(try QuestService.makeQuest(step.draft, now: now.addingTimeInterval(Double(index) / 1000),
+                                                                timeZone: timeZone, epicId: epicId))
+            }
+        }
+        let keptIds = Set(kept.compactMap(\.id))
+        for var removed in existing where !keptIds.contains(removed.id) {
+            removed.deletedAt = now
+            try await store.save(removed)
+        }
+        try await store.save(epic)
+    }
+
+    /// Удаление Epic вместе с шагами (3). Выполненные шаги остаются в Летописи, прогресс не отнимается.
+    public func delete(epicId: UUID, now: Date) async throws {
+        guard var epic = try await store.epic(id: epicId) else { throw QuestlynError.epicNotFound }
+        for var step in try await store.allQuests().filter({ $0.epicId == epicId }) {
+            step.deletedAt = now
+            try await store.save(step)
+        }
+        epic.deletedAt = now
         try await store.save(epic)
     }
 }

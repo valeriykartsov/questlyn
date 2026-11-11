@@ -135,22 +135,59 @@ final class AppModel {
     let calendar = CalendarSource()
     private(set) var agendaEvents: [AgendaEvent] = []
     private(set) var isCalendarAuthorized = false
+    private(set) var deviceCalendars: [DeviceCalendar] = []
+    private(set) var calendarPreferences = CalendarPreferences.load()
 
-    /// Повестка: 7 дней назад и 14 вперёд (02 от 11.11.2026).
-    static let agendaDaysBack = 7
-    static let agendaDaysForward = 14
-
-    func loadAgenda() {
+    /// Повестка недели или месяца (8.13–8.14): события периода без скрытых календарей.
+    func loadAgenda(from first: LocalDate, through last: LocalDate) {
         isCalendarAuthorized = calendar.isAuthorized
-        let start = VitalsCalculator.date(today.adding(days: -Self.agendaDaysBack), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
-        let end = VitalsCalculator.date(today.adding(days: Self.agendaDaysForward + 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
-        agendaEvents = calendar.events(from: start, to: end)
+        deviceCalendars = calendar.calendars()
+        let start = VitalsCalculator.date(first, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        let end = VitalsCalculator.date(last.adding(days: 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        agendaEvents = calendar.events(from: start, to: end, hidden: calendarPreferences.hidden)
     }
 
     func connectCalendar() async {
         await run { [self] in
             _ = try await calendar.requestAccess()
-            loadAgenda()
+            deviceCalendars = calendar.calendars()
+            isCalendarAuthorized = calendar.isAuthorized
+        }
+    }
+
+    func updateCalendarPreferences(_ change: (inout CalendarPreferences) -> Void) {
+        let wasSending = calendarPreferences.sendQuests
+        change(&calendarPreferences)
+        if wasSending, !calendarPreferences.sendQuests {
+            try? calendar.removeAll(mapping: calendarPreferences.questEvents)
+            calendarPreferences.questEvents = [:]
+        }
+        calendarPreferences.save()
+        if calendarPreferences.sendQuests { syncQuestEvents() }
+    }
+
+    /// Цвет и подпись события по привязке календаря (только оформление, XP не даёт).
+    func calendarLink(for event: AgendaEvent) -> (color: UInt32, label: String)? {
+        guard let link = calendarPreferences.links[event.calendarId] else { return nil }
+        let skill = link.skillId.flatMap { skill(id: $0) }
+        let profession = profession(id: skill?.professionId ?? link.professionId)
+        guard let profession else { return nil }
+        let label = skill.map { "\(profession.title) · навык «\($0.title)»" } ?? profession.title
+        return (HeroAccent.hex(catalogItemId: profession.catalogItemId), label)
+    }
+
+    func calendarColor(_ id: String) -> UInt32 { deviceCalendars.first { $0.id == id }?.color ?? 0x8E8576 }
+
+    /// Квесты с датой → календарь «Questlyn» (8.15). Ошибка доступа не мешает работе приложения.
+    func syncQuestEvents() {
+        guard calendarPreferences.sendQuests, calendar.isAuthorized else { return }
+        let quests = (overview?.journal ?? []).compactMap { item -> CalendarSource.QuestEvent? in
+            guard let date = item.quest.dueDate else { return nil }
+            return .init(id: item.quest.id, title: item.quest.title, date: date, time: item.quest.dueTime, isDone: item.isCompleted)
+        }
+        if let mapping = try? calendar.sync(quests: quests, mapping: calendarPreferences.questEvents, timeZone: timeZone) {
+            calendarPreferences.questEvents = mapping
+            calendarPreferences.save()
         }
     }
 
@@ -160,7 +197,7 @@ final class AppModel {
     func dayMap(for date: LocalDate) -> DayMap {
         let start = VitalsCalculator.date(date, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
         let end = VitalsCalculator.date(date.adding(days: 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
-        var events = calendar.events(from: start, to: end).map {
+        var events = calendar.events(from: start, to: end, hidden: calendarPreferences.hidden).map {
             MapEvent(id: $0.id, title: $0.title, start: $0.start, end: $0.end, isAllDay: $0.isAllDay, attendees: $0.attendees)
         }
         #if DEBUG
@@ -252,6 +289,7 @@ final class AppModel {
                 try? await HealthSyncService(store: store, source: health).sync(now: .now, timeZone: timeZone)
             }
             overview = try await TodayService(store: store).overview(now: .now, timeZone: timeZone)
+            syncQuestEvents()
             // Вехи фиксируются при каждом обновлении — в момент, когда они случились.
             try await ChronicleService(store: store).syncMilestones(now: .now, timeZone: timeZone)
             if !chronicle.isEmpty { chronicle = try await ChronicleService(store: store).feed(now: .now, timeZone: timeZone) }
@@ -431,6 +469,28 @@ final class AppModel {
     func createEpic(title: String, details: String, deadline: LocalDate?, steps: [QuestDraft]) async -> Bool {
         await run { [self] in
             try await EpicService(store: store).create(title: title, details: details, deadline: deadline, steps: steps, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    func updateEpic(_ epicId: UUID, title: String, details: String, deadline: LocalDate?, steps: [EpicService.StepEdit]) async -> Bool {
+        await run { [self] in
+            try await EpicService(store: store).update(epicId: epicId, title: title, details: details, deadline: deadline,
+                                                       steps: steps, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    func deleteEpic(_ epicId: UUID) async -> Bool {
+        await run { [self] in
+            try await EpicService(store: store).delete(epicId: epicId, now: .now)
+            await reload()
+        }
+    }
+
+    func archiveHabit(_ habitId: UUID) async -> Bool {
+        await run { [self] in
+            try await HabitService(store: store).archive(habitId: habitId, now: .now, timeZone: timeZone)
             await reload()
         }
     }

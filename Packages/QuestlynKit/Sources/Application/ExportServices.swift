@@ -39,7 +39,7 @@ public struct ExportService: Sendable {
         return QuestlynExport(
             formatVersion: QuestlynExport.formatVersion, exportedAt: now, ruleVersion: RuleVersion.current.rawValue, hero: hero,
             professions: professions, skills: try await store.skills(), masteries: try await store.masteries(),
-            quests: try await store.allQuests(), completions: try await store.allCompletions(), epics: try await store.epics(),
+            quests: try await store.allQuestsIncludingDeleted(), completions: try await store.allCompletions(), epics: try await store.epics(),
             habits: try await store.habits(), habitOccurrences: try await store.allOccurrences(), activities: try await store.allActivities(),
             grants: try await store.allGrants(), sleepSessions: try await store.sleepSessions(), stepDays: try await store.stepDays(),
             moods: try await store.moodEntries(), harms: try await store.harmEntries(), customHarmHabits: try await store.customHarmHabits(),

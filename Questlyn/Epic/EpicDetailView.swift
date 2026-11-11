@@ -8,6 +8,7 @@ struct EpicDetailView: View {
     let epicId: UUID
     @Environment(\.dismiss) private var dismiss
     @State private var isAddingStep = false
+    @State private var isEditing = false
     @State private var openedQuest: Quest?
     @State private var report: CompletionReport?
 
@@ -21,7 +22,16 @@ struct EpicDetailView: View {
             .paperScreen()
             .navigationTitle("Epic Quest")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
+                if status != nil {
+                    ToolbarItem(placement: .primaryAction) { Button("Изменить") { isEditing = true } }
+                }
+            }
+            .sheet(isPresented: $isEditing) {
+                if let status { NavigationStack { EpicFormView(model: model, editing: status) } }
+            }
+            .onChange(of: status == nil) { _, gone in if gone { dismiss() } }
             .sheet(isPresented: $isAddingStep) {
                 NavigationStack { QuestFormView(model: model, epicId: epicId) }
             }

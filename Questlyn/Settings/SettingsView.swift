@@ -48,6 +48,19 @@ struct SettingsView: View {
                 }
                 .listRowBackground(QColor.sheet)
 
+                Section("Календарь") {
+                    NavigationLink {
+                        CalendarSettingsView(model: model)
+                    } label: {
+                        LabeledContent {
+                            Text(model.calendarPreferences.sendQuests ? "квесты → «Questlyn»" : "")
+                        } label: {
+                            Label("Календари", systemImage: "calendar")
+                        }
+                    }
+                }
+                .listRowBackground(QColor.sheet)
+
                 Section("Оформление") {
                     Picker("Тема", selection: $theme) {
                         ForEach(AppTheme.allCases) { Text($0.title).tag($0) }

@@ -122,6 +122,7 @@ struct QuestRecord: QuestlynRecord {
     var timezoneId: String
     var epicId: UUID?
     var createdAt: Date
+    var deletedAt: Date?
 
     enum Columns {
         static let dueDate = Column(CodingKeys.dueDate)
@@ -140,6 +141,7 @@ struct QuestRecord: QuestlynRecord {
         timezoneId = quest.timezoneId
         epicId = quest.epicId
         createdAt = quest.createdAt
+        deletedAt = quest.deletedAt
     }
 
     var domain: Quest {
@@ -149,7 +151,7 @@ struct QuestRecord: QuestlynRecord {
             skillId: skillId,
             dueDate: dueDate.flatMap(LocalDate.init(string:)),
             dueTime: dueTime.flatMap(LocalTime.init(string:)),
-            timezoneId: timezoneId, epicId: epicId, createdAt: createdAt
+            timezoneId: timezoneId, epicId: epicId, createdAt: createdAt, deletedAt: deletedAt
         )
     }
 }
@@ -243,6 +245,7 @@ struct EpicRecord: QuestlynRecord {
     var deadline: String?
     var completedAt: Date?
     var createdAt: Date
+    var deletedAt: Date?
 
     init(_ e: EpicQuest) {
         id = e.id
@@ -251,11 +254,12 @@ struct EpicRecord: QuestlynRecord {
         deadline = e.deadline?.description
         completedAt = e.completedAt
         createdAt = e.createdAt
+        deletedAt = e.deletedAt
     }
 
     var domain: EpicQuest {
         EpicQuest(id: id, title: title, details: details, deadline: deadline.flatMap(LocalDate.init(string:)),
-                  completedAt: completedAt, createdAt: createdAt)
+                  completedAt: completedAt, createdAt: createdAt, deletedAt: deletedAt)
     }
 }
 
@@ -273,6 +277,7 @@ struct HabitRecord: QuestlynRecord {
     var startDate: String
     var isActive: Bool
     var createdAt: Date
+    var archivedOn: String?
 
     init(_ h: HabitDefinition) {
         id = h.id
@@ -287,6 +292,7 @@ struct HabitRecord: QuestlynRecord {
         startDate = h.startDate.description
         isActive = h.isActive
         createdAt = h.createdAt
+        archivedOn = h.archivedOn?.description
     }
 
     var domain: HabitDefinition? {
@@ -294,7 +300,8 @@ struct HabitRecord: QuestlynRecord {
         let days = Set(weekdays.split(separator: ",").compactMap { Int($0).flatMap(Weekday.init(rawValue:)) })
         return HabitDefinition(id: id, kind: kind, title: title, details: details, skillId: skillId, weekdays: days,
                                targetPerWeek: targetPerWeek, time: time.flatMap(LocalTime.init(string:)),
-                               timezoneId: timezoneId, startDate: start, isActive: isActive, createdAt: createdAt)
+                               timezoneId: timezoneId, startDate: start, isActive: isActive, createdAt: createdAt,
+                               archivedOn: archivedOn.flatMap(LocalDate.init(string:)))
     }
 }
 

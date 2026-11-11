@@ -27,9 +27,32 @@ struct QCheckbox: View {
 struct CapsHeader: View {
     let title: String
     var trailing: String?
+    /// Раздел сворачивается нажатием на заголовок (журнал, 11.11.2026).
+    var isExpanded: Binding<Bool>?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        if let isExpanded {
+            Button {
+                withAnimation(.snappy) { isExpanded.wrappedValue.toggle() }
+            } label: {
+                row(chevron: isExpanded.wrappedValue ? "chevron.down" : "chevron.right")
+                    .frame(minHeight: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(title)
+            .accessibilityValue(isExpanded.wrappedValue ? "развёрнуто" : "свёрнуто")
+            .accessibilityHint(isExpanded.wrappedValue ? "Свернуть раздел" : "Развернуть раздел")
+        } else {
+            row(chevron: nil)
+        }
+    }
+
+    private func row(chevron: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: QSpacing.s) {
+            if let chevron {
+                Image(systemName: chevron).font(.system(size: 11, weight: .bold)).foregroundStyle(QColor.inkSecondary).frame(width: 12)
+            }
             Text(title.uppercased())
                 .font(QFont.text(12, weight: .semibold))
                 .tracking(0.7)

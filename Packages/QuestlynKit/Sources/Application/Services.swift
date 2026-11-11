@@ -175,6 +175,12 @@ public struct QuestDraft: Sendable, Equatable {
         self.dueDate = dueDate
         self.dueTime = dueTime
     }
+
+    /// Черновик из существующего квеста — для изменения.
+    public init(quest: Quest) {
+        self.init(title: quest.title, details: quest.details ?? "", priority: quest.priority, skillId: quest.skillId,
+                  dueDate: quest.dueDate, dueTime: quest.dueTime, epicId: quest.epicId)
+    }
 }
 
 /// Создание квеста (BACKLOG 1.4). Создание не даёт XP.
@@ -224,6 +230,9 @@ public struct QuestService: Sendable {
         quest.id = existing.id
         quest.timezoneId = existing.timezoneId
         quest.createdAt = existing.createdAt
+        // Шаг Epic остаётся шагом: изменение текста или даты не отвязывает его (исправлено 11.11.2026).
+        quest.epicId = existing.epicId
+        quest.deletedAt = existing.deletedAt
         try await store.save(quest)
         return quest
     }

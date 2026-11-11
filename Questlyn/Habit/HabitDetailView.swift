@@ -19,6 +19,7 @@ struct HabitDetailView: View {
             .paperScreen()
             .navigationTitle(status?.habit.kind == .weekly ? "Недельный квест" : "Ежедневный квест")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: status == nil) { _, gone in if gone { dismiss() } }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) { Button("Изменить") { isEditing = true } }

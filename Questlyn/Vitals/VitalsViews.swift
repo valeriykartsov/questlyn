@@ -361,3 +361,90 @@ struct HealthSettingsView: View {
         }
     }
 }
+
+/// Блок сна на «Сегодня» (макет 8.11): прошлая ночь — интервал, длительность, качество, HP и MP.
+/// Внести сон можно только после времени подъёма из настроек (02 от 11.11.2026).
+struct SleepCard: View {
+    let model: AppModel
+    let enterSleep: () -> Void
+
+    private var settings: VitalSettings { model.vitalSettings }
+    private var wakeTime: Date { VitalsCalculator.date(model.today, settings.sleepWindow.end, timeZone: .current) }
+    private var night: NightSummary? { model.vitals?.lastNight }
+    private var camp: SleepCamp? {
+        SleepCampBuilder.camps(from: model.vitals?.log ?? [], window: settings.sleepWindow, timeZone: .current)
+            .last { $0.wakeDate == model.today }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: QSpacing.m) {
+            HStack(spacing: QSpacing.l) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(hex: 0xF2B35B))
+                    .frame(width: 36, height: 36)
+                    .background(Color(hex: 0x1E2742), in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                    Text("Сон · ночь на \(weekday)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                    Text(headline).font(QFont.text(16, weight: .bold)).monospacedDigit()
+                }
+                Spacer(minLength: 0)
+                if let source = night?.session?.source {
+                    Text(source == .health ? "Apple Health" : "вручную").font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                }
+            }
+            content
+        }
+        .padding(.horizontal, QSpacing.xl)
+        .padding(.vertical, QSpacing.l)
+        .sheetCard()
+        .accessibilityElement(children: .combine)
+    }
+
+    /// «ночь на среду» — винительный падеж дня пробуждения.
+    private var weekday: String {
+        ["понедельник", "вторник", "среду", "четверг", "пятницу", "субботу", "воскресенье"][model.today.weekday.rawValue - 1]
+    }
+
+    private var headline: String {
+        if Date.now < wakeTime, night == nil { return "Ночь ещё идёт" }
+        guard let camp, camp.source != nil else { return "Нет данных о сне" }
+        return "\(camp.start.formatted(date: .omitted, time: .shortened))–\(camp.end.formatted(date: .omitted, time: .shortened)) · \(WeekMapRenderer.duration(camp.minutes))"
+    }
+
+    @ViewBuilder private var content: some View {
+        if Date.now < wakeTime, night == nil {
+            Text("Внести сон можно после \(settings.sleepWindow.end).")
+                .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
+        } else if let night, night.session != nil {
+            chips(night)
+        } else {
+            if let night {
+                Text("Ночь считается нейтральной: \(Vitals.percent(night.quality)).")
+                    .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
+            }
+            Button(action: enterSleep) {
+                Label("Внести сон", systemImage: "square.and.pencil").font(QFont.text(14, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(QColor.amberDeep)
+        }
+    }
+
+    private func chips(_ night: NightSummary) -> some View {
+        HStack(spacing: QSpacing.s) {
+            chip("качество \(Vitals.percent(night.quality))", fg: QColor.warmInk, bg: QColor.warmFill)
+            let hp = night.hpAfter - night.hpBefore
+            chip(hp >= 0.5 ? "+\(Vitals.whole(hp)) HP" : "HP полное", fg: QColor.hp, bg: QColor.hp.opacity(0.12))
+            chip(night.mpAfter >= night.maxMP ? "MP полностью" : "+\(Vitals.whole(night.mpAfter - night.mpBefore)) MP",
+                 fg: QColor.mp, bg: QColor.mp.opacity(0.12))
+        }
+    }
+
+    private func chip(_ text: String, fg: Color, bg: Color) -> some View {
+        Text(text).font(QFont.text(12, weight: .semibold)).foregroundStyle(fg)
+            .padding(.horizontal, QSpacing.m).padding(.vertical, QSpacing.xxs)
+            .background(bg, in: Capsule())
+    }
+}

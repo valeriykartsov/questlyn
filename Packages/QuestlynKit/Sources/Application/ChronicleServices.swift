@@ -91,7 +91,7 @@ public struct ChronicleService: Sendable {
         let skills = Dictionary(try await store.skills().map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
         let grants = try await store.allGrants()
         let bySource = Dictionary(grouping: grants, by: \.sourceId)
-        let quests = Dictionary(try await store.allQuests().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let quests = Dictionary(try await store.allQuestsIncludingDeleted().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let completions = try await store.allCompletions()
         let epics = Dictionary(try await store.epics().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let habits = Dictionary(try await store.habits().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

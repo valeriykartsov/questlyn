@@ -51,13 +51,16 @@ struct DayStripCard: View {
                             .background(QColor.sheet.opacity(0.92), in: RoundedRectangle(cornerRadius: 7))
                             .padding(6)
                         if let hour = map.heroHour {
+                            // Под героем: буква ранга и время (11.11.2026). Без ранга — тире.
                             let x = (4 + hour / 24 * Double(PixelMapRenderer.stripSize.width - 8)) * scale
-                            Text("Вы · \(MapText.time(hour))")
+                            Text("\(model.progress.rank?.letter ?? "—") · \(MapText.time(hour))")
                                 .font(QFont.text(10, weight: .bold))
+                                .foregroundStyle(Color(hex: 0x1F2A44))
                                 .padding(.horizontal, 6).padding(.vertical, 1)
                                 .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
                                 .fixedSize()
-                                .position(x: min(max(x, 34), proxy.size.width - 34), y: 22 * scale)
+                                .position(x: min(max(x, 30), proxy.size.width - 30), y: 46.5 * scale)
+                                .accessibilityLabel("Ранг \(AdventurerRank.title(for: model.progress.rank)), сейчас \(MapText.time(hour))")
                         }
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                             .font(.system(size: 11, weight: .semibold))
@@ -79,28 +82,35 @@ struct DayStripCard: View {
         }
     }
 
-    /// «Дальше по дороге»: ближайшие поселения и квесты, плюс то, что вне карты.
+    /// «Дальше по дороге»: все события и квесты дня по порядку; прошедшие — бледнее (11.11.2026).
     @ViewBuilder private func upcoming(_ map: DayMap) -> some View {
         let now = map.heroHour ?? 0
-        let next = (map.settlements.filter { $0.endHour > now }.map { ($0.startHour, $0.titles.joined(separator: " + "), $0.kind == .city ? (($0.density > 1) ? "город, пересекаются" : "город") : "деревня", false) }
-            + map.questMarkers.filter { $0.hour >= now && !$0.isDone }.map { ($0.hour, $0.title, "квест", true) })
-            .sorted { $0.0 < $1.0 }.prefix(3)
-        if !next.isEmpty || !map.offMap.isEmpty {
+        let all = (map.settlements.map { ($0.startHour, $0.titles.joined(separator: " + "),
+                                          $0.kind == .city ? (($0.density > 1) ? "город, пересекаются" : "город") : "деревня",
+                                          false, $0.endHour <= now) }
+            + map.questMarkers.map { ($0.hour, $0.title, $0.isDone ? "квест ✓" : "квест", true, $0.isDone || $0.hour < now) })
+            .sorted { $0.0 < $1.0 }
+        if !all.isEmpty || !map.offMap.isEmpty {
             VStack(alignment: .leading, spacing: QSpacing.xs) {
-                if !next.isEmpty {
-                    Text("Дальше по дороге").font(QFont.text(12, weight: .bold))
-                    ForEach(Array(next.enumerated()), id: \.offset) { _, item in
+                if !all.isEmpty {
+                    HStack {
+                        Text("Дальше по дороге").font(QFont.text(12, weight: .bold))
+                        Spacer()
+                        Text("\(all.count) за день").font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                    }
+                    ForEach(Array(all.enumerated()), id: \.offset) { _, item in
                         HStack(spacing: QSpacing.s) {
                             Text(MapText.time(item.0)).monospacedDigit().fontWeight(.semibold)
                             Text(item.1).lineLimit(1)
                             Text("· \(item.2)").foregroundStyle(item.3 ? QColor.amberDeep : QColor.inkSecondary)
                         }
                         .font(QFont.text(12))
+                        .opacity(item.4 ? 0.5 : 1)
                     }
                 }
                 if !map.offMap.isEmpty {
                     Text("Вне карты: " + map.offMap.joined(separator: " · "))
-                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(2)
+                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(3)
                 }
             }
             .padding(.horizontal, QSpacing.l)
@@ -129,19 +139,19 @@ struct MapOverviewView: View {
     private var selectedDay: Int { min(6, max(0, Int(position / 24))) }
     private var dayMap: DayMap? { week.map { $0.days[selectedDay] } }
 
+    /// Высота нижнего листа с ползунком и делами дня (8.16).
+    private let panelHeight: CGFloat = 300
+
     var body: some View {
-        VStack(spacing: QSpacing.m) {
-            header
-            ScrollView {
-                VStack(alignment: .leading, spacing: QSpacing.l) {
-                    viewport
-                    slider.padding(.horizontal, QSpacing.screen)
-                    if let dayMap { dayDetails(dayMap).padding(.horizontal, QSpacing.screen) }
-                }
-                .padding(.bottom, QSpacing.screen)
+        ZStack(alignment: .bottom) {
+            viewport.ignoresSafeArea()
+            VStack(spacing: 0) {
+                header
+                Spacer()
             }
+            panel
         }
-        .paperScreen()
+        .background(Color(hex: 0x8E8350))
         .onAppear { load(resetPosition: true) }
         .onChange(of: weekStart) { load(resetPosition: true) }
     }
@@ -160,23 +170,53 @@ struct MapOverviewView: View {
         dragStart = position
     }
 
+    /// Кнопки поверх карты: назад и листание недель.
     private var header: some View {
         HStack {
             Button { dismiss() } label: {
-                Label("Сегодня", systemImage: "chevron.left").font(QFont.text(15))
+                Label("Сегодня", systemImage: "chevron.left").font(QFont.text(15, weight: .semibold))
+                    .padding(.horizontal, QSpacing.xl).frame(height: 40)
+                    .background(QColor.sheet.opacity(0.94), in: Capsule())
             }
             Spacer()
-            Button { weekStart = weekStart.adding(days: -7) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
-                .accessibilityLabel("Предыдущая неделя")
-            Text(weekTitle).font(QFont.title(17)).monospacedDigit()
-            Button { weekStart = weekStart.adding(days: 7) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
-                .accessibilityLabel("Следующая неделя")
-            Spacer()
-            Color.clear.frame(width: 70, height: 1)
+            HStack(spacing: 0) {
+                Button { weekStart = weekStart.adding(days: -7) } label: { Image(systemName: "chevron.left").frame(width: 40, height: 40) }
+                    .accessibilityLabel("Предыдущая неделя")
+                Text(weekTitle).font(QFont.text(14, weight: .semibold)).monospacedDigit()
+                Button { weekStart = weekStart.adding(days: 7) } label: { Image(systemName: "chevron.right").frame(width: 40, height: 40) }
+                    .accessibilityLabel("Следующая неделя")
+            }
+            .background(QColor.sheet.opacity(0.94), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(QColor.ink)
+        .padding(.horizontal, QSpacing.l)
+        .padding(.top, QSpacing.s)
+    }
+
+    /// Нижний лист: ползунок недели и дела выбранного дня.
+    private var panel: some View {
+        VStack(spacing: QSpacing.m) {
+            Capsule().fill(QColor.lineStrong).frame(width: 40, height: 5).padding(.top, QSpacing.s)
+            ScrollView {
+                VStack(alignment: .leading, spacing: QSpacing.l) {
+                    slider
+                    if let dayMap { dayDetails(dayMap) }
+                }
+                .padding(.horizontal, QSpacing.screen)
+                .padding(.bottom, QSpacing.screen)
+            }
+        }
+        .frame(height: panelHeight)
+        .frame(maxWidth: .infinity)
+        // Фон листа уходит под индикатор «домой» — до самого низа экрана.
+        .background {
+            UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22)
+                .fill(QColor.paper)
+                .shadow(color: .black.opacity(0.15), radius: 12, y: -4)
+                .ignoresSafeArea(edges: .bottom)
         }
         .foregroundStyle(QColor.ink)
-        .padding(.horizontal, QSpacing.m)
-        .padding(.top, QSpacing.m)
     }
 
     private var weekTitle: String {
@@ -193,8 +233,10 @@ struct MapOverviewView: View {
         GeometryReader { proxy in
             let scale = proxy.size.width / CGFloat(WeekMapRenderer.viewport.width)
             let center = WeekMapRenderer.roadPoint(position)
+            // Дорога — по центру видимой части над нижним листом.
+            let visible = (proxy.size.height - panelHeight) / scale
             let originX = CGFloat(center.x) - CGFloat(WeekMapRenderer.viewport.width) / 2
-            let originY = CGFloat(center.y) - CGFloat(WeekMapRenderer.viewport.height) / 2
+            let originY = CGFloat(center.y) - visible / 2
             ZStack(alignment: .topLeading) {
                 if let image = rendered?.image {
                     Image(decorative: image, scale: 1)
@@ -213,7 +255,7 @@ struct MapOverviewView: View {
                 }
                 if let hero = week?.heroHour, abs(hero - position) < 10 {
                     let point = WeekMapRenderer.roadPoint(hero)
-                    Text("Вы · \(Date.now.formatted(date: .omitted, time: .shortened))")
+                    Text("\(model.progress.rank?.letter ?? "—") · \(Date.now.formatted(date: .omitted, time: .shortened))")
                         .font(QFont.text(10, weight: .bold))
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
@@ -231,7 +273,6 @@ struct MapOverviewView: View {
             }.onEnded { _ in dragStart = position })
             .onAppear { dragStart = position }
         }
-        .aspectRatio(CGFloat(WeekMapRenderer.viewport.width) / CGFloat(WeekMapRenderer.viewport.height), contentMode: .fit)
         .accessibilityElement()
         .accessibilityLabel("Карта недели, \(Format.weekPosition(position, start: weekStart))")
     }
