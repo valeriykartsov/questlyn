@@ -38,19 +38,7 @@ struct HeroView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: QSpacing.xxs) {
-            HStack {
-                Text(model.hero?.name ?? "")
-                    .font(QFont.text(13))
-                    .foregroundStyle(QColor.inkSecondary)
-                Spacer()
-                Button { isShowingSettings = true } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 20))
-                        .foregroundStyle(QColor.ink)
-                        .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Настройки")
-            }
+            ScreenHeader(model: model, subtitle: model.hero?.name ?? "", title: "Герой")
             HStack(alignment: .bottom, spacing: QSpacing.l) {
                 if let hero = model.hero {
                     HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136)
@@ -58,7 +46,7 @@ struct HeroView: View {
                 }
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
                     Text(model.hero?.classTitle ?? "Герой")
-                        .font(QFont.title(30))
+                        .font(QFont.title(24))
                     Text(classNote)
                         .font(QFont.text(13))
                         .foregroundStyle(QColor.inkSecondary)

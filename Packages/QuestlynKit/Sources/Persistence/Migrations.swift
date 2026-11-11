@@ -10,6 +10,7 @@ enum Migrations {
     static let vitals = "v6_vitals"
     static let chronicle = "v7_chronicle"
     static let wellbeing = "v8_wellbeing"
+    static let softDelete = "v9_softDelete"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -274,6 +275,13 @@ enum Migrations {
                 t.column("timezoneId", .text).notNull()
                 t.column("deletedAt", .datetime)
             }
+        }
+
+        // Удаление Epic и его шагов — пометкой: выполнения и начисления остаются в Летописи и прогрессе.
+        migrator.registerMigration(softDelete) { db in
+            try db.alter(table: "quest") { t in t.add(column: "deletedAt", .datetime) }
+            try db.alter(table: "epic") { t in t.add(column: "deletedAt", .datetime) }
+            try db.alter(table: "habit") { t in t.add(column: "archivedOn", .text) }
         }
 
         return migrator

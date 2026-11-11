@@ -6,6 +6,7 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case heroNotFound
     case invalidStepGoal
     case emptyCheckIn
+    case epicNeedsStep
     case invalidHarmStrength
     case questNotFound
     case skillNotFound
@@ -37,6 +38,7 @@ extension QuestlynError: CustomStringConvertible {
         case .heroAlreadyExists: "Герой уже создан."
         case .heroNotFound: "Герой не найден."
         case .invalidStepGoal: "Норма шагов — от 500 до 30 000."
+        case .epicNeedsStep: "В Epic должен остаться хотя бы один шаг. Чтобы убрать его целиком — «Удалить Epic»."
         case .emptyCheckIn: "Отметьте настроение или что-нибудь в блоке «Здоровье»."
         case .invalidHarmStrength: "Сила привычки — 5, 10 или 20% HP."
         case .questNotFound: "Квест не найден."

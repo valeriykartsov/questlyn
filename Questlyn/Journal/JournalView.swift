@@ -2,7 +2,7 @@ import SwiftUI
 import Domain
 import Application
 
-/// Журнал (макеты Journal и Chronicle): «Квесты · Летопись»; у квестов — фильтры, секции, поиск.
+/// Журнал (макеты Journal, 8.12): общая шапка, фильтры, сворачиваемые разделы. Летопись — кнопкой в шапке.
 struct JournalView: View {
     let model: AppModel
 
@@ -11,15 +11,6 @@ struct JournalView: View {
         var id: String { rawValue }
     }
 
-    enum Mode: String, CaseIterable { case quests = "Квесты", chronicle = "Летопись" }
-
-    /// В отладке режим задаётся аргументом `-QuestlynJournal Летопись` — для проверки в симуляторе.
-    @State private var mode: Mode = {
-        #if DEBUG
-        if let value = UserDefaults.standard.string(forKey: "QuestlynJournal"), let mode = Mode(rawValue: value) { return mode }
-        #endif
-        return .quests
-    }()
     @State private var filter: Filter = .all
     @State private var search = ""
     @State private var isAdding = false
@@ -28,6 +19,11 @@ struct JournalView: View {
     @State private var openedEpic: UUID?
     @State private var report: CompletionReport?
     @State private var showsCompleted = false
+    /// Свёрнутые разделы журнала запоминаются.
+    @AppStorage("journal.daily.expanded") private var dailyExpanded = true
+    @AppStorage("journal.weekly.expanded") private var weeklyExpanded = true
+    @AppStorage("journal.epic.expanded") private var epicExpanded = true
+    @AppStorage("journal.quests.expanded") private var questsExpanded = true
 
     private func matches(_ text: String) -> Bool {
         let query = search.trimmingCharacters(in: .whitespaces)
@@ -54,24 +50,16 @@ struct JournalView: View {
             .sorted { ($0.completion?.completedAt ?? .distantPast) > ($1.completion?.completedAt ?? .distantPast) }
     }
 
-    @State private var isSearching = false
-    @FocusState private var searchFocused: Bool
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.m) {
-                header
-                modePicker
-                if mode == .chronicle {
-                    ChronicleView(model: model)
-                } else {
-                    if isSearching { searchField }
-                    filterBar
-                    if filter == .all || filter == .daily { dailySection }
-                    if filter == .all || filter == .weekly { weeklySection }
-                    if filter == .all || filter == .epic { epicSection }
-                    if filter == .all || filter == .quests { questSection }
-                }
+                ScreenHeader(model: model, subtitle: "Квесты, привычки и Epic", title: "Журнал")
+                filterBar
+                if filter == .all || filter == .daily { dailySection }
+                if filter == .all || filter == .weekly { weeklySection }
+                if filter == .all || filter == .epic { epicSection }
+                if filter == .all || filter == .quests { questSection }
             }
             .padding(.horizontal, QSpacing.screen)
             .padding(.top, QSpacing.l)
@@ -79,11 +67,8 @@ struct JournalView: View {
         }
         .paperScreen()
         .keyboardDismissal()
-        .overlay(alignment: .bottomTrailing) { if mode == .quests { AddButton { isAdding = true } } }
-        .refreshable {
-            await model.reload()
-            if mode == .chronicle { await model.loadChronicle() }
-        }
+        .overlay(alignment: .bottomTrailing) { AddButton { isAdding = true } }
+        .refreshable { await model.reload() }
         .sheet(isPresented: $isAdding) { AddFlowView(model: model) }
         .sheet(item: $openedQuest) { QuestDetailView(model: model, questId: $0.id) { report = $0 } }
         .sheet(item: Binding(get: { openedHabit.map(IdentifiedID.init) }, set: { openedHabit = $0?.id })) {
@@ -93,78 +78,6 @@ struct JournalView: View {
             EpicDetailView(model: model, epicId: $0.id)
         }
         .fullScreenCover(item: $report) { RewardView(model: model, report: $0) }
-    }
-
-    // MARK: Шапка
-
-    /// Literata 30 и круглые кнопки 44 pt. Поиск — только у квестов.
-    private var header: some View {
-        HStack(alignment: .bottom) {
-            Text(mode == .quests ? "Журнал квестов" : "Летопись героя").font(QFont.title(30))
-            Spacer()
-            if mode == .quests { searchButton }
-        }
-    }
-
-    /// Переключатель «Квесты · Летопись» (макет Chronicle).
-    private var modePicker: some View {
-        HStack(spacing: 0) {
-            ForEach(Mode.allCases, id: \.self) { item in
-                let isOn = mode == item
-                Button {
-                    withAnimation(.snappy) {
-                        mode = item
-                        isSearching = false
-                        search = ""
-                    }
-                } label: {
-                    Text(item.rawValue)
-                        .font(QFont.text(14, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                        .foregroundStyle(isOn ? QColor.sheet : QColor.ink)
-                        .background(isOn ? QColor.ink : Color.clear, in: RoundedRectangle(cornerRadius: QRadius.small))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isOn ? .isSelected : [])
-            }
-        }
-        .padding(3)
-        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
-        .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.line))
-    }
-
-    private var searchButton: some View {
-        Group {
-            Button {
-                withAnimation {
-                    isSearching.toggle()
-                    if !isSearching { search = "" }
-                }
-                searchFocused = isSearching
-            } label: {
-                Image(systemName: isSearching ? "xmark" : "magnifyingglass")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(QColor.ink)
-                    .frame(width: 44, height: 44)
-                    .background(QColor.sheet, in: Circle())
-                    .overlay(Circle().strokeBorder(QColor.lineStrong))
-            }
-            .accessibilityLabel(isSearching ? "Закрыть поиск" : "Поиск")
-        }
-    }
-
-    private var searchField: some View {
-        HStack(spacing: QSpacing.m) {
-            Image(systemName: "magnifyingglass").foregroundStyle(QColor.inkSecondary)
-            TextField("Поиск по названию", text: $search, prompt: Text("Поиск по названию").foregroundStyle(QColor.placeholder))
-                .font(QFont.text(15))
-                .focused($searchFocused)
-                .submitLabel(.search)
-        }
-        .padding(.horizontal, QSpacing.l)
-        .frame(height: 40)
-        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
-        .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.line))
     }
 
     private var filterBar: some View {
@@ -200,8 +113,11 @@ struct JournalView: View {
     @ViewBuilder
     private var dailySection: some View {
         let today = daily.filter(\.isScheduledToday)
-        CapsHeader(title: "Ежедневные · сегодня", trailing: today.isEmpty ? nil : "\(today.filter(\.doneToday).count) из \(today.count)")
-        if daily.isEmpty {
+        CapsHeader(title: "Ежедневные · сегодня", trailing: today.isEmpty ? nil : "\(today.filter(\.doneToday).count) из \(today.count)",
+                   isExpanded: $dailyExpanded)
+        if !dailyExpanded {
+            EmptyView()
+        } else if daily.isEmpty {
             empty("Ежедневных квестов нет. Добавьте через «+».")
         } else {
             VStack(spacing: 0) {
@@ -240,8 +156,10 @@ struct JournalView: View {
 
     @ViewBuilder
     private var weeklySection: some View {
-        CapsHeader(title: "Недельные", trailing: "до вс")
-        if weekly.isEmpty {
+        CapsHeader(title: "Недельные", trailing: "до вс", isExpanded: $weeklyExpanded)
+        if !weeklyExpanded {
+            EmptyView()
+        } else if weekly.isEmpty {
             empty("Недельных квестов нет.")
         } else {
             ForEach(weekly) { status in
@@ -270,8 +188,10 @@ struct JournalView: View {
     @ViewBuilder
     private var epicSection: some View {
         let active = epics.filter { !$0.epic.isCompleted }
-        CapsHeader(title: "Epic", trailing: "\(active.count) активных")
-        if epics.isEmpty {
+        CapsHeader(title: "Epic", trailing: "\(active.count) активных", isExpanded: $epicExpanded)
+        if !epicExpanded {
+            EmptyView()
+        } else if epics.isEmpty {
             empty("Epic — большая цель из шагов. Добавьте через «+».")
         } else {
             ForEach(epics) { status in
@@ -329,9 +249,11 @@ struct JournalView: View {
 
     @ViewBuilder
     private var questSection: some View {
-        CapsHeader(title: "Квесты", trailing: "по дате")
-        if openQuests.isEmpty { empty("Открытых квестов нет.") } else { ForEach(openQuests) { journalQuestRow($0) } }
-        if !doneQuests.isEmpty {
+        CapsHeader(title: "Квесты", trailing: "по дате · \(openQuests.count)", isExpanded: $questsExpanded)
+        if questsExpanded {
+            if openQuests.isEmpty { empty("Открытых квестов нет.") } else { ForEach(openQuests) { journalQuestRow($0) } }
+        }
+        if questsExpanded, !doneQuests.isEmpty {
             Button(showsCompleted ? "Скрыть выполненные" : "Выполненные · \(doneQuests.count)") {
                 withAnimation { showsCompleted.toggle() }
             }

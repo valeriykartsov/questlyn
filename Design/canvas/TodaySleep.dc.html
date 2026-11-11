@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Сегодня: шапка и сон</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 56px 16px 0; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;">  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 13px; color: #4A5368;">Среда, 11 ноября</div><div style="font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Сегодня</div></div>
+    <div style="display: flex; gap: 8px; padding-bottom: 4px;"><a href="Chronicle.dc.html" aria-label="Летопись" style="width: 40px; height: 40px; border-radius: 20px; background: #FFFCF6; border: 1px solid #C9BCA2; display: flex; align-items: center; justify-content: center; color: #1F2A44;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 19a2 2 0 0 1 2-2h13"></path><path d="M9 7h6"></path></svg></a><a href="Settings.dc.html" aria-label="Настройки" style="width: 40px; height: 40px; border-radius: 20px; background: #FFFCF6; border: 1px solid #C9BCA2; display: flex; align-items: center; justify-content: center; color: #1F2A44;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path></svg></a></div>
+  </div>
+  <div style="position: relative; border-radius: 14px; overflow: hidden;"><img src="data:image/png;base64,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" alt="Миниатюра дня" style="width: 358px; height: 100px; image-rendering: pixelated; display: block;">
+    <div style="position: absolute; left: 178px; top: 84px; background: #E2A04A; border-radius: 7px; padding: 0 6px; font-size: 10px; font-weight: 700;">D · 14:20</div></div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 36px; height: 36px; border-radius: 10px; background: #1E2742; color: #F2B35B; display: flex; align-items: center; justify-content: center; font-size: 18px;" aria-hidden="true">☾</div>
+      <div style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: 12px; color: #4A5368;">Сон · ночь на среду</span><span style="font-size: 16px; font-weight: 700;">23:40–07:10 · 7 ч 30 мин</span></div>
+      <span style="font-size: 11px; color: #4A5368;">Apple Health</span>
+    </div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 600;">
+      <span style="padding: 2px 8px; border-radius: 999px; background: #F1E3D3; color: #5C3410;">качество 85%</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #F6E4DF; color: #A8432F;">+43 HP</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #E2EAF4; color: #3E6FA3;">MP полностью</span>
+    </div>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; border-style: dashed;">
+    <span style="font-size: 11px; font-weight: 700; color: #4A5368; text-transform: uppercase; letter-spacing: .06em;">Тот же блок до подъёма</span>
+    <span style="font-size: 13px;">Ночь ещё идёт — внести сон можно после <b>07:00</b>.</span>
+    <span style="font-size: 12px; color: #4A5368;">После 07:00 без данных: кнопка «Внести сон» → «Как спали?».</span>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; gap: 14px;">
+    <div style="flex: 1;"><div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700;"><span style="color: #A8432F;">HP</span><span>142 / 175</span></div><div style="height: 6px; border-radius: 3px; background: #E9E1D0; margin-top: 4px;"><div style="width: 81%; height: 6px; border-radius: 3px; background: #A8432F;"></div></div></div>
+    <div style="flex: 1;"><div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700;"><span style="color: #3E6FA3;">MP</span><span>232 / 280</span></div><div style="height: 6px; border-radius: 3px; background: #E9E1D0; margin-top: 4px;"><div style="width: 83%; height: 6px; border-radius: 3px; background: #3E6FA3;"></div></div></div>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Блок ранга с «Сегодня» убран: ранг — на «Герое» и буквой под героем на миниатюре.</div>
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 22px; height: 62px; border-radius: 31px; background: rgba(255,252,246,.94); border: 1px solid #E3D9C6; display: flex; align-items: center; justify-content: space-around; font-size: 11px; font-weight: 600; color: #1F2A44;">
+    <span style="color: #B8651B;">Сегодня</span><span style="color: #1F2A44;">Журнал</span><span style="color: #1F2A44;">Герой</span><span style="color: #1F2A44;">Календарь</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

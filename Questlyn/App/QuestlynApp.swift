@@ -49,6 +49,7 @@ struct RootView: View {
                 case "checkin": CheckInView(model: model)
                 case "map": MapOverviewView(model: model)
                 case "settings": SettingsView(model: model)
+                case "gallery": NavigationStack { ComponentGallery() }
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
             } else { content }

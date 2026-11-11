@@ -25,7 +25,10 @@ public protocol QuestRepository: Sendable {
     func questsForToday(_ date: LocalDate) async throws -> [Quest]
     func quest(id: UUID) async throws -> Quest?
     func save(_ quest: Quest) async throws
+    /// Квесты без удалённых.
     func allQuests() async throws -> [Quest]
+    /// Все квесты, включая удалённые, — для Летописи и HP/MP.
+    func allQuestsIncludingDeleted() async throws -> [Quest]
 }
 
 public protocol EpicRepository: Sendable {

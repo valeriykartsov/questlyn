@@ -15,6 +15,7 @@ struct HabitFormView: View {
     @State private var time = Calendar.current.date(bySettingHour: 7, minute: 0, second: 0, of: .now) ?? .now
     @State private var isCreatingSkill = false
     @State private var isSaving = false
+    @State private var isConfirmingDelete = false
 
     init(model: AppModel, kind: HabitKind, editing: HabitDefinition? = nil, onDone: (() -> Void)? = nil) {
         self.model = model
@@ -113,8 +114,26 @@ struct HabitFormView: View {
                 }
                 .listRowBackground(QColor.sheet)
             }
+
+            if editing != nil {
+                Section {
+                    Button("Удалить привычку", role: .destructive) { isConfirmingDelete = true }
+                } footer: {
+                    Text("Привычка пропадёт из «Сегодня» и журнала и с этой недели не войдёт в DIS. Прошлые отметки и начисления останутся в Летописи.")
+                }
+                .listRowBackground(QColor.sheet)
+            }
         }
         .tint(QColor.amber)
+        .confirmationDialog("Удалить «\(draft.title)»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Удалить привычку", role: .destructive) {
+                guard let id = editing?.id else { return }
+                Task { if await model.archiveHabit(id) { dismiss() } }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Отменить нельзя. Прогресс за прошлые отметки сохранится.")
+        }
         .paperScreen()
             .keyboardDismissal()
         .navigationTitle(editing == nil ? (kind == .daily ? "Ежедневный квест" : "Недельный квест") : "Изменить")

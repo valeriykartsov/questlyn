@@ -25,12 +25,15 @@ public struct HabitDefinition: Identifiable, Hashable, Codable, Sendable {
     public var startDate: LocalDate
     public var isActive: Bool
     public var createdAt: Date
+    /// День удаления: с недели удаления привычка не входит в DIS, прошлые недели не меняются.
+    public var archivedOn: LocalDate?
 
     public init(
         id: UUID = UUID(), kind: HabitKind, title: String, details: String? = nil, skillId: UUID? = nil,
         weekdays: Set<Weekday> = Weekday.everyDay, targetPerWeek: Int = 1, time: LocalTime? = nil,
-        timezoneId: String, startDate: LocalDate, isActive: Bool = true, createdAt: Date
+        timezoneId: String, startDate: LocalDate, isActive: Bool = true, createdAt: Date, archivedOn: LocalDate? = nil
     ) {
+        self.archivedOn = archivedOn
         self.id = id
         self.kind = kind
         self.title = title
@@ -47,12 +50,18 @@ public struct HabitDefinition: Identifiable, Hashable, Codable, Sendable {
 
     /// Запланирован ли ежедневный квест на этот день.
     public func isScheduled(on date: LocalDate) -> Bool {
-        kind == .daily && isActive && date >= startDate && weekdays.contains(date.weekday)
+        kind == .daily && counts(inWeekOf: date) && date >= startDate && weekdays.contains(date.weekday)
     }
 
     /// Входит ли недельный квест в DIS этой недели: с первой полной недели после создания.
     public func countsForWeek(starting weekStart: LocalDate) -> Bool {
-        kind == .weekly && isActive && startDate <= weekStart
+        kind == .weekly && counts(inWeekOf: weekStart) && startDate <= weekStart
+    }
+
+    /// Активна или удалена позже этой недели.
+    private func counts(inWeekOf date: LocalDate) -> Bool {
+        guard let archivedOn else { return isActive }
+        return date.weekStart < archivedOn.weekStart
     }
 }
 
@@ -95,9 +104,12 @@ public struct EpicQuest: Identifiable, Hashable, Codable, Sendable {
     public var deadline: LocalDate?
     public var completedAt: Date?
     public var createdAt: Date
+    /// Удалён пользователем: пропадает из журнала, начисления за выполненные шаги остаются.
+    public var deletedAt: Date?
 
     public init(id: UUID = UUID(), title: String, details: String? = nil, deadline: LocalDate? = nil,
-                completedAt: Date? = nil, createdAt: Date) {
+                completedAt: Date? = nil, createdAt: Date, deletedAt: Date? = nil) {
+        self.deletedAt = deletedAt
         self.id = id
         self.title = title
         self.details = details

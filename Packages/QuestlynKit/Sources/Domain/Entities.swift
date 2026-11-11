@@ -137,12 +137,15 @@ public struct Quest: Identifiable, Hashable, Codable, Sendable {
     /// Шаг Epic: квест принадлежит не более чем одному Epic (02).
     public var epicId: UUID?
     public var createdAt: Date
+    /// Удалён (вместе с Epic или из его редактирования). Выполнения и начисления остаются — прогресс не отнимается.
+    public var deletedAt: Date?
 
     public init(
         id: UUID = UUID(), title: String, details: String? = nil, priority: QuestPriority = .default,
         skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil,
-        timezoneId: String, epicId: UUID? = nil, createdAt: Date
+        timezoneId: String, epicId: UUID? = nil, createdAt: Date, deletedAt: Date? = nil
     ) {
+        self.deletedAt = deletedAt
         self.epicId = epicId
         self.id = id
         self.title = title

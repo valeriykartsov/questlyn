@@ -88,7 +88,7 @@ public struct GRDBStore: QuestlynStore {
     public func quests(dueOn date: LocalDate) async throws -> [Quest] {
         try await writer.read { db in
             try QuestRecord
-                .filter(QuestRecord.Columns.dueDate == date.description)
+                .filter(QuestRecord.Columns.dueDate == date.description && Column("deletedAt") == nil)
                 .order(QuestRecord.Columns.dueTime.ascNullsLast, QuestRecord.Columns.createdAt)
                 .fetchAll(db)
                 .map(\.domain)
@@ -99,8 +99,8 @@ public struct GRDBStore: QuestlynStore {
         try await writer.read { db in
             try QuestRecord.fetchAll(db, sql: """
                 SELECT * FROM quest
-                WHERE dueDate IS NULL OR dueDate <= ?
-                   OR id IN (SELECT questId FROM questCompletion WHERE undoneAt IS NULL AND localDate = ?)
+                WHERE deletedAt IS NULL AND (dueDate IS NULL OR dueDate <= ?
+                   OR id IN (SELECT questId FROM questCompletion WHERE undoneAt IS NULL AND localDate = ?))
                 ORDER BY createdAt
                 """, arguments: [date.description, date.description])
             .map(\.domain)
@@ -116,13 +116,19 @@ public struct GRDBStore: QuestlynStore {
     }
 
     public func allQuests() async throws -> [Quest] {
+        try await writer.read { db in
+            try QuestRecord.filter(Column("deletedAt") == nil).order(QuestRecord.Columns.createdAt).fetchAll(db).map(\.domain)
+        }
+    }
+
+    public func allQuestsIncludingDeleted() async throws -> [Quest] {
         try await writer.read { db in try QuestRecord.order(QuestRecord.Columns.createdAt).fetchAll(db).map(\.domain) }
     }
 
     // MARK: Epic
 
     public func epics() async throws -> [EpicQuest] {
-        try await writer.read { db in try EpicRecord.order(Column("createdAt")).fetchAll(db).map(\.domain) }
+        try await writer.read { db in try EpicRecord.filter(Column("deletedAt") == nil).order(Column("createdAt")).fetchAll(db).map(\.domain) }
     }
 
     public func epic(id: UUID) async throws -> EpicQuest? {

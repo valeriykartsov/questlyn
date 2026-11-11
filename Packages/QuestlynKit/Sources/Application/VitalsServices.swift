@@ -8,8 +8,10 @@ public struct VitalsService: Sendable {
 
     func state(hero: Hero, journal: [TodayItem], sleeps: [SleepSession], settings: VitalSettings,
                grants: [ProgressGrant], now: Date, timeZone: TimeZone) async throws -> VitalsState {
-        let spends = journal.compactMap { item in
-            item.completion.map { ManaSpend(at: $0.completedAt, cost: ManaRules.cost(priority: item.quest.priority, hasSkill: item.quest.skillId != nil)) }
+        // Мана тратится и на шаги удалённых Epic: факт выполнения остаётся.
+        let quests = Dictionary(try await store.allQuestsIncludingDeleted().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let spends = try await store.allCompletions().filter(\.isActive).compactMap { completion in
+            quests[completion.questId].map { ManaSpend(at: completion.completedAt, cost: ManaRules.cost(priority: $0.priority, hasSkill: $0.skillId != nil)) }
         }
         return VitalsCalculator.state(heroCreatedAt: hero.createdAt, grants: grants, spends: spends, sleeps: sleeps,
                                       steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone,

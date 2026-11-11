@@ -23,10 +23,10 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: QSpacing.l) {
                 header
                 DayStripCard(model: model) { isShowingMap = true }
-                rankCard
+                SleepCard(model: model) { isShowingMorning = true }
                 WeatherCard(model: model) { isCheckingIn = true }
                 if let vitals = model.vitals {
-                    VitalsCard(vitals: vitals, askSleep: model.needsSleepAnswer ? { isShowingMorning = true } : nil)
+                    VitalsCard(vitals: vitals)
                 }
                 AttributeStrip(progress: model.progress)
                 habitsSection
@@ -55,7 +55,7 @@ struct TodayView: View {
         .sheet(isPresented: $isShowingMorning) { MorningView(model: model) }
         .sheet(isPresented: $isCheckingIn) { CheckInView(model: model) }
         .fullScreenCover(isPresented: $isShowingMap) { MapOverviewView(model: model) }
-        .onAppear { model.loadAgenda() }
+        .onAppear { model.loadAgenda(from: model.today, through: model.today) }
         .onAppear(perform: presentMorningIfNeeded)
         .onChange(of: model.overview?.date) { presentMorningIfNeeded() }
         .onChange(of: model.overview?.hasSleepToday) { presentMorningIfNeeded() }
@@ -72,35 +72,7 @@ struct TodayView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: QSpacing.xxs) {
-            Text(Format.longDay(.now))
-                .font(QFont.text(13))
-                .foregroundStyle(QColor.inkSecondary)
-            Text("Сегодня")
-                .font(QFont.title(30))
-        }
-    }
-
-    private var rankCard: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: QSpacing.xxs) {
-                Text(model.hero?.classTitle ?? "")
-                    .font(QFont.text(12))
-                    .foregroundStyle(QColor.inkSecondary)
-                Text(AdventurerRank.title(for: model.progress.rank))
-                    .font(QFont.text(15, weight: .bold))
-            }
-            Spacer()
-            if let next = model.progress.nextRank {
-                Text("\(Format.number(model.progress.rankPoints)) / \(next.threshold) до \(next.letter)")
-                    .font(QFont.text(12, weight: .semibold))
-                    .foregroundStyle(QColor.inkSecondary)
-                    .monospacedDigit()
-            }
-        }
-        .padding(.horizontal, QSpacing.xl)
-        .padding(.vertical, QSpacing.l)
-        .sheetCard()
+        ScreenHeader(model: model, subtitle: Format.longDay(.now), title: "Сегодня")
     }
 
     @ViewBuilder
