@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Побродить: диапазон и навыки</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #8E8350; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 790px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 28px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="MapFull.dc.html" style="font-size: 15px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Побродить</div>
+      <div style="width: 56px;"></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Диапазон · прошлые даты, до 3 месяцев</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <label style="background: #FFFCF6; border: 1px solid #C9BCA2; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12px; color: #4A5368;">С</span>
+          <input type="text" value="12 августа" aria-label="Начало диапазона" style="border: none; background: transparent; padding: 0; font: 700 18px Inter, sans-serif; color: #1F2A44; width: 100%;">
+        </label>
+        <label style="background: #FFFCF6; border: 1px solid #C9BCA2; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12px; color: #4A5368;">По</span>
+          <input type="text" value="10 ноября" aria-label="Конец диапазона" style="border: none; background: transparent; padding: 0; font: 700 18px Inter, sans-serif; color: #1F2A44; width: 100%;">
+        </label>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" style="flex: 1; height: 36px; border-radius: 18px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">2 недели</button>
+        <button type="button" style="flex: 1; height: 36px; border-radius: 18px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">Месяц</button>
+        <button type="button" aria-pressed="true" style="flex: 1; height: 36px; border-radius: 18px; border: none; background: #1F2A44; color: #FFFCF6; font: 700 13px Inter, sans-serif;">3 месяца</button>
+      </div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 15px; font-weight: 700;">Большой остров</span><span style="font-size: 12px; color: #4A5368;">91 день</span></div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; font-size: 12px;">
+        <sc-for list="{{counts}}" as="c" hint-placeholder-count="6">
+          <span style="display: flex; flex-direction: column; padding: 6px 8px; border-radius: 10px; background: #F5F0E6;"><b style="font-size: 16px;">{{c.n}}</b><span style="color: #4A5368;">{{c.label}}</span></span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Навыки в дорогу</span><span style="font-size: 12px; font-weight: 700;">2 из 3</span></div>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+        <sc-for list="{{skills}}" as="s" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{s.on}}" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 14px; border: none; border-bottom: 1px solid #E3D9C6; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+            <span style="width: 22px; height: 22px; border-radius: 6px; background: {{s.box}}; border: {{s.ring}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+            <span style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: 600;">{{s.name}}</span><span style="font-size: 12px; color: #4A5368;">{{s.sub}}</span></span>
+            <span style="font-size: 13px; font-weight: 700; color: #9A5214;">{{s.power}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Способность — по виду активности навыка, без привязки — по атрибуту профессии. Сила — от XP навыка.</div>
+    </div>
+
+    <div style="font-size: 12px; line-height: 1.45; color: #3D4354; padding: 10px 12px; border-radius: 12px; background: #E9E1D0;">Песочница: XP, HP, MP и Летопись героя не меняются. HP и MP в игре стартуют с текущих.</div>
+
+    <a href="ExploreIsland.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Создать остров</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const counts = [
+      { n: '6', label: 'городов' }, { n: '14', label: 'деревень' }, { n: '23', label: 'NPC' },
+      { n: '18', label: 'сундуков' }, { n: '13', label: 'костров' }, { n: '13', label: 'недель погоды' }
+    ];
+    const src = [
+      ['Бег', 'Рывок · вид «Бег и кардио»', '×1,5', true],
+      ['Публичные выступления', 'Уговорить · вид «Общение»', '×1,25', true],
+      ['Жим', 'Мощный удар · вид «Силовая»', '×1,0', false],
+      ['Отчётность', 'Концентрация · по атрибуту MNT', '×1,0', false]
+    ];
+    const skills = src.map(([name, sub, power, on]) => ({
+      name, sub, power, on: on ? 'true' : 'false',
+      box: on ? '#1F2A44' : 'transparent', ring: on ? 'none' : '2px solid #C9BCA2'
+    }));
+    return { counts, skills };
+  }
+}
+</script>
+</body>
+</html>

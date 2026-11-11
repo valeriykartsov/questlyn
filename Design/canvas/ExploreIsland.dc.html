@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Побродить: остров</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #3F6E9C; font-family: Inter, system-ui, sans-serif; color: #1F2A44;">
+  <div style="position: absolute; left: 0; top: 0; display: grid; grid-template-columns: repeat(26, 15px); grid-auto-rows: 15px;" role="img" aria-label="Схема острова: суша, лес, песок и вода">
+    <sc-for list="{{tiles}}" as="t" hint-placeholder-count="884"><div style="background: {{t.c}};"></div></sc-for>
+  </div>
+
+  <sc-for list="{{fog}}" as="f" hint-placeholder-count="1"><div style="position: absolute; inset: 0; background: radial-gradient(circle at 196px 420px, transparent 120px, rgba(31,42,68,.35) 170px); pointer-events: none;"></div></sc-for>
+
+  <sc-for list="{{cities}}" as="c" hint-placeholder-count="3">
+    <div style="position: absolute; left: {{c.x}}; top: {{c.y}}; width: 0; height: 0;">
+      <div style="position: absolute; left: -46px; top: -46px; width: 92px; height: 92px; border-radius: 46px; border: 2px dashed rgba(255,252,246,.85); box-sizing: border-box;" aria-hidden="true"></div>
+      <div style="position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; background: {{c.roof}}; box-shadow: 8px 6px 0 #C9BCA2, -6px 8px 0 #8A4B3A;" aria-hidden="true"></div>
+      <div style="position: absolute; left: -60px; top: 22px; width: 120px; display: flex; justify-content: center;"><span style="padding: 2px 6px; border-radius: 7px; background: #1F2A44; color: #FFFCF6; font-size: 10px; font-weight: 600; white-space: nowrap;">{{c.name}}</span></div>
+    </div>
+  </sc-for>
+
+  <sc-for list="{{points}}" as="p" hint-placeholder-count="20">
+    <div style="position: absolute; left: {{p.x}}; top: {{p.y}}; width: {{p.s}}; height: {{p.s}}; background: {{p.c}}; border: {{p.b}}; box-sizing: border-box;" aria-hidden="true"></div>
+  </sc-for>
+
+  <div style="position: absolute; left: 189px; top: 404px; width: 14px; height: 26px; background: #2F6B4F; border: 2px solid #1F2A44; box-sizing: border-box;" aria-label="Герой" role="img"></div>
+  <div style="position: absolute; left: 163px; top: 384px; padding: 1px 6px; border-radius: 7px; background: #E2A04A; font-size: 10px; font-weight: 700;">D · Арин</div>
+  <div style="position: absolute; left: 252px; top: 470px; width: 16px; height: 16px; border-radius: 8px; border: 2px solid #FFFCF6; box-sizing: border-box;" aria-hidden="true"></div>
+  <div style="position: absolute; left: 196px; top: 420px; width: 64px; height: 2px; background: repeating-linear-gradient(90deg, #FFFCF6 0 4px, transparent 4px 8px); transform-origin: 0 0; transform: rotate(48deg);" aria-hidden="true"></div>
+
+  <div style="position: absolute; left: 12px; right: 12px; top: 54px; display: flex; gap: 8px; align-items: flex-start;">
+    <a href="ExploreSummary.dc.html" style="height: 40px; padding: 0 14px; border-radius: 20px; background: rgba(255,252,246,.94); font-size: 14px; font-weight: 600; text-decoration: none; color: #1F2A44; display: flex; align-items: center;">Выйти</a>
+    <div style="flex: 1; padding: 8px 12px; border-radius: 16px; background: rgba(255,252,246,.94); display: flex; flex-direction: column; gap: 5px;">
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;"><span style="color: #A8432F; width: 22px;">HP</span><span style="flex: 1; height: 6px; border-radius: 3px; background: #E9E1D0;"><span style="display: block; width: 72%; height: 6px; border-radius: 3px; background: #A8432F;"></span></span><span>101/140</span></div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;"><span style="color: #3E6FA3; width: 22px;">MP</span><span style="flex: 1; height: 6px; border-radius: 3px; background: #E9E1D0;"><span style="display: block; width: 55%; height: 6px; border-radius: 3px; background: #3E6FA3;"></span></span><span>66/120</span></div>
+    </div>
+  </div>
+  <div style="position: absolute; left: 12px; top: 106px; padding: 6px 10px; border-radius: 12px; background: rgba(255,252,246,.94); font-size: 12px; font-weight: 600; display: flex; gap: 10px;"><span>Города 2/6</span><span>Сундуки 5/18</span></div>
+  <div style="position: absolute; right: 12px; top: 106px; width: 78px; height: 78px; border-radius: 10px; background: #3F6E9C; border: 2px solid #FFFCF6; overflow: hidden;" aria-label="Мини-карта" role="img">
+    <div style="position: absolute; left: 12px; top: 10px; width: 54px; height: 58px; border-radius: 40% 50% 45% 55%; background: #9DB06A;"></div>
+    <div style="position: absolute; left: 36px; top: 40px; width: 6px; height: 6px; background: #E2A04A;"></div>
+    <div style="position: absolute; left: 24px; top: 26px; width: 4px; height: 4px; background: #1F2A44;"></div>
+    <div style="position: absolute; left: 48px; top: 54px; width: 4px; height: 4px; background: #1F2A44;"></div>
+    <div style="position: absolute; left: 22px; top: 48px; width: 4px; height: 4px; background: #1F2A44;"></div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #F5F0E6; border-radius: 22px 22px 0 0; padding: 14px 16px 30px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; gap: 8px;">
+      <button type="button" style="flex: 1; min-height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 14px; font-weight: 700;">Рывок</span><span style="font-size: 11px; opacity: .8;">Бег · −10 MP</span></button>
+      <button type="button" disabled style="flex: 1; min-height: 52px; border-radius: 14px; border: 1px solid #C9BCA2; background: transparent; color: #4A5368; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 14px; font-weight: 700;">Уговорить</span><span style="font-size: 11px;">только во встрече</span></button>
+    </div>
+    <div style="font-size: 12px; color: #4A5368; line-height: 1.45;">Касание — идти туда. Пунктир — безопасная зона города: NPC не заходят, HP и MP восстанавливаются. Красные NPC преследуют, серые бродят, зелёные — уговорены. Схема сверху; в приложении — изометрия в стиле большой карты, камера за героем.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cols = 26, rows = 34;
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const tiles = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const dx = (c - 13) / 12, dy = (r - 19) / 15;
+        const d = Math.sqrt(dx * dx + dy * dy) + (rnd() - 0.5) * 0.18 + 0.08 * Math.sin(c * 0.7 + r * 0.4);
+        let color = '#3F6E9C';
+        if (d < 0.78) color = (rnd() < 0.18 ? '#5F7F45' : (rnd() < 0.5 ? '#9DB06A' : '#93A762'));
+        else if (d < 0.88) color = '#E3CF9A';
+        else if (d < 0.97) color = '#4F86B8';
+        tiles.push({ c: color });
+      }
+    }
+    const cities = [
+      { x: '110px', y: '330px', name: 'Планёрка', roof: '#B8651B' },
+      { x: '268px', y: '300px', name: 'Тренировка', roof: '#2F6B4F' },
+      { x: '150px', y: '540px', name: 'Созвон с командой', roof: '#3E5C8A' }
+    ];
+    const pt = (x, y, s, c, b) => ({ x: x + 'px', y: y + 'px', s: s + 'px', c, b: b || 'none' });
+    const points = [
+      pt(252, 470, 12, '#A8432F', '2px solid #1F2A44'),
+      pt(300, 420, 12, '#A8432F', '2px solid #1F2A44'),
+      pt(80, 450, 12, '#8E8576', '2px solid #1F2A44'),
+      pt(210, 250, 12, '#8E8576', '2px solid #1F2A44'),
+      pt(320, 560, 12, '#8E8576', '2px solid #1F2A44'),
+      pt(130, 270, 12, '#2F6B4F', '2px solid #1F2A44'),
+      pt(230, 360, 10, '#E2A04A', '2px solid #5C3410'),
+      pt(70, 380, 10, '#E2A04A', '2px solid #5C3410'),
+      pt(290, 520, 10, '#E2A04A', '2px solid #5C3410'),
+      pt(180, 470, 10, '#E2A04A', '2px solid #5C3410'),
+      pt(225, 600, 10, '#F2B35B', '2px solid #A8432F'),
+      pt(95, 520, 10, '#F2B35B', '2px solid #A8432F'),
+      pt(330, 360, 8, '#C9BCA2', '2px solid #1F2A44'),
+      pt(60, 300, 8, '#C9BCA2', '2px solid #1F2A44'),
+      pt(250, 220, 8, '#C9BCA2', '2px solid #1F2A44')
+    ];
+    return { tiles, cities, points, fog: [1] };
+  }
+}
+</script>
+</body>
+</html>

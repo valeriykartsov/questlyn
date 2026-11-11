@@ -229,6 +229,63 @@ final class AppModel {
         return WeekMap.build(weekStart: start, days: days, camps: camps, now: .now, timeZone: timeZone)
     }
 
+    // MARK: Побродить — этап 8B
+
+    /// Данные острова за диапазон прошлых дат: события, квесты, ночи, настроение недель.
+    func exploreInput(first: LocalDate, last: LocalDate) -> ExploreInput {
+        let from = VitalsCalculator.date(first, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        let to = VitalsCalculator.date(last.adding(days: 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        var events = calendar.exploreEvents(from: from, to: to, hidden: calendarPreferences.hidden)
+        #if DEBUG
+        // `-QuestlynSampleEvents YES` — повторяющиеся события с участниками, чтобы проверить остров в симуляторе.
+        if UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") {
+            let titles = ["Стендап", "Планёрка", "Тренировка", "Созвон с командой", "Обед", "Ретро", "Кино", "Встреча с Петей"]
+            var day = first
+            var index = 0
+            while day <= last {
+                for slot in 0..<3 {
+                    let title = titles[(index + slot * 3) % titles.count] + (index % 11 == 0 ? " \(index)" : "")
+                    let keys = (0..<((index + slot) % 4)).map { "p\(($0 * 7 + index) % 24)" }
+                    events.append(ExploreEvent(title: title, start: VitalsCalculator.date(day, LocalTime(hour: 9 + slot * 3, minute: 0)!, timeZone: timeZone),
+                                               minutes: 45, attendeeKeys: keys))
+                }
+                index += 1
+                day = day.adding(days: 1)
+            }
+        }
+        #endif
+        let quests = (overview?.journal ?? []).filter { item in
+            let date = item.completion?.localDate ?? item.quest.dueDate
+            return date.map { $0 >= first && $0 <= last } ?? false
+        }.map { (title: $0.quest.title, priority: $0.quest.priority) }
+        var nights: [LocalDate: Double] = [:]
+        for entry in vitals?.log ?? [] {
+            if case let .night(night) = entry.kind, night.wakeDate >= first, night.wakeDate <= last { nights[night.wakeDate] = night.quality }
+        }
+        var weekMoods: [LocalDate: Mood] = [:]
+        for mood in (overview?.moods ?? []).sorted(by: { $0.at < $1.at }) where mood.localDate >= first && mood.localDate <= last {
+            weekMoods[mood.localDate.weekStart] = mood.mood
+        }
+        return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
+                            hasCalendar: calendar.isAuthorized || !events.isEmpty)
+    }
+
+    /// Навыки, которые можно взять в дорогу: способность по виду активности или атрибуту профессии, сила — по XP.
+    var exploreSkills: [ExploreSkill] {
+        skills.filter(\.isActive).compactMap { skill in
+            let main = profession(id: skill.professionId)?.attributes.first
+            guard let ability = ExploreAbility.of(activityTemplateId: skill.activityTemplateId, professionMain: main) else { return nil }
+            let xp = Double((progress.skillXP[skill.id] ?? .zero).value) / 100
+            return ExploreSkill(id: skill.id, title: skill.title, ability: ability, skillXP: xp)
+        }
+    }
+
+    func exploreHero(skills chosen: [ExploreSkill]) -> ExploreHero {
+        let state = vitals
+        return ExploreHero(levels: progress.levels, hp: state?.hp ?? 100, maxHP: state?.maxHP ?? 100, mp: state?.mp ?? 100,
+                           maxMP: state?.maxMP ?? 100, rankLetter: progress.rank?.letter ?? "—", skills: chosen)
+    }
+
     // MARK: Летопись — этап 5
 
     private(set) var chronicle: [ChronicleDay] = []

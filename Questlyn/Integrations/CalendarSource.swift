@@ -1,5 +1,6 @@
 import Foundation
 import EventKit
+import CryptoKit
 import Domain
 
 /// Событие Apple Calendar для повестки и карты. Не хранится: событие ≠ выполненное действие (02).
@@ -89,6 +90,23 @@ final class CalendarSource {
                         attendees: event.attendees?.count ?? 0)
         }
         .sorted { ($0.isAllDay ? 0 : 1, $0.start) < ($1.isAllDay ? 0 : 1, $1.start) }
+    }
+
+    /// События для «Побродить» (8B): без событий на весь день; участники — хешами адресов, без имён и без самого пользователя.
+    func exploreEvents(from: Date, to: Date, hidden: Set<String> = []) -> [ExploreEvent] {
+        guard isAuthorized else { return [] }
+        let skip = hidden.union([questlynCalendarId].compactMap { $0 })
+        let calendars = store.calendars(for: .event).filter { !skip.contains($0.calendarIdentifier) }
+        guard !calendars.isEmpty else { return [] }
+        let predicate = store.predicateForEvents(withStart: from, end: to, calendars: calendars)
+        return store.events(matching: predicate).filter { !$0.isAllDay }.map { event in
+            let keys = (event.attendees ?? []).filter { !$0.isCurrentUser }.map { participant in
+                let digest = SHA256.hash(data: Data(participant.url.absoluteString.lowercased().utf8))
+                return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
+            }
+            return ExploreEvent(title: event.title ?? "Без названия", start: event.startDate,
+                                minutes: max(1, Int(event.endDate.timeIntervalSince(event.startDate) / 60)), attendeeKeys: keys)
+        }
     }
 
     // MARK: Отправка квестов (8.15)

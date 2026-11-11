@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Побродить: встреча</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #2B3A52; font-family: Inter, system-ui, sans-serif; color: #1F2A44;">
+  <div style="position: absolute; left: 0; right: 0; top: 0; height: 380px; background: #6E7F4A;" aria-hidden="true"></div>
+  <div style="position: absolute; left: 0; right: 0; top: 300px; height: 80px; background: #5F7F45;" aria-hidden="true"></div>
+  <div style="position: absolute; left: 92px; top: 214px; width: 28px; height: 52px; background: #2F6B4F; border: 3px solid #1F2A44; box-sizing: border-box;" role="img" aria-label="Герой"></div>
+  <div style="position: absolute; left: 258px; top: 196px; width: 34px; height: 64px; background: #A8432F; border: 3px solid #1F2A44; box-sizing: border-box;" role="img" aria-label="Постоянный NPC"></div>
+  <div style="position: absolute; left: 70px; top: 120px; width: 120px; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+    <span style="padding: 1px 6px; border-radius: 7px; background: #E2A04A; font-size: 10px; font-weight: 700;">D · Арин</span>
+    <span style="width: 100px; height: 6px; background: #E9E1D0; border: 2px solid #1F2A44;"><span style="display: block; width: 72%; height: 6px; background: #A8432F;"></span></span>
+    <span style="font-size: 11px; font-weight: 700; color: #FFFCF6;">HP 101/140 · MP 66/120</span>
+  </div>
+  <div style="position: absolute; left: 215px; top: 120px; width: 120px; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+    <span style="padding: 1px 6px; border-radius: 7px; background: #1F2A44; color: #FFFCF6; font-size: 10px; font-weight: 700;">Постоянный</span>
+    <span style="width: 100px; height: 6px; background: #E9E1D0; border: 2px solid #1F2A44;"><span style="display: block; width: 74%; height: 6px; background: #A8432F;"></span></span>
+    <span style="font-size: 11px; font-weight: 700; color: #FFFCF6;">52/70</span>
+  </div>
+
+  <div role="dialog" aria-label="Встреча" style="position: absolute; left: 12px; right: 12px; top: 400px; background: #FFFCF6; border: 3px solid #1F2A44; box-shadow: 4px 4px 0 rgba(0,0,0,.35); padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #A8432F;">Встреча · ход 2</span>
+      <span style="font-size: 12px; color: #4A5368;">встречались в 7 событиях</span>
+    </div>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 700; line-height: 1.25;">Постоянный преградил путь</div>
+    <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #3D4354;">
+      <span>Вы ударили: −11</span>
+      <span>Постоянный ударил: −18 HP</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <button type="button" style="min-height: 56px; border: 3px solid #1F2A44; background: #1F2A44; color: #FFFCF6; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 14px; font-weight: 700;">Сражаться</span><span style="font-size: 11px; opacity: .85;">удар 8–12</span></button>
+      <button type="button" aria-expanded="true" style="min-height: 56px; border: 3px solid #1F2A44; background: #E2A04A; color: #1F2A44; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 14px; font-weight: 700;">Навык</span><span style="font-size: 11px;">2 готовы</span></button>
+      <button type="button" style="min-height: 56px; border: 3px solid #1F2A44; background: #FFFCF6; color: #1F2A44; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center;"><span style="font-size: 14px; font-weight: 700;">Бежать</span><span style="font-size: 11px;">шанс 34%</span></button>
+    </div>
+    <div style="display: flex; flex-direction: column; border: 2px solid #1F2A44;">
+      <button type="button" style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border: none; border-bottom: 2px solid #1F2A44; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+        <span style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: 14px; font-weight: 700;">Рывок · Бег ×1,5</span><span style="font-size: 12px; color: #4A5368;">побег без броска</span></span><span style="font-size: 12px; font-weight: 700; color: #3E6FA3;">−10 MP</span>
+      </button>
+      <button type="button" style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border: none; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+        <span style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: 14px; font-weight: 700;">Уговорить · Выступления ×1,25</span><span style="font-size: 12px; color: #4A5368;">шанс 19% (CHR 3, против «Постоянного») — NPC станет мирным</span></span><span style="font-size: 12px; font-weight: 700; color: #3E6FA3;">−12 MP</span>
+      </button>
+    </div>
+    <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Пошагово: ваш ход, затем ход NPC. Поражение — герой приходит в себя в последнем городе, ничего не теряется. Числа — из черновика 09, на согласовании.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

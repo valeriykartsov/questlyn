@@ -450,6 +450,34 @@
       "w": 1280,
       "x": 3760,
       "y": 15724
+    },
+    "ExploreSetup.dc.html": {
+      "h": 844,
+      "title": "8B.1 · «Побродить»: диапазон и навыки",
+      "w": 390,
+      "x": 0,
+      "y": 16994
+    },
+    "ExploreIsland.dc.html": {
+      "h": 844,
+      "title": "8B.2 · Остров: города, NPC, сундуки, костры",
+      "w": 390,
+      "x": 470,
+      "y": 16994
+    },
+    "ExploreEncounter.dc.html": {
+      "h": 844,
+      "title": "8B.3 · Встреча: сражаться, навык, бежать",
+      "w": 390,
+      "x": 940,
+      "y": 16994
+    },
+    "ExploreSummary.dc.html": {
+      "h": 844,
+      "title": "8B.4 · Итог прогулки",
+      "w": 390,
+      "x": 1410,
+      "y": 16994
     }
   },
   "createdOnFiles": {
@@ -544,6 +572,13 @@
       "text": "На review (11.11.2026): этап 8 — исправление сна, экран загрузки, подсказки на карте, Epic с профессией, отметки недели, навык и активность",
       "x": 0,
       "y": 15474
+    },
+    "r12": {
+      "kind": "title1",
+      "maxW": 12000,
+      "text": "На review (11.11.2026): этап 8B «Побродить» — мини-игра на острове из событий",
+      "x": 0,
+      "y": 16744
     }
   },
   "order": [
@@ -610,7 +645,11 @@
     "WeeklyUnmark.dc.html",
     "SkillActivity.dc.html",
     "ActivitySkillAuto.dc.html",
-    "Splash.dc.html"
+    "Splash.dc.html",
+    "ExploreSetup.dc.html",
+    "ExploreIsland.dc.html",
+    "ExploreEncounter.dc.html",
+    "ExploreSummary.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"
