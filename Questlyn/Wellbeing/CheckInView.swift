@@ -23,10 +23,15 @@ struct CheckInView: View {
                     moodPicker
                     moodExtras
                     healthBlock
-                    if !model.todayHarms.isEmpty { todayList }
+                    benefitBlock
+                    if !model.todayHarms.isEmpty || !model.todayBenefits.isEmpty { todayList }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, QSpacing.screen)
+                .onChange(of: draft.customBenefitTitle) { _, title in
+                    // Ввод названия своего действия сразу ставит одну отметку.
+                    if !title.trimmingCharacters(in: .whitespaces).isEmpty, (draft.benefits[.custom] ?? 0) == 0 { draft.benefits[.custom] = 1 }
+                }
             }
             .paperScreen()
             .keyboardDismissal()
@@ -117,6 +122,65 @@ struct CheckInView: View {
             .sheetCard()
             summary
         }
+    }
+
+    // MARK: Полезное (08, раздел 2.3)
+
+    private var benefitBlock: some View {
+        VStack(alignment: .leading, spacing: QSpacing.m) {
+            HStack(alignment: .firstTextBaseline) {
+                CapsHeader(title: "Полезное")
+                Spacer()
+                Text("+3% HP, до +10% в день").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(BenefitKind.allCases.filter { $0 != .custom }.enumerated()), id: \.element) { index, kind in
+                    if index > 0 { Divider().overlay(QColor.line) }
+                    benefitRow(title: kind.title, kind: kind)
+                }
+                Divider().overlay(QColor.line)
+                HStack(spacing: QSpacing.l) {
+                    TextField("Своё действие", text: $draft.customBenefitTitle,
+                              prompt: Text("Своё действие").foregroundStyle(QColor.placeholder))
+                        .font(QFont.text(15))
+                    Stepper(value: Binding(get: { draft.benefits[.custom] ?? 0 }, set: { draft.benefits[.custom] = $0 }),
+                            in: 0...WellbeingService.maxCount) {
+                        Text("\(draft.benefits[.custom] ?? 0)").font(QFont.text(15, weight: .semibold)).monospacedDigit()
+                    }
+                    .fixedSize()
+                    .accessibilityLabel("Своё действие")
+                }
+                .padding(.vertical, QSpacing.m)
+            }
+            .padding(.horizontal, QSpacing.xl)
+            .sheetCard()
+            if let vitals, benefitHeal > 0 {
+                Text("HP +\(Int(benefitHeal.rounded())) · не выше \(Vitals.whole(vitals.maxHP))")
+                    .font(QFont.text(13, weight: .bold)).foregroundStyle(QColor.forest)
+            }
+        }
+    }
+
+    private func benefitRow(title: String, kind: BenefitKind) -> some View {
+        HStack(spacing: QSpacing.l) {
+            Text(title).font(QFont.text(15))
+            Spacer(minLength: 0)
+            Stepper(value: Binding(get: { draft.benefits[kind] ?? 0 }, set: { draft.benefits[kind] = $0 }), in: 0...WellbeingService.maxCount) {
+                Text("\(draft.benefits[kind] ?? 0)").font(QFont.text(15, weight: .semibold)).monospacedDigit()
+            }
+            .fixedSize()
+            .accessibilityLabel(title)
+        }
+        .padding(.vertical, QSpacing.m)
+    }
+
+    /// Оценка восстановления: +3% за отметку с учётом уже отмеченного сегодня и предела +10%.
+    private var benefitHeal: Double {
+        guard let vitals else { return 0 }
+        let count = draft.benefits.values.reduce(0, +)
+        let used = Double(model.todayBenefits.count) * BenefitRules.healShare
+        let share = min(Double(count) * BenefitRules.healShare, max(0, BenefitRules.dailyCapShare - used))
+        return min(vitals.maxHP - vitals.hp, vitals.maxHP * share)
     }
 
     private func counter(_ kind: HarmKind, note: String) -> some View {
@@ -235,6 +299,24 @@ struct CheckInView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(QColor.hp)
                         .accessibilityLabel("Удалить отметку «\(harm.title)»")
+                    }
+                    .padding(.vertical, QSpacing.xs)
+                }
+                ForEach(model.todayBenefits) { benefit in
+                    HStack {
+                        Text(benefit.at.formatted(date: .omitted, time: .shortened))
+                            .font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+                        Text(benefit.title).font(QFont.text(14))
+                        Text("+HP").font(QFont.text(12, weight: .bold)).foregroundStyle(QColor.forest)
+                        Spacer()
+                        Button(role: .destructive) {
+                            Task { await model.deleteBenefit(benefit.id) }
+                        } label: {
+                            Image(systemName: "trash").font(.system(size: 14)).frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(QColor.hp)
+                        .accessibilityLabel("Удалить отметку «\(benefit.title)»")
                     }
                     .padding(.vertical, QSpacing.xs)
                 }

@@ -95,8 +95,8 @@ struct RootView: View {
                 TabView(selection: $tab) {
                     Tab("Сегодня", systemImage: "sun.max", value: AppTab.today) { TodayView(model: model) }
                     Tab("Журнал", systemImage: "book.closed", value: AppTab.journal) { JournalView(model: model) }
-                    Tab("Герой", systemImage: "person.crop.circle", value: AppTab.hero) { HeroView(model: model) }
                     Tab("Календарь", systemImage: "calendar", value: AppTab.calendar) { CalendarView(model: model) }
+                    Tab("Герой", systemImage: "person.crop.circle", value: AppTab.hero) { HeroView(model: model) }
                 }
                 .tint(QColor.amber)
             }

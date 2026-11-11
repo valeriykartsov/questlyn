@@ -53,7 +53,7 @@ final class ExploreScene: SKScene {
     override func didMove(to view: SKView) {
         guard children.isEmpty else { return }
         let island = session.island
-        if let image = ExploreRenderer.islandImage(island, seed: session.seed) {
+        if let image = ExploreRenderer.islandImage(island, seed: session.seed, season: session.season) {
             let texture = SKTexture(cgImage: image)
             texture.filteringMode = .nearest
             let ground = SKSpriteNode(texture: texture)
@@ -112,12 +112,14 @@ final class ExploreScene: SKScene {
         for npc in island.npcs {
             let node = sprite(ExploreRenderer.person(looks[npc.id % looks.count], accent: colors[npc.id % colors.count]))
             node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            node.setScale(Self.characterScale)
             addChild(node)
             npcNodes.append(node)
             let badge = SKShapeNode(rectOf: CGSize(width: 4, height: 4))
             badge.strokeColor = UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 1)
             badge.lineWidth = 1
             badge.position = CGPoint(x: 0, y: 32)
+            badge.setScale(1 / Self.characterScale)
             node.addChild(badge)
             npcBadges.append(badge)
             npcs.append(NPCState(x: Double(npc.home.x), y: Double(npc.home.y)))
@@ -131,6 +133,7 @@ final class ExploreScene: SKScene {
             heroNode.size = CGSize(width: 8, height: 14)
         }
         heroNode.anchorPoint = CGPoint(x: 0.5, y: 0)
+        heroNode.setScale(Self.characterScale)
         addChild(heroNode)
         heroLabel.text = "\(session.hero.rankLetter) · Герой"
         heroLabel.fontName = "HelveticaNeue-Bold"
@@ -139,6 +142,7 @@ final class ExploreScene: SKScene {
         heroLabel.position = CGPoint(x: 0, y: 34)
         // Пометка ранга — поверх подписей городов.
         heroLabel.zPosition = 9_500
+        heroLabel.setScale(1 / Self.characterScale)
         let plate = SKShapeNode(rectOf: CGSize(width: heroLabel.frame.width + 8, height: 9), cornerRadius: 3)
         plate.fillColor = UIColor(red: 0xE2 / 255, green: 0xA0 / 255, blue: 0x4A / 255, alpha: 1)
         plate.strokeColor = .clear
@@ -152,8 +156,35 @@ final class ExploreScene: SKScene {
         addChild(cameraNode)
         fogNode.zPosition = 20_000
         cameraNode.addChild(fogNode)
+        if session.precipitation { cameraNode.addChild(precipitationNode(snow: session.season == .winter)) }
         updateFog()
         layoutDynamic()
+    }
+
+    /// Персонажи мельче при прежнем масштабе карты (8C.9).
+    static let characterScale: CGFloat = 0.65
+
+    /// Осадки поверх острова: дождь или снег (зимой).
+    private func precipitationNode(snow: Bool) -> SKEmitterNode {
+        let emitter = SKEmitterNode()
+        let canvas = RGBACanvas(width: snow ? 2 : 1, height: snow ? 2 : 5, fill: snow ? 0xF4F7F9 : 0xBFD3E6)
+        if let image = canvas.image {
+            emitter.particleTexture = SKTexture(cgImage: image)
+            emitter.particleTexture?.filteringMode = .nearest
+        }
+        emitter.particleBirthRate = snow ? 60 : 160
+        emitter.particleLifetime = snow ? 6 : 1.4
+        emitter.particlePositionRange = CGVector(dx: 520, dy: 40)
+        emitter.position = CGPoint(x: 0, y: 260)
+        emitter.emissionAngle = snow ? -.pi / 2 : -.pi / 2 - 0.25
+        emitter.emissionAngleRange = snow ? 0.6 : 0.05
+        emitter.particleSpeed = snow ? 40 : 320
+        emitter.particleSpeedRange = snow ? 20 : 60
+        emitter.particleAlpha = snow ? 0.9 : 0.6
+        emitter.particleRotation = snow ? 0 : 0.25
+        emitter.zPosition = 19_000
+        emitter.advanceSimulationTime(6)
+        return emitter
     }
 
     private func sprite(_ image: CGImage?) -> SKSpriteNode {
@@ -178,7 +209,11 @@ final class ExploreScene: SKScene {
         guard session.encounter == nil, let touch = touches.first else { return }
         let location = touch.location(in: self)
         let t = ExploreRenderer.tile(px: Double(location.x), py: Double(-location.y), side: side)
-        let target = TilePoint(Int(t.x.rounded()), Int(t.y.rounded()))
+        var target = TilePoint(Int(t.x.rounded()), Int(t.y.rounded()))
+        // Касание рядом с сундуком или костром ведёт прямо к нему (8C.9).
+        let goals = session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position)
+            + session.island.campfires.filter { !session.litCampfires.contains($0.id) }.map(\.position)
+        if let goal = goals.min(by: { $0.distance(to: target) < $1.distance(to: target) }), goal.distance(to: target) <= 1.5 { target = goal }
         let from = TilePoint(Int(heroPosition.x.rounded()), Int(heroPosition.y.rounded()))
         guard session.island.isLand(target), let route = session.island.path(from: from, to: target) else { return }
         path = Array(route.dropFirst())
@@ -277,16 +312,30 @@ final class ExploreScene: SKScene {
         for chest in island.chests where !session.openedChests.contains(chest.id) && chest.position.distance(to: tile) <= 1 {
             session.openedChests.insert(chest.id)
             chestNodes[chest.id]?.texture = texture(ExploreRenderer.chest(opened: true))
+            if let node = chestNodes[chest.id] { flash(node) }
             session.toast = "Сундук: \(chest.title)"
         }
         for fire in island.campfires where !session.litCampfires.contains(fire.id) && fire.position.distance(to: tile) <= 1 {
             session.litCampfires.insert(fire.id)
             fireNodes[fire.id]?.texture = texture(ExploreRenderer.campfire(lit: true))
+            if let node = fireNodes[fire.id] { flash(node) }
             let share = ExploreRules.campfireShare * fire.quality
             session.hp = min(session.hero.maxHP, session.hp + session.hero.maxHP * share)
             session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * share)
             session.toast = "Костёр: +\(Int((share * 100).rounded()))% HP и MP"
         }
+    }
+
+    /// Короткая вспышка при находке: увеличение и золотое кольцо.
+    private func flash(_ node: SKSpriteNode) {
+        node.run(.sequence([.scale(to: 1.8, duration: 0.12), .scale(to: 1, duration: 0.2)]))
+        let ring = SKShapeNode(circleOfRadius: 6)
+        ring.strokeColor = UIColor(red: 0.95, green: 0.82, blue: 0.48, alpha: 1)
+        ring.lineWidth = 2
+        ring.position = CGPoint(x: node.position.x, y: node.position.y + 5)
+        ring.zPosition = 9_800
+        addChild(ring)
+        ring.run(.sequence([.group([.scale(to: 4, duration: 0.45), .fadeOut(withDuration: 0.45)]), .removeFromParent()]))
     }
 
     private func texture(_ image: CGImage?) -> SKTexture? {

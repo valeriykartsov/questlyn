@@ -37,7 +37,7 @@ public struct GRDBStore: QuestlynStore {
             try db.execute(sql: "UPDATE profession SET isActive = 0")
             for profession in professions {
                 try Self.write(profession, db)
-                try db.execute(sql: "UPDATE skill SET isActive = ? WHERE professionId = ?",
+                try db.execute(sql: "UPDATE skill SET isActive = ? WHERE professionId = ? AND deletedAt IS NULL",
                                arguments: [profession.isActive, profession.id.uuidString.lowercased()])
             }
         }
@@ -73,6 +73,19 @@ public struct GRDBStore: QuestlynStore {
 
     public func save(_ skill: Skill) async throws {
         try await writer.write { db in try SkillRecord(skill).save(db) }
+    }
+
+    public func deleteSkill(id: UUID, at date: Date) async throws {
+        let key = id.uuidString.lowercased()
+        try await writer.write { db in
+            try db.execute(sql: "UPDATE skill SET deletedAt = ?, isActive = 0, activityTemplateId = NULL WHERE id = ?", arguments: [date, key])
+            // Открытые квесты и привычки остаются без навыка; выполненные квесты не меняются — начисления уже посчитаны.
+            try db.execute(sql: """
+                UPDATE quest SET skillId = NULL WHERE skillId = ?
+                AND id NOT IN (SELECT questId FROM questCompletion WHERE undoneAt IS NULL)
+                """, arguments: [key])
+            try db.execute(sql: "UPDATE habit SET skillId = NULL WHERE skillId = ?", arguments: [key])
+        }
     }
 
     public func linkActivityTemplate(_ templateId: String?, toSkill skillId: UUID) async throws {
@@ -427,6 +440,22 @@ public struct GRDBStore: QuestlynStore {
     public func deleteHarm(id: UUID, at date: Date) async throws {
         try await writer.write { db in
             guard var record = try HarmEntryRecord.fetchOne(db, key: id.uuidString.lowercased()), record.deletedAt == nil else { return }
+            record.deletedAt = date
+            try record.update(db)
+        }
+    }
+
+    public func benefitEntries() async throws -> [BenefitEntry] {
+        try await writer.read { db in try BenefitEntryRecord.order(Column("at")).fetchAll(db).compactMap(\.domain) }
+    }
+
+    public func record(_ benefits: [BenefitEntry]) async throws {
+        try await writer.write { db in for benefit in benefits { try BenefitEntryRecord(benefit).insert(db) } }
+    }
+
+    public func deleteBenefit(id: UUID, at date: Date) async throws {
+        try await writer.write { db in
+            guard var record = try BenefitEntryRecord.fetchOne(db, key: id.uuidString.lowercased()), record.deletedAt == nil else { return }
             record.deletedAt = date
             try record.update(db)
         }

@@ -134,6 +134,8 @@ struct MapOverviewView: View {
     @State private var selected: Selection?
     /// «Побродить» (8B).
     @State private var isExploring = false
+    /// Спрайт героя для карты недели.
+    @State private var heroImage: CGImage?
 
     struct Selection: Equatable {
         let x: Int
@@ -171,6 +173,7 @@ struct MapOverviewView: View {
         let map = model.weekMap(start: weekStart)
         week = map
         rendered = WeekMapRenderer.render(map, appearance: model.hero?.appearance, accent: model.heroAccent, timeZone: .current)
+        if heroImage == nil, let appearance = model.hero?.appearance { heroImage = ExploreRenderer.person(appearance, accent: model.heroAccent) }
         // По умолчанию — «сейчас»; в другой неделе — полдень понедельника.
         if resetPosition { position = map.heroHour ?? 12 }
         #if DEBUG
@@ -284,10 +287,33 @@ struct MapOverviewView: View {
                         }
                     }
                 }
-                if let hero = week?.heroHour, abs(hero - position) < 10 {
+                // «Сейчас» — постоянная метка на дороге (8C.3).
+                if let now = week?.heroHour, abs(now - position) > 0.4 {
+                    let point = WeekMapRenderer.roadPoint(now)
+                    VStack(spacing: 0) {
+                        Text("Сейчас").font(QFont.text(9, weight: .bold)).foregroundStyle(QColor.sheet)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(Color(hex: 0x1F2A44), in: RoundedRectangle(cornerRadius: 5))
+                        Rectangle().fill(Color(hex: 0x1F2A44)).frame(width: 2, height: 8)
+                    }
+                    .fixedSize()
+                    .position(x: (CGFloat(point.x) - originX) * scale, y: (CGFloat(point.y) - originY) * scale - 10)
+                    .accessibilityHidden(true)
+                }
+                // Герой идёт по дороге за ползунком и перетаскиванием (8C.3).
+                if let image = heroImage {
+                    let point = WeekMapRenderer.roadPoint(position)
+                    Image(decorative: image, scale: 1).resizable().interpolation(.none)
+                        .frame(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
+                        .position(x: (CGFloat(point.x) - originX) * scale,
+                                  y: (CGFloat(point.y + 7) - originY) * scale - CGFloat(image.height) * scale / 2)
+                        .allowsHitTesting(false)
+                }
+                do {
+                    let hero = position
                     let point = WeekMapRenderer.roadPoint(hero)
                     Button { select(Selection(x: point.x, y: point.y + 16, callout: heroCallout(hour: hero))) } label: {
-                        Text("\(model.progress.rank?.letter ?? "—") · \(Date.now.formatted(date: .omitted, time: .shortened))")
+                        Text("\(model.progress.rank?.letter ?? "—") · \(positionTime)")
                             .font(QFont.text(10, weight: .bold))
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
@@ -355,6 +381,12 @@ struct MapOverviewView: View {
         .foregroundStyle(fg)
         .background(bg, in: RoundedRectangle(cornerRadius: 7))
         .fixedSize())
+    }
+
+    /// Время точки ползунка — подпись над героем.
+    private var positionTime: String {
+        let start = VitalsCalculator.date(weekStart, LocalTime(hour: 0, minute: 0)!, timeZone: .current)
+        return start.addingTimeInterval(position * 3600).formatted(date: .omitted, time: .shortened)
     }
 
     private func select(_ selection: Selection) {
@@ -502,7 +534,8 @@ struct MapCallout: View {
             .frame(width: bubbleWidth, alignment: .leading)
             .background(QColor.sheet)
             .overlay(Rectangle().strokeBorder(QColor.ink, lineWidth: 3))
-            .background(QColor.ink.opacity(0.35).offset(x: 4, y: 4))
+            // Тень всегда тёмная: «чернила» в тёмной теме светлые и выглядели как фон за рамкой (8C.1).
+            .background(Color.black.opacity(0.35).offset(x: 4, y: 4))
             // Ступенчатый хвостик, как в пиксельном диалоге.
             VStack(alignment: .leading, spacing: 0) {
                 Rectangle().fill(QColor.ink).frame(width: 15, height: 3)

@@ -83,6 +83,14 @@ final class AppModel {
 
     var weather: Weather { overview?.weather ?? .clear }
     var todayHarms: [HarmEntry] { overview?.todayHarms ?? [] }
+    var todayBenefits: [BenefitEntry] { overview?.todayBenefits ?? [] }
+
+    func deleteBenefit(_ id: UUID) async {
+        await run { [self] in
+            try await WellbeingService(store: store).deleteBenefit(id: id, now: .now)
+            await reload()
+        }
+    }
     var lastMood: MoodEntry? { overview?.lastMood }
 
     private let moodSink = StateOfMindSink()
@@ -394,6 +402,20 @@ final class AppModel {
             await reload()
         }
         return created
+    }
+
+    func renameSkill(_ skillId: UUID, title: String) async -> Bool {
+        await run { [self] in
+            try await SkillService(store: store).rename(skillId: skillId, title: title)
+            await reload()
+        }
+    }
+
+    func deleteSkill(_ skillId: UUID) async -> Bool {
+        await run { [self] in
+            try await SkillService(store: store).delete(skillId: skillId, now: .now)
+            await reload()
+        }
     }
 
     /// Привязка навыка к виду активности, один к одному (8.6). nil — убрать.

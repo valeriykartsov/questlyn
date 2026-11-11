@@ -50,7 +50,7 @@ extension QuestlynError: CustomStringConvertible {
         case .notCompleted: "Квест не выполнен."
         case .timeWithoutDate: "Время можно указать только вместе с датой."
         case .lockedWhileCompleted: "Приоритет и навык выполненного квеста не меняются. Сначала отмените выполнение."
-        case .cannotMarkDate: "Отметить можно только за сегодня и за вчера."
+        case .cannotMarkDate: "Отметить можно за сегодня и за вчера, недельный квест — за любой день этой недели."
         case .notScheduled: "В этот день квест не запланирован."
         case .alreadyMarked: "Уже отмечено."
         case .noWeekdays: "Выберите хотя бы один день недели."
