@@ -32,11 +32,22 @@ enum WeekMapRenderer {
     static func roadPoint(_ weekHour: Double) -> (x: Int, y: Int) { iso(roadI(weekHour), roadMid) }
 
     struct Label: Hashable {
-        enum Kind: Hashable { case settlement(city: Bool), camp(known: Bool), day }
+        /// `quest` — без подписи: только место касания у флажка квеста.
+        enum Kind: Hashable { case settlement(city: Bool), camp(known: Bool), day, quest(done: Bool) }
         let x: Int
         let y: Int
         let title: String
         let kind: Kind
+        /// Подсказка по касанию (8.3, макет 8.19).
+        var callout: Callout? = nil
+    }
+
+    /// Содержимое подсказки-реплики: подпись типа, заголовок, строки и час недели объекта.
+    struct Callout: Hashable {
+        let caption: String
+        let title: String
+        let lines: [String]
+        let weekHour: Double
     }
 
     struct Rendered {
@@ -269,9 +280,12 @@ enum WeekMapRenderer {
             let point = iso(Double(spot[0]), Double(spot[1]))
             items.append((Double(spot[0] + spot[1]) + 0.5, .camp(point.x, point.y + 6, camp.source != nil)))
             let from = camp.start.formatted(date: .omitted, time: .shortened), to = camp.end.formatted(date: .omitted, time: .shortened)
+            let sourceLine = camp.source.map { "\(duration(camp.minutes)) · \(SleepCard.sourceTitle($0))" } ?? "нет данных о сне · ночь нейтральная"
             labels.append(Label(x: point.x + 2, y: spot[1] > roadJ.1 ? point.y + 18 : point.y - 16,
                                 title: camp.source == nil ? "\(from)–\(to) · нет данных" : "\(from)–\(to) · \(duration(camp.minutes))",
-                                kind: .camp(known: camp.source != nil)))
+                                kind: .camp(known: camp.source != nil),
+                                callout: Callout(caption: "Привал · сон", title: "\(from)–\(to)", lines: [sourceLine],
+                                                 weekHour: (startHour + endHour) / 2)))
         }
 
         // Поселения, квесты и флажки каждого дня.
@@ -304,8 +318,15 @@ enum WeekMapRenderer {
                 }
                 let near = placed.tiles[0]
                 let point = iso(Double(near[0]), Double(near[1]))
+                let minutes = Int(((settlement.endHour - settlement.startHour) * 60).rounded())
+                var lines = ["\(MapText.time(settlement.startHour))–\(MapText.time(settlement.endHour)) · \(duration(max(minutes, 1)))"]
+                if settlement.density > 1 { lines.append("Пересекаются события: \(settlement.density)") }
+                if settlement.attendees > 0 { lines.append("Участников: \(settlement.attendees)") }
                 labels.append(Label(x: point.x + 4, y: placed.above ? point.y - (placed.heights.max() ?? 6) - 8 : point.y + tile.h + 12,
-                                    title: settlement.titles.joined(separator: " + "), kind: .settlement(city: settlement.kind == .city)))
+                                    title: settlement.titles.joined(separator: " + "), kind: .settlement(city: settlement.kind == .city),
+                                    callout: Callout(caption: settlement.kind == .city ? "Город · событие" : "Деревня · событие",
+                                                     title: settlement.titles.joined(separator: " + "), lines: lines,
+                                                     weekHour: offset + settlement.startHour)))
                 for k in 0..<min(settlement.attendees, 2) {
                     let pj = placed.above ? Double(near[1]) - 0.9 : Double(roadJ.1) + 0.2
                     let pi = Double(near[0]) + 0.2 + Double(k) * 0.55
@@ -315,6 +336,9 @@ enum WeekMapRenderer {
             for marker in day.questMarkers {
                 let (x, y) = iso(roadI(offset + marker.hour), Double(roadJ.1) + 0.3)
                 PixelMapRenderer.flag(&buffer, x: x, baseY: y + 4, height: 9, color: MapStyle.questColor(done: marker.isDone))
+                labels.append(Label(x: x, y: y - 2, title: marker.title, kind: .quest(done: marker.isDone),
+                                    callout: Callout(caption: marker.isDone ? "Квест · выполнен" : "Квест", title: marker.title,
+                                                     lines: [MapText.time(marker.hour)], weekHour: offset + marker.hour)))
             }
             for mood in day.moodFlags {
                 let (x, y) = iso(roadI(offset + mood.hour), Double(roadJ.0) - 0.1)

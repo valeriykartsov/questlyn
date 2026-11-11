@@ -75,6 +75,16 @@ public struct GRDBStore: QuestlynStore {
         try await writer.write { db in try SkillRecord(skill).save(db) }
     }
 
+    public func linkActivityTemplate(_ templateId: String?, toSkill skillId: UUID) async throws {
+        try await writer.write { db in
+            if let templateId {
+                try db.execute(sql: "UPDATE skill SET activityTemplateId = NULL WHERE activityTemplateId = ? AND id != ?",
+                               arguments: [templateId, skillId.uuidString.lowercased()])
+            }
+            try db.execute(sql: "UPDATE skill SET activityTemplateId = ? WHERE id = ?", arguments: [templateId, skillId.uuidString.lowercased()])
+        }
+    }
+
     public func masteries() async throws -> [SkillMastery] {
         try await writer.read { db in try SkillMasteryRecord.order(Column("assessedAt")).fetchAll(db).map(\.domain) }
     }
@@ -310,6 +320,15 @@ public struct GRDBStore: QuestlynStore {
         try await writer.write { db in
             try SleepSessionRecord
                 .filter(Column("source") == SleepSource.manual.rawValue && Column("wakeDate") == session.wakeDate.description)
+                .deleteAll(db)
+            try SleepSessionRecord(session).insert(db)
+        }
+    }
+
+    public func saveCorrectedSleep(_ session: SleepSession) async throws {
+        try await writer.write { db in
+            try SleepSessionRecord
+                .filter(Column("source") == SleepSource.corrected.rawValue && Column("wakeDate") == session.wakeDate.description)
                 .deleteAll(db)
             try SleepSessionRecord(session).insert(db)
         }

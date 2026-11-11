@@ -11,6 +11,7 @@ enum Migrations {
     static let chronicle = "v7_chronicle"
     static let wellbeing = "v8_wellbeing"
     static let softDelete = "v9_softDelete"
+    static let stage8 = "v10_stage8"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -284,6 +285,32 @@ enum Migrations {
             try db.alter(table: "habit") { t in t.add(column: "archivedOn", .text) }
         }
 
+        // Этап 8: профессия у Epic, вид активности у навыка, исправление сна (новый источник `corrected`).
+        migrator.registerMigration(stage8) { db in
+            try db.alter(table: "epic") { t in t.add(column: "professionId", .text).references("profession", onDelete: .setNull) }
+            try db.alter(table: "skill") { t in t.add(column: "activityTemplateId", .text) }
+            // У SQLite нельзя изменить CHECK — таблица сна пересоздаётся с тем же содержимым.
+            try db.create(table: "sleepSession_v10") { t in
+                t.primaryKey("id", .text)
+                t.column("wakeDate", .text).notNull()
+                t.column("durationMinutes", .integer).notNull().check { $0 > 0 && $0 <= 1440 }
+                t.column("bedtimeDeviationMinutes", .integer)
+                t.column("startedAt", .datetime)
+                t.column("endedAt", .datetime)
+                t.column("source", .text).notNull()
+                    .check { [SleepSourceValue.manual, SleepSourceValue.health, SleepSourceValue.corrected].contains($0) }
+                t.column("timezoneId", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.execute(sql: """
+                INSERT INTO sleepSession_v10 (id, wakeDate, durationMinutes, bedtimeDeviationMinutes, startedAt, endedAt, source, timezoneId, createdAt)
+                SELECT id, wakeDate, durationMinutes, bedtimeDeviationMinutes, startedAt, endedAt, source, timezoneId, createdAt FROM sleepSession
+                """)
+            try db.drop(table: "sleepSession")
+            try db.rename(table: "sleepSession_v10", to: "sleepSession")
+            try db.create(index: "index_sleepSession_on_wakeDate", on: "sleepSession", columns: ["wakeDate"], ifNotExists: true)
+        }
+
         return migrator
     }
 }
@@ -291,4 +318,5 @@ enum Migrations {
 private enum SleepSourceValue {
     static let manual = "manual"
     static let health = "health"
+    static let corrected = "corrected"
 }

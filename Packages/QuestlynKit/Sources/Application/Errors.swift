@@ -27,6 +27,8 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case invalidProfessionAttributes
     case unknownActivityType
     case invalidDuration
+    case cannotCorrectNight
+    case invalidSleepInterval
 }
 
 extension QuestlynError: CustomStringConvertible {
@@ -58,6 +60,8 @@ extension QuestlynError: CustomStringConvertible {
         case .epicHasOpenSteps: "Завершить Epic можно, когда все шаги выполнены."
         case .unknownActivityType: "Такого типа активности нет."
         case .invalidDuration: "Длительность — от 1 минуты до 24 часов."
+        case .cannotCorrectNight: "Исправить можно только одну из последних 7 ночей."
+        case .invalidSleepInterval: "Подъём должен быть позже отбоя, не позже текущего времени, а сон — не дольше 24 часов."
         case .invalidProfessionAttributes: "У профессии от 1 до 3 разных атрибутов: STR, END, INT, MNT, CHR."
         case .resetNotConfirmed: "Чтобы сбросить данные, введите слово СБРОС."
         }

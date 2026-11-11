@@ -148,6 +148,13 @@ public struct SkillService: Sendable {
         return skill
     }
 
+    /// Привязка навыка к виду активности один к одному (8.6): вид снимается с прежнего навыка. nil — убрать.
+    public func linkActivity(templateId: String?, skillId: UUID) async throws {
+        guard try await store.skills().contains(where: { $0.id == skillId }) else { throw QuestlynError.skillNotFound }
+        if let templateId, ActivityTemplate.template(id: templateId) == nil { throw QuestlynError.unknownActivityType }
+        try await store.linkActivityTemplate(templateId, toSkill: skillId)
+    }
+
     /// Мастерство 1–5 меняется только вручную и хранится как факт оценки (07, раздел 6).
     public func assess(skillId: UUID, mastery: Int, now: Date) async throws {
         guard try await store.skills().contains(where: { $0.id == skillId }) else { throw QuestlynError.skillNotFound }
@@ -426,13 +433,20 @@ public struct TodayService: Sendable {
         }
 
         let habits = try await HabitStatusBuilder(store: store).statuses(today: date, skills: skills)
-        let epics = try await store.epics().map { epic in
+        let unsortedEpics = try await store.epics().map { epic in
             let steps = journal.filter { $0.quest.epicId == epic.id }.sorted { lhs, rhs in
                 (lhs.quest.dueDate ?? LocalDate(year: 9999, month: 1, day: 1), lhs.quest.createdAt)
                     < (rhs.quest.dueDate ?? LocalDate(year: 9999, month: 1, day: 1), rhs.quest.createdAt)
             }
             return EpicStatus(epic: epic, steps: steps)
         }
+        // Epic с профессией — выше остальных, по слоту профессии; внутри группы порядок не меняется (8.4).
+        let slots = Dictionary(professions.filter(\.isActive).map { ($0.id, $0.slot) }, uniquingKeysWith: { first, _ in first })
+        let epics = unsortedEpics.enumerated().sorted { lhs, rhs in
+            let l = lhs.element.epic.professionId.flatMap { slots[$0] } ?? 4
+            let r = rhs.element.epic.professionId.flatMap { slots[$0] } ?? 4
+            return (l, lhs.offset) < (r, rhs.offset)
+        }.map(\.element)
         let lastWeek = date.weekStart.adding(days: -7)
         let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
         let settings = try await store.vitalSettings()

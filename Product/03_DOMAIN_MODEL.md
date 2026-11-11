@@ -183,7 +183,7 @@ Epic (epicId) добавится миграцией этапа 2.
 | Vitals | SleepSession, HarmType, HarmEntry, StatusEffect (дебаф INT), Vitals — проекция HP/MP | 08 |
 | Chronicle | ChronicleEntry (вехи); остальная лента — проекция фактов | 08 |
 | Wellbeing | MoodEntry (+ State of Mind) | 02 |
-| Calendar | CalendarEvent (EventKit, только чтение), Schedule | 02 |
+| Calendar | CalendarEvent (EventKit: чтение; запись — только квесты с датой в календарь «Questlyn»), Schedule | 02 |
 | World | DayMap — проекция событий, квестов и настроения; Weather | 02 |
 | Settings | SleepWindow, StepGoal, Theme | 02, 08 |
 | Backup | BackupSnapshot (iCloud Drive), Export | 02 |
@@ -200,3 +200,9 @@ Epic (epicId) добавится миграцией этапа 2.
 - **11.11.2026** — этап 4: сон, шаги, настройки здоровья; HP и MP — проекции.
 - **11.11.2026** — этап 5: вехи Летописи (`ChronicleEntry`).
 - **11.11.2026** — этап 6A: настроение, отметки здоровья, свои вредные привычки.
+
+### Этап 8 (миграция v10, 11.11.2026)
+
+- `epic.professionId` (UUID?, → Profession, при удалении профессии — NULL): только акцент и порядок в журнале, на начисления не влияет.
+- `skill.activityTemplateId` (String?, `ActivityTemplate.id`): привязка навыка к виду активности один к одному; инвариант держит `linkActivityTemplate` одной транзакцией.
+- `SleepSession.source = corrected` — исправление одной из последних 7 ночей точным интервалом. Ночь в расчёте: последнее исправление, иначе самая длинная запись (`SleepRules.nights`). Записи HealthKit и ручной ввод не удаляются — прежнее значение показывается в Летописи («было …»).

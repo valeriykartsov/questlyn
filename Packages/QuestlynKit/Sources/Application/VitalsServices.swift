@@ -37,6 +37,20 @@ public struct SleepService: Sendable {
         try await store.saveManualSleep(session)
         return session
     }
+
+    /// Исправление одной из последних 7 ночей точным интервалом (8.1). Побеждает HealthKit и ручной ввод той ночи.
+    @discardableResult
+    public func correct(wakeDate: LocalDate, startedAt: Date, endedAt: Date, now: Date, timeZone: TimeZone) async throws -> SleepSession {
+        let today = LocalDate(now, timeZone: timeZone)
+        guard SleepRules.correctableWakeDates(today: today).contains(wakeDate) else { throw QuestlynError.cannotCorrectNight }
+        let settings = try await store.vitalSettings()
+        guard let session = SleepRules.correction(wakeDate: wakeDate, startedAt: startedAt, endedAt: endedAt,
+                                                  window: settings.sleepWindow, timeZone: timeZone, now: now) else {
+            throw QuestlynError.invalidSleepInterval
+        }
+        try await store.saveCorrectedSleep(session)
+        return session
+    }
 }
 
 /// Источник данных Apple Health (только чтение). Реализация — в приложении, чтобы пакет не зависел от HealthKit.

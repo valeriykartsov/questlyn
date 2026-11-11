@@ -6,6 +6,8 @@ import Application
 struct ChronicleView: View {
     let model: AppModel
     @State private var category: ChronicleCategory?
+    /// Ночь из Летописи, открытая для исправления (8.1).
+    @State private var correctingNight: LocalDate?
 
     private var days: [ChronicleDay] {
         model.chronicle.compactMap { day in
@@ -27,6 +29,9 @@ struct ChronicleView: View {
             ForEach(days) { day in
                 daySection(day)
             }
+        }
+        .sheet(item: Binding(get: { correctingNight.map(NightID.init) }, set: { correctingNight = $0?.date })) {
+            SleepCorrectionView(model: model, wakeDate: $0.date)
         }
         .task { await model.loadChronicle() }
     }
@@ -65,13 +70,26 @@ struct ChronicleView: View {
             }
             VStack(spacing: 0) {
                 ForEach(Array(day.items.enumerated()), id: \.element.id) { index, item in
-                    row(item)
+                    if let night = correctableNight(item) {
+                        Button { correctingNight = night } label: { row(item) }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Открыть исправление сна")
+                    } else {
+                        row(item)
+                    }
                     if index < day.items.count - 1 { Divider().overlay(QColor.line).padding(.leading, 58) }
                 }
             }
             .padding(.vertical, QSpacing.xs)
             .sheetCard()
         }
+    }
+
+    /// Ночь, которую можно исправить: запись сна за одну из последних 7 ночей.
+    private func correctableNight(_ item: ChronicleItem) -> LocalDate? {
+        guard item.id.hasPrefix("night:") else { return nil }
+        let date = LocalDate(item.at, timeZone: .current)
+        return SleepRules.correctableWakeDates(today: model.today).contains(date) ? date : nil
     }
 
     private func dayTitle(_ date: LocalDate) -> String {
@@ -100,6 +118,11 @@ struct ChronicleView: View {
                         .strikethrough(item.isCancelled, color: QColor.inkSecondary)
                         .foregroundStyle(item.isCancelled ? QColor.inkSecondary : QColor.ink)
                 }
+                if let badge = item.badge {
+                    Text(badge).font(QFont.text(11, weight: .bold)).foregroundStyle(QColor.amberDeep)
+                        .padding(.horizontal, QSpacing.m).padding(.vertical, 1)
+                        .overlay(Capsule().strokeBorder(QColor.amberDeep))
+                }
                 if let detail = item.detail {
                     Text(detail).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                 }
@@ -114,8 +137,14 @@ struct ChronicleView: View {
         }
         .padding(.horizontal, QSpacing.xl)
         .padding(.vertical, QSpacing.m)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
+}
+
+private struct NightID: Identifiable {
+    let date: LocalDate
+    var id: String { date.description }
 }
 
 /// Изменения строки: «+5 FOC», «+10 Отчётность», «−4 MP».

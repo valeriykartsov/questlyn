@@ -24,6 +24,7 @@ struct EpicFormView: View {
     @State private var steps: [StepRow] = [StepRow(title: ""), StepRow(title: "")]
     @State private var isSaving = false
     @State private var isConfirmingDelete = false
+    @State private var professionId: UUID?
 
     init(model: AppModel, onDone: (() -> Void)? = nil, editing: EpicStatus? = nil) {
         self.model = model
@@ -34,6 +35,7 @@ struct EpicFormView: View {
             _details = State(initialValue: editing.epic.details ?? "")
             _hasDeadline = State(initialValue: editing.epic.deadline != nil)
             if let date = editing.epic.deadline?.date { _deadline = State(initialValue: date) }
+            _professionId = State(initialValue: editing.epic.professionId)
             _steps = State(initialValue: editing.steps.map { StepRow(questId: $0.quest.id, title: $0.quest.title, isDone: $0.isCompleted) })
         }
     }
@@ -45,6 +47,22 @@ struct EpicFormView: View {
                     .font(QFont.text(17, weight: .semibold))
                 TextField("Описание · необязательно", text: $details, prompt: Text("Описание · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
                     .font(QFont.text(15)).lineLimit(2...6)
+            }
+            .listRowBackground(QColor.sheet)
+
+            Section {
+                Picker("Профессия", selection: $professionId) {
+                    Text("Без профессии").tag(UUID?.none)
+                    ForEach(activeProfessions) { profession in
+                        Text(profession.title).tag(UUID?.some(profession.id))
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } header: {
+                Text("Профессия · необязательно")
+            } footer: {
+                Text("Epic с профессией выделяется акцентом и стоит в журнале выше остальных. Навык и награды шагов не меняются — их задаёт каждый шаг.")
             }
             .listRowBackground(QColor.sheet)
 
@@ -108,6 +126,10 @@ struct EpicFormView: View {
         }
     }
 
+    private var activeProfessions: [Profession] {
+        (model.overview?.professions ?? []).filter(\.isActive).sorted { $0.slot < $1.slot }
+    }
+
     private func save() {
         isSaving = true
         Task {
@@ -120,9 +142,10 @@ struct EpicFormView: View {
                     draft.title = row.title
                     return EpicService.StepEdit(id: row.questId, draft: draft)
                 }
-                ok = await model.updateEpic(editing.epic.id, title: title, details: details, deadline: due, steps: edits)
+                ok = await model.updateEpic(editing.epic.id, title: title, details: details, deadline: due, steps: edits, professionId: professionId)
             } else {
-                ok = await model.createEpic(title: title, details: details, deadline: due, steps: steps.map { QuestDraft(title: $0.title) })
+                ok = await model.createEpic(title: title, details: details, deadline: due, steps: steps.map { QuestDraft(title: $0.title) },
+                                            professionId: professionId)
             }
             isSaving = false
             if ok { if let onDone { onDone() } else { dismiss() } }

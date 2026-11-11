@@ -275,6 +275,14 @@ final class AppModel {
         }
     }
 
+    /// Исправление одной из последних 7 ночей точным интервалом (8.1).
+    func correctSleep(wakeDate: LocalDate, startedAt: Date, endedAt: Date) async -> Bool {
+        await run { [self] in
+            try await SleepService(store: store).correct(wakeDate: wakeDate, startedAt: startedAt, endedAt: endedAt, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
     func updateVitalSettings(_ settings: VitalSettings) async -> Bool {
         await run { [self] in
             try await VitalsService(store: store).updateSettings(settings)
@@ -330,6 +338,17 @@ final class AppModel {
         }
         return created
     }
+
+    /// Привязка навыка к виду активности, один к одному (8.6). nil — убрать.
+    func linkActivity(templateId: String?, skillId: UUID) async {
+        await run { [self] in
+            try await SkillService(store: store).linkActivity(templateId: templateId, skillId: skillId)
+            await reload()
+        }
+    }
+
+    /// Навык, привязанный к виду активности.
+    func linkedSkill(templateId: String) -> Skill? { skills.first { $0.activityTemplateId == templateId && $0.isActive } }
 
     func assessMastery(skillId: UUID, value: Int) async {
         await run { [self] in
@@ -395,6 +414,21 @@ final class AppModel {
             try await HabitMarkService(store: store).unmark(habitId: habitId, on: date, now: .now, timeZone: timeZone)
             await reload()
         }
+    }
+
+    /// Снять конкретную отметку недельного квеста текущей недели (8.5).
+    func unmarkWeekly(occurrenceId: UUID) async {
+        await run { [self] in
+            try await HabitMarkService(store: store).unmarkWeekly(occurrenceId: occurrenceId, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    /// Отметки недельного квеста за текущую неделю — для списка «Отметки недели».
+    func weekOccurrences(habitId: UUID) async -> [HabitOccurrence] {
+        let today = LocalDate(.now, timeZone: timeZone)
+        let all = (try? await store.occurrences(from: today.weekStart, through: today)) ?? []
+        return all.filter { $0.habitId == habitId }.sorted { $0.completedAt < $1.completedAt }
     }
 
     // MARK: Activity
@@ -466,17 +500,19 @@ final class AppModel {
     var epics: [EpicStatus] { overview?.epics ?? [] }
     func epic(id: UUID?) -> EpicStatus? { epics.first { $0.id == id } }
 
-    func createEpic(title: String, details: String, deadline: LocalDate?, steps: [QuestDraft]) async -> Bool {
+    func createEpic(title: String, details: String, deadline: LocalDate?, steps: [QuestDraft], professionId: UUID?) async -> Bool {
         await run { [self] in
-            try await EpicService(store: store).create(title: title, details: details, deadline: deadline, steps: steps, now: .now, timeZone: timeZone)
+            try await EpicService(store: store).create(title: title, details: details, deadline: deadline, steps: steps,
+                                                       professionId: professionId, now: .now, timeZone: timeZone)
             await reload()
         }
     }
 
-    func updateEpic(_ epicId: UUID, title: String, details: String, deadline: LocalDate?, steps: [EpicService.StepEdit]) async -> Bool {
+    func updateEpic(_ epicId: UUID, title: String, details: String, deadline: LocalDate?, steps: [EpicService.StepEdit],
+                    professionId: UUID?) async -> Bool {
         await run { [self] in
             try await EpicService(store: store).update(epicId: epicId, title: title, details: details, deadline: deadline,
-                                                       steps: steps, now: .now, timeZone: timeZone)
+                                                       steps: steps, professionId: professionId, now: .now, timeZone: timeZone)
             await reload()
         }
     }

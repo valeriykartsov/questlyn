@@ -14,9 +14,13 @@ struct ActivityFormView: View {
     @State private var skillId: UUID?
     @State private var questId: UUID?
     @State private var isSaving = false
+    /// Привязка выбранного навыка к виду, если вид занят другим навыком, — с вопросом (8.6).
+    @State private var pendingLink: (template: ActivityTemplate, skill: Skill, owner: Skill)?
 
     private let presets = [15, 30, 45, 60, 90]
     private var draft: ActivityDraft { ActivityDraft(templateId: templateId, durationMinutes: minutes, skillId: skillId, startedAt: startedAt) }
+    private var selectedSkill: Skill? { model.skill(id: skillId) }
+    private var isLinked: Bool { selectedSkill.map { $0.activityTemplateId == templateId } ?? false }
     private var openQuests: [TodayItem] { (model.overview?.journal ?? []).filter { !$0.isCompleted } }
 
     var body: some View {
@@ -29,7 +33,11 @@ struct ActivityFormView: View {
                         Button { templateId = template.id } label: {
                             VStack(alignment: .leading, spacing: QSpacing.xxs) {
                                 Text(template.title).font(QFont.text(13, weight: .semibold)).multilineTextAlignment(.leading)
-                                Text(template.attributes.map(\.code).joined(separator: " · ")).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                                if let linked = model.linkedSkill(templateId: template.id) {
+                                    Text("навык «\(linked.title)»").font(QFont.text(11, weight: .semibold)).foregroundStyle(QColor.forest)
+                                } else {
+                                    Text(template.attributes.map(\.code).joined(separator: " · ")).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                                }
                             }
                             .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
                             .padding(.horizontal, QSpacing.m)
@@ -59,6 +67,21 @@ struct ActivityFormView: View {
                             }
                         }
                     }
+                    if isLinked {
+                        Text("подставлен из привязки").font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.forest)
+                            .frame(maxWidth: .infinity, alignment: .trailing).padding(.horizontal, QSpacing.xl).padding(.bottom, QSpacing.s)
+                    }
+                    Divider().overlay(QColor.line)
+                    Toggle(isOn: Binding(get: { isLinked }, set: setLink)) {
+                        VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                            Text("Привязать к виду").font(QFont.text(15))
+                            Text(selectedSkill.map { "«\($0.title)» ↔ «\(template.title)»" } ?? "сначала выберите навык")
+                                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        }
+                    }
+                    .tint(QColor.forest)
+                    .disabled(selectedSkill == nil)
+                    .padding(.horizontal, QSpacing.xl).frame(minHeight: 56)
                     Divider().overlay(QColor.line)
                     pickerRow("Закрыть квест") {
                         Picker("Закрыть квест", selection: $questId) {
@@ -84,9 +107,39 @@ struct ActivityFormView: View {
         .toolbar {
             if onDone == nil { ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } } }
         }
+        .confirmationDialog(pendingLink.map { "Перенести «\($0.template.title)» с навыка «\($0.owner.title)»?" } ?? "",
+                            isPresented: Binding(get: { pendingLink != nil }, set: { if !$0 { pendingLink = nil } }), titleVisibility: .visible) {
+            Button("Перенести") {
+                guard let link = pendingLink else { return }
+                Task { await model.linkActivity(templateId: link.template.id, skillId: link.skill.id) }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("У вида активности может быть только один навык.")
+        }
+        .onAppear { applyLinkedSkill() }
+        .onChange(of: templateId) { _, _ in applyLinkedSkill() }
         .onChange(of: questId) { _, id in
             // Квест с навыком подставляет свой навык.
             if let id, let quest = openQuests.first(where: { $0.quest.id == id })?.quest, let skill = quest.skillId { skillId = skill }
+        }
+    }
+
+    private var template: ActivityTemplate { ActivityTemplate.template(id: templateId) ?? ActivityTemplate.all[0] }
+
+    /// Вид с привязанным навыком подставляет его; квест с навыком важнее — его навык не перебиваем.
+    private func applyLinkedSkill() {
+        if let id = questId, openQuests.first(where: { $0.quest.id == id })?.quest.skillId != nil { return }
+        if let linked = model.linkedSkill(templateId: templateId) { skillId = linked.id }
+    }
+
+    private func setLink(_ on: Bool) {
+        guard let skill = selectedSkill else { return }
+        guard on else { Task { await model.linkActivity(templateId: nil, skillId: skill.id) }; return }
+        if let owner = model.linkedSkill(templateId: templateId), owner.id != skill.id {
+            pendingLink = (template, skill, owner)
+        } else {
+            Task { await model.linkActivity(templateId: templateId, skillId: skill.id) }
         }
     }
 

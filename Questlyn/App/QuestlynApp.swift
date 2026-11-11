@@ -1,4 +1,5 @@
 import SwiftUI
+import Domain
 
 @main
 struct QuestlynApp: App {
@@ -27,6 +28,8 @@ struct RootView: View {
     @AppStorage("appTheme") private var theme: AppTheme = .system
     /// Размеры шрифтов считаются через UIFontMetrics — при смене размера текста пересобираем экраны.
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// Экран загрузки — один раз за запуск процесса: при возврате из фона RootView не пересоздаётся (8.2).
+    @State private var isShowingSplash = true
 
     enum AppTab: String { case today, journal, hero, calendar }
 
@@ -50,6 +53,8 @@ struct RootView: View {
                 case "map": MapOverviewView(model: model)
                 case "settings": SettingsView(model: model)
                 case "gallery": NavigationStack { ComponentGallery() }
+                case "splash": SplashView(finish: {}, frozen: true)
+                case "sleepFix": SleepCorrectionView(model: model, wakeDate: model.today.adding(days: -1))
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
             } else { content }
@@ -58,6 +63,12 @@ struct RootView: View {
             #endif
         }
         .id(typeSize)
+        .overlay {
+            if isShowingSplash {
+                SplashView { withAnimation(.easeOut(duration: 0.2)) { isShowingSplash = false } }
+                    .transition(.opacity)
+            }
+        }
         .preferredColorScheme(theme.scheme)
         .task {
             await model.reload()
