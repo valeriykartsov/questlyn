@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Редактор героя</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 800px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 16px 28px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="HeroV2.dc.html" style="font-size: 15px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Внешность героя</div>
+      <a href="HeroV2.dc.html" style="font-size: 15px; font-weight: 600; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Готово</a>
+    </div>
+    <div style="height: 200px; border-radius: 16px; background: #E7DCC4; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+      <div style="position: absolute; width: 150px; height: 150px; border-radius: 75px; background: radial-gradient(circle, rgba(62,111,163,.0) 35%, rgba(62,111,163,.35) 55%, rgba(62,111,163,0) 72%);" aria-hidden="true"></div>
+      <div style="position: relative; width: {{preview.w}}; height: {{preview.h}}; flex-shrink: 0;" role="img" aria-label="Герой в редакторе"><sc-for list="{{preview.px}}" as="r" hint-placeholder-count="120"><div style="position: absolute; left: {{r.l}}; top: {{r.t}}; width: {{r.w}}; height: {{r.h}}; background: {{r.c}};"></div></sc-for></div>
+      <span style="position: absolute; left: 10px; bottom: 10px; padding: 2px 8px; border-radius: 7px; background: #FFFCF6; font-size: 11px; font-weight: 700;">Аура ранга D · ступень 2</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Готовые образы</span>
+      <div style="display: flex; gap: 6px; overflow: hidden;">
+        <sc-for list="{{presets}}" as="p" hint-placeholder-count="5">
+          <button type="button" style="flex-shrink: 0; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid #C9BCA2; background: transparent; color: #1F2A44; font: 500 13px Inter, sans-serif;">{{p}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #E9E1D0; overflow: hidden;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="7">
+        <button type="button" aria-pressed="{{t.on}}" style="flex-shrink: 0; height: 34px; padding: 0 10px; border-radius: 9px; border: none; background: {{t.bg}}; color: #1F2A44; font: {{t.font}} 13px Inter, sans-serif;">{{t.name}}</button>
+      </sc-for>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{options}}" as="o" hint-placeholder-count="9">
+        <button type="button" aria-pressed="{{o.on}}" aria-label="{{o.name}}" style="height: 92px; border-radius: 12px; border: {{o.border}}; background: #FFFCF6; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding: 4px; overflow: hidden;">
+          <div style="height: 64px; overflow: hidden; display: flex; align-items: flex-start;"><div style="margin-top: {{o.shift}};"><div style="position: relative; width: {{o.hero.w}}; height: {{o.hero.h}}; flex-shrink: 0;" role="img" aria-label="Вариант"><sc-for list="{{o.hero.px}}" as="r" hint-placeholder-count="120"><div style="position: absolute; left: {{r.l}}; top: {{r.t}}; width: {{r.w}}; height: {{r.h}}; background: {{r.c}};"></div></sc-for></div></div></div>
+          <span style="font-size: 11px; font-weight: 600; color: #1F2A44;">{{o.name}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Акцент одежды</span>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <sc-for list="{{accents}}" as="a" hint-placeholder-count="7">
+          <button type="button" aria-label="{{a.name}}" style="width: 32px; height: 32px; border-radius: 16px; border: {{a.ring}}; background: {{a.c}}; box-sizing: border-box;"></button>
+        </sc-for>
+        <span style="font-size: 12px; color: #4A5368;">по профессии</span>
+      </div>
+    </div>
+    <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Все детали доступны сразу и не влияют на прогресс. Тот же редактор — в онбординге (шаг «Класс») и в «Настройки › Внешность».</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+
+const SPRITES = {"mage": ["..............KKKK..............", ".............KCCCCK.............", ".............KCYYCK.............", "............KCCYYCCK............", "............KCCCCCCK............", "...........KCCCCCCCCK...........", "...........KCYCCCCYCK...........", "..........KCCCCCCCCCCK..........", "..........KCCCCCCCCCCK..........", "........KGGGGGGGGGGGGGGK........", "......KKDDDDDDDDDDDDDDDDKK......", "....KKKDDDDDDDDDDDDDDDDDDK......", "...KQQqKKKKKKKKKKKKKKKKKK.......", "...KQqqKKHHHHHhHHhHHHHHK........", "....KKK.KHHHHSSSSSSHHHHK........", "....KwK.KHHSSSSSSSSSSHHK........", "....KwK.KHSSSSSSSSSSSSHK........", "....KwK.KHSSESSSSSSESSHK........", "....KwK.KHsSESSSSSSESsHK........", "....KwK.KhsSSSSSSSSSSshK........", "....KwK..KsSSSSssSSSSsK.........", "....KwK...KssSSSSSSssK..........", "....KwK....KKssssssKK...........", "....KwK......KssssK.............", "....KwK..KKCCCCGGCCCCKK.........", "....KwKKKCCYCCCGGCCCYCCKK.......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKYCCCCGGCCCCYKCCK......", "....KwKCCKCCCCCGGCCCCCKCCK......", "....KwKCDKCCCCCGGCCCCCKDCK......", "....KwKCDKCCCCCGGCCCCCKDCK......", "....KwKDDKCCCCCGGCCCCCKDDK......", "....KwKDDDKCCCCGGCCCCKDDDK......", "....KwKKKKKBBBBbbBBBBKKKKK......", "....KwKSSKCCCCCGGCCCCCKSSK......", "....KwKsSKCCCCCGGCCCCCKSsK......", "....KwKKKKCCCCCGGCCCCCKKK.......", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwK.KCCCCCCGGCCCCCCK........", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKCCCCCCCGGCCCCCCCK.......", "....KwKKDCCCCCCGGCCCCCCDK.......", "....KwKKDCCCCCCGGCCCCCCDK.......", "....KwKDCCCCCCCGGCCCCCCCDK......", "....KwKDDCCCCCCGGCCCCCCDDK......", "....KwKDDCCCCCCGGCCCCCCDDK......", "....KwKDDDCCCCCGGCCCCCDDDK......", "....KwKGGGGGGGGGGGGGGGGGGK......", "....KwKKKKKKKKKKKKKKKKKKKK......", "....KwK.KFFFFFK..KFFFFFK........", "....KwK.KFFFFFK..KFFFFFK........", "....KKK.KKKKKKK..KKKKKKK........"], "warrior": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KhsSSSSSSSSSSshK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", ".........KKMMMMMMMMMMKK.........", "......KKMMKKMMMMMMMMKKMMKK......", ".....KMWMMMKMMCCCCMMKMMMWMK.....", ".....KMMMMMKMMCCCCMMKMMMMMK.....", "......KmmmKMMMCCCCMMMKmmmK......", ".......KmmKMWMCCCCMWMKmmK.......", ".......KmmKMMMCCCCMMMKKKKKK.....", ".......KmmKMMMCCCCMMMKMMMMMK....", ".......KmmKmMMCCCCMMKMCCCCCMK...", ".......KmmKmMMCCCCMMKMCCGCCMK...", ".......KmmKmmMCCCCMmKMCGGGCMK...", ".......KKKKBBBBbbBBBKMCCGCCMK...", ".......KSSKmmmCCCCmmKMCCCCCMK...", ".......KsSKmmmCCCCmmmKMCCCMK....", "......KGGGGKmmCCCCmmmKKMCMK.....", ".......KWMKmmmCCCCmmmmKKMK......", ".......KWMKmmmCCCCmmmmK.K.......", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPPK..KPPPPK.........", ".......KWMKPPpK..KpPPPK.........", ".......KWMKPPpK..KpPPPK.........", ".......KWMKPPpK..KpPPPK.........", "........KKPPPpK..KpPPPK.........", ".........KpPPpK..KpPPpK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "archer": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KOOOOOOOOOOOOK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOoOOOOOOOOOOoOOK.......", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKKKKKKKKKKKKOOK.......", ".......KOKHHHSSSSSSHHHKOK.......", ".......KOKHSSSSSSSSSSHKOK.......", ".......KOKSSESSSSSSESSKOK.......", ".......KOKsSESSSSSSESsKOK.......", ".......KOKsSSSSSSSSSSsKOK.......", ".......KOOKsSSSssSSSsKOOK.......", "....K.KKoOOKsSSSSSSsKOOoKKKK....", "....RKRKKooOOKKssKKOOooK.LwwK...", "....RRRK.KooOOOOOOOOooK..L.KwK..", "........KOOOOOOOOOOOOOOK.L..KwK.", ".......KOOOOOOOOOOOOOOOOKL..KwK.", ".......KOoOOOOOOOOOOOOoOKL..KwK.", ".......KTTKVVVVTTVVVVKTTKL..KwK.", ".......KTTKVVVVTTVVVVKTTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKVVVVTTVVVVKtTKL..KwK.", ".......KTtKvVVVTTVVVvKtTKL..KwK.", ".......KTtKvVVVTTVVVvKtTKL..KwK.", ".......KTtKvvVVTTVVvvKtTKL..KwK.", ".......KKKKBBBBbbBBBBKKKKL..KwK.", ".......KSSKVVVVVVVVVVKSSKL..KwK.", ".......KsSKVVVVVVVVVVKSsKL..KwK.", "........KKKvVVVVVVVVvKKK.L..KwK.", ".........KvvVVVVVVVVvvK..L..KwK.", ".........KvvvvvKKvvvvvK..L..KwK.", ".........KPPPPK..KPPPPK..L.KwK..", ".........KPPPPK..KPPPPK..LwwK...", ".........KPPPPK..KPPPPK..KKK....", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "assassin": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KOOOOOOOOOOOOK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOoOOOOOOOOOOoOOK.......", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKKKKKKKKKKKKOOK.......", ".......KOKHHHSSSSSSHHHKOK.......", ".......KOKHSSSSSSSSSSHKOK.......", ".......KOKSSESSSSSSESSKOK.......", ".......KOKsSESSSSSSESsKOK.......", ".......KOKNNNNNNNNNNNNKOK.......", ".......KOOKNNNNNNNNNNKOOK.......", ".......KoOOKNNNNNNNNKOOoK.......", "........KooOOKNNNNKOOooK........", ".........KooOOOOOOOOooK.........", "........KOOOOOOOOOOOOOOK........", ".......KOOOOOOOOOOOOOOOOK.......", ".......KOOKOOOOOOOOOOKOOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKOOOOOOOOOOKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKoOOOOOOOOoKoOK.......", ".......KOoKooOOOOOOooKoOK.......", ".......KKKKCCCCCCCCCCKKKK.......", ".......KSSKOOOOOOOKCKKSSK.......", ".......KsSKOOOOOOOKCKKSsK.......", ".......KGKKoOOOOOOKDKKKGK.......", ".......KWKooOOOOOOOKooKWK.......", ".......KWKooooOKKOooooKWK.......", ".......KWKPPPPK..KPPPPKWK.......", ".......KWKPPPPK..KPPPPKWK.......", "........KKPPPPK..KPPPPKK........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPPK..KPPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KPPPpK..KpPPPK.........", ".........KpPPpK..KpPPpK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "baller": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KWWWWWWWWWWWWWWK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KhsSSSSSSSSSSshK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", "........KKCCCWssssWCCCKK........", ".......KSSKCCCCCCCCCCKSSK.......", ".......KSSKCCCCCCCCCCKSSK.......", ".......KSsKCCCCCCCCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSK.......", ".......KSsKCCCWCCWCCCKsSKKKK....", ".......KSsKCCCWCCWCCCKsKZZKZK...", ".......KSsKCCCCCCCCCCKKZZZKZZK..", ".......KSsKDCCCCCCCCDKKKKKKKKK..", ".......KSSKWWWWWWWWWWKKZZKZZZK..", ".......KsSKCCCCCCCCCCKKZZKZZZK..", "........KKKCCCCCCCCCCKKKZZKZK...", "........KWCCCCCCCCCCCCWKKKKK....", "........KWCCCCCKKCCCCCWK........", "........KWCCCCK..KCCCCWK........", "........KKKKKKK..KKKKKKK........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSSK..KSSSSK.........", ".........KSSSsK..KsSSSK.........", ".........KSSSsK..KsSSSK.........", ".........KWWWWK..KWWWWK.........", ".........KWWWWK..KWWWWK.........", ".........KWWWWK..KWWWWK.........", ".........KXXXXK..KXXXXK.........", ".........KXXXXK..KXXXXK.........", "........KXXXXXK..KXXXXXK........", "........KKKKKKK..KKKKKKK........"], "coder": ["................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "................................", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHggggSSSSggggHK........", "........KHgzEggggggEzgHK........", "........KHgzEgSSSSgEzgHK........", "........KhggggSSSSgggghK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", ".............KssssK.............", "........KKCCCCKssKCCCCKK........", ".......KCCKDCCKKKKCCDKCCK.......", ".......KCCKCCCWCCWCCCKCCK.......", ".......KCDKCCCWCCWCCCKDCK.......", ".......KCDKCCCWCCWCCCKDCK.......", ".......KKKKKKKKKKKKKKKKKK.......", ".......KLLLLLLLLLLLLLLLLK.......", "......KSSLLLLLLLzzLLLLLSSK......", "......KsSLLLLLLLzzLLLLLSsK......", ".......KKllllllllllllllKK.......", ".......KKKKKKKKKKKKKKKKKK.......", ".......KDDKDDDDDDDDDDKDDK.......", ".......KKKKJJJJJJJJJJKKKK.......", "........KKKJJJJJJJJJJKKK........", "........KKKJJJJJJJJJJKKK........", ".........KJJJJJJJJJJJJK.........", ".........KjjjjjKKjjjjjK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJJK..KJJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KJJJjK..KjJJJK.........", ".........KjJJjK..KjJJjK.........", ".........KXXXXK..KXXXXK.........", ".........KXXXXK..KXXXXK.........", "........KXXXXXK..KXXXXXK........", "........KKKKKKK..KKKKKKK........"], "sage": ["................................", "................................", "................................", "................................", "................................", "..............KKKK..............", ".............KHHHHK.............", "............KHHHHHHK............", ".............KKGGKK.............", "..........KKKKKKKKKKKK..........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", ".......KHhsSSSSSSSSSSshHK.......", ".......KHKsSSSSssSSSSsKHK.......", ".......KHHKssSSSSSSssKHHK.......", ".......KHHHKKssssssKKHHHK.......", ".......KHHHKKKssssKKKHHHK.......", ".......KHKKNNNCCCCNNNKHHK.......", "......KKHKNNNNNCCNNNNNKHHK......", "......KKhKNNNNNCCNNNNNNKHK......", "......KKHKNNNNNCCNNNNNNNKK......", "......KKhKNNNNNCCNNNNNNNnK......", "......KKHKNNNNNCCNNNNNNNnK......", "......KKhKNNNNNCCNNNNNNNnK......", "......KnKNNNNNNCCNNNNNNNnK......", "......KnNNNNNNNCCNNNNNNNnK......", "......KnNNNNNNNCCNNNNNNNnK......", "......KnNNNNCCCGGCCCNNNNnK......", "......KnNNNNNNNCCNNNNNNNnK......", "......KnNNNNNNNCCNNNNNNNnK......", "......KnNNNNNNNCCNNNNNNNnK......", "......KnnNNNNNNCCNNNNNNnnK......", "......KnnNNNNNNCCNNNNNNnnK......", "......KnnNNNNNNCCNNNNNNnnK......", "......KnnNNNNNNCCNNNNNNnnK......", ".....KnnNNNNNNNCCNNNNNNNnnK.....", ".....KnnNNNNNNNCCNNNNNNNnnK.....", ".....KnnNNNNNNNCCNNNNNNNnnK.....", ".....KnnnNNNNNNCCNNNNNNnnnK.....", ".....KnnnNNNNNNCCNNNNNNnnnK.....", ".....KnnnNNNNNNCCNNNNNNnnnK.....", ".....KnnnNNNNNNCCNNNNNNnnnK.....", ".....KnnnNNNNNNCCNNNNNNnnnK.....", ".....KCCCCCCCCCCCCCCCCCCCCK.....", ".....KKKKKKKKKKKKKKKKKKKKKK.....", "........KFFFFFK..KFFFFFK........", "........KFFFFFK..KFFFFFK........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "illusionist": ["................................", "................................", "................................", "................................", "...........KKKKKKKKKK...........", "..........KNNNNNNNNNNK..........", "..........KNNNNNNNNNNK..........", "..........KCCCCCCCCCCK..........", "....KKKKKKKKKKKKKKKKKKKKKKKK....", "........KoooHHHHHHHHoooK........", "........KHHooooooooooHHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHHHHHHHHHHHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KhsSSSSSSSSSSshK........", ".........KsSSSSssSSSSsK.........", "..........KssSSSSSSssK..........", "...........KKssssssKK...........", "......KKKKK..KssssK.............", ".....KCCCCCKNWWNNWWNNNKK........", "....KCYCCCDCKNWNNWNNNKNNK.......", "....KCYCCCDCKNWNNWNNNKNNK.......", "...KCCYCCCDCKNWNNWNNNKNNK.......", "...KCCYCDCCDKNWNNWNNNKoNK.......", "...KCCYCDCCDKNWNNWNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKoNK.......", "...KCCYCDCCDKNNNNNNNNKSSK.......", "...KCCYCDCCDKNNNNNNNNKKsK.......", "...KCCYCDCCDKNNNNNNNNKKK........", "...KCCYCDCCDKNNNNNNNKGGGK.......", "...KCCYCDCCDKNNKKNNNKQQQK.......", "...KCCYCDCCDKNNKKNNNKQqQK.......", "...KCCYCDCCDKNK..KNNKQQQK.......", "...KCCYCDCCDKNK..KNNKGGGK.......", "...KCCYCDCCDKNK..KNNNKKK........", "...KCCYCDCCDKNK..KNNNNK.........", "...KCCYCDCCDKNK..KNNNNK.........", "...KCCYCDCCDKNK..KNNNNK.........", "...KCCYCDCCDKoK..KoNNNK.........", "..KCDCCDCCDKNoK..KoNNNK.........", "..KCCDCCDCKNNoK..KoNNNK.........", "..KKKKKKKKKNNoK..KoNNNK.........", ".........KoNNoK..KoNNoK.........", ".........KFFFFK..KFFFFK.........", ".........KFFFFK..KFFFFK.........", "........KFFFFFK..KFFFFFK........", "........KKKKKKK..KKKKKKK........"], "master": ["................................", "................................", "................................", "................................", "...........G...GG...G...........", "...........GG.GGGG.GG...........", "...........GGGGGGGGGG...........", "...........GRGGGGGGRG...........", "..........KGGGGGGGGGGK..........", "........KGGGGGGGGGGGGGGK........", ".........KHHHHHHHHHHHHK.........", "........KHHHHHHHHHHHHHHK........", "........KHhHHHHHHHHHHhHK........", "........KHHHHHhHHhHHHHHK........", "........KHHHHSSSSSSHHHHK........", "........KHHSSSSSSSSSSHHK........", "........KHSSSSSSSSSSSSHK........", "........KHSSESSSSSSESSHK........", "........KHsSESSSSSSESsHK........", "........KKKSSSSSSSSSSshK........", ".......KYRYKSSSssSSSSsK.........", "........KGKssSSSSSSssK..........", "........KGKKKssssssKK...........", "........KGK..KssssK.............", "......KWKGKWGGGGGGGGWWKWWK......", ".....KWKKGKKGYGGGGYGKWWWKWK.....", "....KCWWKGKKGGYGGYGGKCKWWWCK....", "....KCCCKGKKGGGGGGGGKCCKCCCK....", "....KCCYKGKKGYGGGGYGKCCKYCCK....", "....KCCYKGKKGGGGGGGGKCCKYCCK....", "....KCCYKGKKGGYGGYGGKCCKYCCK....", "....KCCYKGKKGGGGGGGGKCCKYCCK....", "....KCCYKGKKGYGGGGYGKCCKYCCK....", "....KCCYKGKKGGGGGGGGKCCKYCCK....", "....KCCCKGKKBBBbbBBBKCCKCCCK....", "....KCCCKGKKWWWWWWWWKSSKCCCK....", "....KCCCKGKKWWWWWWWWKSsKCCCK....", "....KCCDKGKWWWWWWWWWWKKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KCCDKGKWWWWWWWWWWWKCDCCK....", "....KGGGGKKWWWWWWWWWWKGGGGGK....", ".....KKKKKKFFFFKKFFFFKKKKKK.....", "..........KFFFFKKFFFFK..........", "..........KFFFFKKFFFFK..........", "..........KKKKKKKKKKKK.........."]};
+const shade = (hex, f) => { const c = [16, 8, 0].map((s) => Math.min(255, Math.max(0, Math.round(((hex >> s) & 255) * f)))); return (c[0] << 16) | (c[1] << 8) | c[2]; };
+const css = (hex) => '#' + hex.toString(16).padStart(6, '0');
+const palette = (hair, skin, accent, outfit) => {
+  const p = { K: 0x2A2320, H: hair, h: shade(hair, 0.76), S: skin, s: shade(skin, 0.86), E: 0x1F2A44, C: accent, Y: shade(accent, 1.3), D: shade(accent, 0.75),
+    T: 0xD8C7A0, t: 0xB9A57E, B: 0x6B4A2E, b: 0xC9772A, P: 0x3E4A63, p: 0x2F3A50, F: 0x5A3E2B, G: 0xD9A441, W: 0xF4EFE4, M: 0xA9B1BC, m: 0x7C8592,
+    Q: 0x9FE3F0, g: 0x6B5A4A, q: 0x3FA7C4, w: 0x8A5A34, V: 0x8A5A3A, v: 0x6E4529, L: 0xE8E0CC, R: 0xB5473A, Z: 0xD9772B, X: 0xECE6DA, J: 0x4C6A8C,
+    j: 0x3B5573, z: 0xE8EEF2, N: 0x2B2B35, O: accent, o: shade(accent, 0.75), l: 0x8A929C, n: 0x221F1C };
+  if (outfit === 'assassin') { p.O = 0x3A3A46; p.o = 0x2C2C36; p.P = 0x33333F; p.p = 0x26262F; p.F = 0x24242C; }
+  if (outfit === 'archer') { p.P = 0x5B5240; p.p = 0x47402F; }
+  if (outfit === 'illusionist') { p.Q = 0xF6D36B; p.q = 0xE58A2B; }
+  if (outfit === 'master') { p.Y = 0xF2D27A; p.t = 0xD9D2C4; p.R = 0xA8432F; }
+  return p;
+};
+/* Слои: голова (причёска) 0–23, головной убор — верх головы 0–14 поверх, верх 24–40 по центру (кол. 10–21),
+   в руке — бока 24–51, низ 41–51 по центру, обувь 52–55. */
+const compose = (parts) => {
+  const rows = [];
+  const hairless = new Set(['H', 'h', 'S', 's', 'E', '.']);
+  for (let y = 0; y < 56; y++) {
+    let line = '';
+    for (let x = 0; x < 32; x++) {
+      const core = x >= 10 && x <= 21;
+      let src;
+      if (y <= 23) src = parts.hair;
+      else if (y <= 40) src = core ? parts.top : parts.item;
+      else if (y <= 51) src = core ? parts.bottom : parts.item;
+      else src = parts.shoes;
+      let ch = SPRITES[src][y][x];
+      if (parts.hat && y <= 14) { const h = SPRITES[parts.hat][y][x]; if (!hairless.has(h)) ch = h; }
+      line += ch;
+    }
+    rows.push(line);
+  }
+  return rows;
+};
+const runs = (rows, pal, scale) => {
+  const out = [];
+  rows.forEach((row, y) => {
+    let start = 0;
+    for (let x = 1; x <= row.length; x++) {
+      if (x === row.length || row[x] !== row[start]) {
+        const c = pal[row[start]];
+        if (c !== undefined && row[start] !== '.') out.push({ l: start * scale + 'px', t: y * scale + 'px', w: (x - start) * scale + 'px', h: scale + 'px', c: css(c) });
+        start = x;
+      }
+    }
+  });
+  return out;
+};
+const hero = (parts, scale, look) => {
+  const l = look || {};
+  return { px: runs(compose(parts), palette(l.hair ?? 0x3B2A20, l.skin ?? 0xE8B892, l.accent ?? 0x2F6B4F, parts.top), scale), w: 32 * scale + 'px', h: 56 * scale + 'px' };
+};
+const preset = (o) => ({ hair: o, top: o, bottom: o, shoes: o, item: o });
+
+class Component extends DCLogic {
+  renderVals() {
+    const base = { hair: 'coder', top: 'coder', bottom: 'coder', shoes: 'coder', item: 'coder' };
+    const tops = ['coder', 'warrior', 'mage', 'archer', 'assassin', 'baller', 'sage', 'illusionist', 'master'];
+    const names = { mage: 'Маг', warrior: 'Воин', archer: 'Лучник', assassin: 'Ассасин', baller: 'Баскетболист', coder: 'Программист', sage: 'Мудрец', illusionist: 'Иллюзионист', master: 'Мастер' };
+    const options = tops.map((t, i) => ({
+      name: names[t], on: i === 1 ? 'true' : 'false', border: i === 1 ? '2px solid #1F2A44' : '1px solid #E3D9C6', shift: '-46px',
+      hero: hero({ ...base, top: t }, 2, { accent: 0x3E5C8A })
+    }));
+    const tab = (name, on) => ({ name, on: on ? 'true' : 'false', bg: on ? '#FFFCF6' : 'transparent', font: on ? '600' : '500' });
+    const tabs = [tab('Причёска'), tab('Убор'), tab('Верх', true), tab('Низ'), tab('Обувь'), tab('В руке'), tab('Цвета')];
+    const accents = [['#2F6B4F', 'Лес'], ['#B8651B', 'Янтарь'], ['#3E5C8A', 'Синий'], ['#2E7D7A', 'Бирюза'], ['#6B4FA3', 'Фиолет'], ['#A8432F', 'Кирпич'], ['#1F2A44', 'Чернила']]
+      .map(([c, name], i) => ({ c, name, ring: i === 2 ? '3px solid #1F2A44' : '2px solid #FFFCF6' }));
+    return { preview: hero({ ...base, top: 'warrior' }, 3, { accent: 0x3E5C8A }), options, tabs, accents, presets: Object.values(names) };
+  }
+}
+</script>
+</body>
+</html>

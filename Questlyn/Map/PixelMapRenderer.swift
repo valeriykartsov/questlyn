@@ -170,16 +170,11 @@ enum PixelMapRenderer {
         }
     }
 
-    static func heroRows(_ appearance: HeroAppearance) -> [[Character]] {
-        appearance.outfit.spriteRows.enumerated().filter { $0.offset % 2 == 0 }.map { Array($0.element).enumerated().filter { $0.offset % 2 == 0 }.map(\.element) }
-    }
-
     static func drawHero(_ buffer: inout PixelBuffer, appearance: HeroAppearance, accent: UInt32, centerX: Int, feetY: Int) {
-        let palette = HeroPalette.colors(for: appearance, accent: accent)
-        let rows = heroRows(appearance)
+        let rows = HeroComposer.half(appearance, accent: accent)
         for (ry, row) in rows.enumerated() {
-            for (cx, ch) in row.enumerated() {
-                if let color = palette[ch] { buffer.set(centerX - row.count / 2 + cx, feetY - rows.count + ry + 1, color) }
+            for (cx, color) in row.enumerated() {
+                if let color { buffer.set(centerX - row.count / 2 + cx, feetY - rows.count + ry + 1, color) }
             }
         }
     }
@@ -195,7 +190,7 @@ enum PixelMapRenderer {
 
     static let stripSize = (width: 180, height: 50)
 
-    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32, farm: ClosedRange<Double>? = nil) -> CGImage? {
+    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32, farm: ClosedRange<Double>? = nil, aura: Int = 0) -> CGImage? {
         let (w, h) = stripSize
         let groundY = 36, roadTop = 39, roadBottom = 42
         let light = map.light
@@ -268,6 +263,7 @@ enum PixelMapRenderer {
             flag(&buffer, x: x(mood.hour), baseY: roadTop, height: 7, color: MapStyle.moodColor(mood.mood))
         }
         if let hour = map.heroHour, let appearance {
+            AuraArt.draw(&buffer, tier: aura, centerX: x(hour), feetY: roadBottom, rx: 6, ry: 1.4)
             drawHero(&buffer, appearance: appearance, accent: accent, centerX: x(hour), feetY: roadBottom)
         }
         finish(&buffer, map: map, light: light, seed: UInt64(map.date.day), cloudsY: [6, 4, 8])

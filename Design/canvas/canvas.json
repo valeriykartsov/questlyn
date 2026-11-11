@@ -520,6 +520,55 @@
       "w": 844,
       "x": 2350,
       "y": 18208
+    },
+    "HeroParts.dc.html": {
+      "h": 900,
+      "title": "10.1 · Герой из деталей: слои и готовые наборы",
+      "w": 1280,
+      "x": 0,
+      "y": 19422
+    },
+    "HeroEditor.dc.html": {
+      "h": 844,
+      "title": "10.2 · Редактор героя",
+      "w": 390,
+      "x": 1360,
+      "y": 19422
+    },
+    "AuraTiers.dc.html": {
+      "h": 900,
+      "title": "10.3 · Аура ранга: 5 ступеней, на картах",
+      "w": 1280,
+      "x": 1830,
+      "y": 19422
+    },
+    "GraphA.dc.html": {
+      "h": 844,
+      "title": "11 · Вариант А «Созвездие»",
+      "w": 390,
+      "x": 0,
+      "y": 20692
+    },
+    "GraphV.dc.html": {
+      "h": 844,
+      "title": "11 · Вариант В «Кольца»",
+      "w": 390,
+      "x": 470,
+      "y": 20692
+    },
+    "GraphG.dc.html": {
+      "h": 844,
+      "title": "11 · Вариант Г «Дерево-список»",
+      "w": 390,
+      "x": 940,
+      "y": 20692
+    },
+    "Widgets.dc.html": {
+      "h": 900,
+      "title": "12 · Виджеты «Домой» и экрана блокировки",
+      "w": 1280,
+      "x": 1410,
+      "y": 20692
     }
   },
   "createdOnFiles": {
@@ -628,6 +677,20 @@
       "text": "На review (12.11.2026): этап 9 — длительность квестов, лагеря монстров, «Фарм», Гант «Путь героя»",
       "x": 0,
       "y": 17958
+    },
+    "r14": {
+      "kind": "title1",
+      "maxW": 12000,
+      "text": "На review (12.11.2026): этап 10 — настраиваемый герой и аура",
+      "x": 0,
+      "y": 19172
+    },
+    "r15": {
+      "kind": "title1",
+      "maxW": 12000,
+      "text": "На review (12.11.2026): этап 11 — граф персонажа (выбрать А, В или Г) и этап 12 — виджеты",
+      "x": 0,
+      "y": 20442
     }
   },
   "order": [
@@ -704,7 +767,14 @@
     "SettingsWork.dc.html",
     "MapMovement.dc.html",
     "GanttDay.dc.html",
-    "GanttLandscape.dc.html"
+    "GanttLandscape.dc.html",
+    "HeroParts.dc.html",
+    "HeroEditor.dc.html",
+    "AuraTiers.dc.html",
+    "GraphA.dc.html",
+    "GraphV.dc.html",
+    "GraphG.dc.html",
+    "Widgets.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"

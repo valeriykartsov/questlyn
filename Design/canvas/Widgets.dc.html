@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Виджеты</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 36px 48px; background: #EFE9DC; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A5214;">12 · виджеты</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Только показывают данные · настройка через «Изменить виджет»</h1>
+  </div>
+  <div style="display: flex; gap: 24px; flex: 1;">
+    <div style="flex: 1; border-radius: 28px; background: linear-gradient(160deg, #3E5C8A, #1F2A44); padding: 28px; display: flex; flex-direction: column; gap: 16px;">
+      <span style="color: #E8ECF7; font-size: 13px; font-weight: 600;">«Домой»</span>
+      <div style="display: grid; grid-template-columns: repeat(4, 160px); grid-auto-rows: 160px; gap: 18px;">
+        <div style="grid-column: span 2; border-radius: 22px; background: #FFFCF6; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;"><b style="font-size: 14px;">Сегодня</b><span style="font-size: 11px; color: #4A5368;">чт, 12 ноя</span></div>
+          <div style="font-size: 13px; display: flex; gap: 8px;"><b style="width: 40px;">15:00</b><span>Слайды для ретро</span></div>
+          <div style="font-size: 13px; display: flex; gap: 8px;"><b style="width: 40px;">18:00</b><span>Сдать отчёт</span></div>
+          <div style="font-size: 13px; display: flex; gap: 8px; color: #A8432F;"><b style="width: 40px;">!</b><span>призрак: Оплатить интернет</span></div>
+          <div style="margin-top: auto; font-size: 11px; color: #4A5368;">Привычки 1 из 3 · квестов 2</div>
+        </div>
+        <div style="border-radius: 22px; background: #FFFCF6; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between;"><b style="font-size: 14px;">Герой</b><span style="padding: 0 6px; border-radius: 6px; background: #E2A04A; font-size: 11px; font-weight: 800;">D</span></div>
+          <div style="font-size: 11px; font-weight: 700; color: #A8432F;">HP 142/175</div><div style="height: 6px; border-radius: 3px; background: #E9E1D0;"><div style="width: 81%; height: 6px; border-radius: 3px; background: #A8432F;"></div></div>
+          <div style="font-size: 11px; font-weight: 700; color: #3E6FA3;">MP 232/280</div><div style="height: 6px; border-radius: 3px; background: #E9E1D0;"><div style="width: 83%; height: 6px; border-radius: 3px; background: #3E6FA3;"></div></div>
+          <div style="margin-top: auto; font-size: 11px; color: #4A5368;">к 23:00 · HP 150</div>
+        </div>
+        <div style="border-radius: 22px; background: #1E2742; color: #E8ECF7; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+          <b style="font-size: 14px; color: #F2B35B;">Сон</b>
+          <div style="font-family: Literata, Georgia, serif; font-size: 26px; font-weight: 700;">7 ч 30</div>
+          <div style="font-size: 12px; color: #C9CFE0;">23:40–07:10</div>
+          <div style="margin-top: auto; font-size: 11px;">качество 85% · +43 HP</div>
+        </div>
+        <div style="grid-column: span 2; border-radius: 22px; background: #FFFCF6; overflow: hidden; position: relative;">
+          <img src="data:image/png;base64,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" alt="Мини-карта дня" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block;">
+          <span style="position: absolute; left: 150px; bottom: 30px; padding: 1px 6px; border-radius: 7px; background: #E2A04A; font-size: 10px; font-weight: 700;">D · 14:20 · Фарм</span>
+        </div>
+        <div style="border-radius: 22px; background: #FFFCF6; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <b style="font-size: 14px;">Пробежка 3 раза</b>
+          <span style="font-size: 12px; color: #4A5368;">недельный · 1 из 3</span>
+          <div style="display: flex; gap: 4px; margin-top: auto;"><sc-for list="{{dots}}" as="d" hint-placeholder-count="7"><span style="width: 14px; height: 14px; border-radius: 7px; background: {{d}};"></span></sc-for></div>
+        </div>
+        <div style="border-radius: 22px; background: rgba(255,252,246,.25); border: 2px dashed rgba(255,252,246,.5); display: flex; align-items: center; justify-content: center; text-align: center; color: #E8ECF7; font-size: 12px; padding: 12px;">«Изменить виджет»: какая привычка, какой день карты</div>
+      </div>
+    </div>
+    <div style="width: 380px; border-radius: 28px; background: linear-gradient(180deg, #182036, #0F1424); padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 14px; color: #E8ECF7;">
+      <span style="font-size: 13px; font-weight: 600; align-self: flex-start;">Экран блокировки</span>
+      <div style="font-size: 18px; font-weight: 600;">Четверг, 12 ноября</div>
+      <div style="font-size: 14px; color: #C9CFE0;">Сон 7 ч 30 мин · качество 85%</div>
+      <div style="font-size: 72px; font-weight: 700; line-height: 1;">9:41</div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="width: 64px; height: 64px; border-radius: 32px; background: conic-gradient(#E8ECF7 0 81%, rgba(232,236,247,.2) 81% 100%); display: flex; align-items: center; justify-content: center;"><div style="width: 52px; height: 52px; border-radius: 26px; background: #182036; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px;"><b>HP</b>142</div></div>
+        <div style="width: 64px; height: 64px; border-radius: 32px; background: conic-gradient(#E8ECF7 0 83%, rgba(232,236,247,.2) 83% 100%); display: flex; align-items: center; justify-content: center;"><div style="width: 52px; height: 52px; border-radius: 26px; background: #182036; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px;"><b>MP</b>232</div></div>
+        <div style="width: 160px; height: 64px; border-radius: 14px; background: rgba(232,236,247,.12); padding: 8px 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; font-size: 12px;"><b>15:00 · Слайды</b><span style="color: #C9CFE0;">ближайший квест · 2 ч</span></div>
+      </div>
+      <div style="margin-top: auto; font-size: 12px; color: #AEB8D2; line-height: 1.45; text-align: center;">Монохромные по правилам iOS. Строка над часами — сон, круги — HP и MP, прямоугольник — ближайший квест.</div>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #4A5368;">Отметок с виджета нет. HP и MP заранее рассчитаны на день вперёд по правилам 08 — виджет обновляется сам; касание открывает нужный экран.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { dots: ['#2F6B4F', '#E9E1D0', '#E9E1D0', '#E9E1D0', '#E9E1D0', '#E9E1D0', '#E9E1D0'] }; }
+}
+</script>
+</body>
+</html>

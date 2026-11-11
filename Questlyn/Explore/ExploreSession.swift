@@ -44,6 +44,8 @@ final class ExploreSession {
     static let zoomRange: ClosedRange<CGFloat> = 0.3...1.0
     /// Призраки просроченных задач (9.6) — число, они только летают.
     var ghostCount = 0
+    /// Ступень ауры ранга (10.3, 0 — без ауры): в «Побродить» — по решению 12.11.2026.
+    var aura = 0
 
     init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32,
          season: Season, precipitation: Bool) {

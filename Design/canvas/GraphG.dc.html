@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Граф героя: дерево</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <a href="HeroV2.dc.html" style="text-decoration: none; font-size: 15px; min-height: 44px; display: flex; align-items: center;">‹ Герой</a>
+    <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 700;">Граф героя</div>
+    <div style="width: 60px;"></div>
+  </div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 40px; height: 40px; border-radius: 12px; background: #1F2A44; color: #F2B35B; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">D</span>
+    <span style="display: flex; flex-direction: column;"><b style="font-size: 16px;">Арин · Инженер-атлет</b><span style="font-size: 12px; color: #4A5368;">Ранг D · Искатель · 2 профессии</span></span>
+  </div>
+  <div style="display: flex; flex-direction: column;">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+      <div style="display: flex; align-items: stretch; min-height: 44px;">
+        <sc-for list="{{r.guides}}" as="g" hint-placeholder-count="2"><span style="width: 18px; flex-shrink: 0; border-left: 2px solid #C9BCA2; margin-left: 8px;"></span></sc-for>
+        <div style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #E3D9C6;">
+          <span style="width: 24px; height: 24px; border-radius: {{r.shape}}; background: {{r.bg}}; color: {{r.fg}}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;">{{r.icon}}</span>
+          <span style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: {{r.fs}}; font-weight: {{r.fw}};">{{r.name}}</span><span style="font-size: 11px; color: #4A5368;">{{r.sub}}</span></span>
+          <span style="font-size: 12px; font-weight: 700; color: #9A5214;">{{r.tail}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Касание строки — раскрыть или открыть карточку. Полностью читается VoiceOver и крупным шрифтом.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const row = (level, kind, name, sub, tail) => {
+      const k = { prof: ['П', '#1F2A44', '#FFFCF6', '8px', '15px', '700'], skill: ['Н', '#E9E1D0', '#1F2A44', '50%', '14px', '600'],
+        epic: ['E', '#F1E3D3', '#9A5214', '3px', '14px', '600'], daily: ['Д', '#DCEBE2', '#2F6B4F', '50%', '13px', '500'], weekly: ['Н7', '#DCEBE2', '#2F6B4F', '50%', '13px', '500'] }[kind];
+      return { guides: Array.from({ length: level }, (_, i) => i), icon: k[0], bg: k[1], fg: k[2], shape: k[3], fs: k[4], fw: k[5], name, sub, tail };
+    };
+    return { rows: [
+      row(0, 'prof', 'Инженер-программист', 'INT · MNT · CHR', '▾'),
+      row(1, 'skill', 'Отчётность', 'XP 230 · форма 90% · мастерство 3/5', ''),
+      row(2, 'daily', 'Английский: 20 слов', 'ежедневный · 08:00', ''),
+      row(1, 'skill', 'Публичные выступления', 'XP 80 · форма 64%', ''),
+      row(1, 'epic', 'Повышение до тимлида', 'Epic · 1 из 3 · навыки: Отчётность', ''),
+      row(0, 'prof', 'Атлет', 'STR · END · MNT', '▾'),
+      row(1, 'skill', 'Бег', 'XP 520 · форма 82% · мастерство 3/5', ''),
+      row(2, 'weekly', 'Пробежка 3 раза', 'недельный · 1 из 3', ''),
+      row(1, 'skill', 'Жим', 'XP 40 · форма 55%', ''),
+      row(2, 'daily', 'Зарядка 15 минут', 'ежедневный', ''),
+      row(1, 'epic', 'Полумарафон весной', 'Epic · 5 из 12 · навыки: Бег', '')
+    ] };
+  }
+}
+</script>
+</body>
+</html>

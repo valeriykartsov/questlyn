@@ -20,6 +20,9 @@ struct HeroRecord: QuestlynRecord {
     var skin: String
     var outfit: String
     var createdAt: Date
+    /// Детали героя — JSON (10.1); nil — набор образа.
+    var parts: String?
+    var accent: Int64?
 
     init(_ hero: Hero) {
         id = hero.id
@@ -29,13 +32,17 @@ struct HeroRecord: QuestlynRecord {
         skin = hero.appearance.skin.rawValue
         outfit = hero.appearance.outfit.rawValue
         createdAt = hero.createdAt
+        parts = hero.appearance.parts.flatMap { try? JSONEncoder().encode($0) }.flatMap { String(data: $0, encoding: .utf8) }
+        accent = hero.appearance.accent.map(Int64.init)
     }
 
     var domain: Hero {
-        Hero(id: id, name: name, classTitle: classTitle,
-             appearance: HeroAppearance(hair: .init(rawValue: hair) ?? .dark, skin: .init(rawValue: skin) ?? .medium,
-                                        outfit: .init(rawValue: outfit) ?? .coder),
-             createdAt: createdAt)
+        let decoded = parts.flatMap { try? JSONDecoder().decode(HeroAppearance.Parts.self, from: Data($0.utf8)) }
+        return Hero(id: id, name: name, classTitle: classTitle,
+                    appearance: HeroAppearance(hair: .init(rawValue: hair) ?? .dark, skin: .init(rawValue: skin) ?? .medium,
+                                               outfit: .init(rawValue: outfit) ?? .coder, parts: decoded,
+                                               accent: accent.map { UInt32(truncatingIfNeeded: $0) }),
+                    createdAt: createdAt)
     }
 }
 

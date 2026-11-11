@@ -10,6 +10,7 @@ struct HeroView: View {
     @State private var isEditingProfessions = false
     @State private var openedAttribute: Attribute?
     @State private var openedSkill: UUID?
+    @State private var isShowingGraph = false
 
     private var progress: HeroProgress { model.progress }
 
@@ -27,6 +28,7 @@ struct HeroView: View {
             .padding(.bottom, QSpacing.screen)
         }
         .paperScreen()
+        .fullScreenCover(isPresented: $isShowingGraph) { HeroGraphView(model: model) }
         .sheet(isPresented: $isCreatingSkill) { SkillFormView(model: model) }
         .sheet(isPresented: $isShowingSettings) { SettingsView(model: model) }
         .sheet(isPresented: $isEditingProfessions) { ProfessionEditorView(model: model) }
@@ -41,8 +43,21 @@ struct HeroView: View {
             ScreenHeader(model: model, subtitle: model.hero?.name ?? "", title: "Герой")
             HStack(alignment: .bottom, spacing: QSpacing.l) {
                 if let hero = model.hero {
-                    HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136)
+                    HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136, aura: model.auraTier)
                         .frame(width: 96)
+                        // Вход в граф героя (11, макет GraphA) — небольшая кнопка справа от миниатюры.
+                        .overlay(alignment: .bottomTrailing) {
+                            Button { isShowingGraph = true } label: {
+                                Image(systemName: "sparkles").font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color(hex: 0xF2B35B))
+                                    .frame(width: 32, height: 32)
+                                    .background(Color(hex: 0x0F1424), in: Circle())
+                                    .overlay(Circle().strokeBorder(QColor.sheet, lineWidth: 2))
+                            }
+                            .buttonStyle(.plain)
+                            .offset(x: 14, y: 6)
+                            .accessibilityLabel("Граф героя")
+                        }
                 }
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
                     Text(model.hero?.classTitle ?? "Герой")
@@ -50,8 +65,8 @@ struct HeroView: View {
                     Text(classNote)
                         .font(QFont.text(13))
                         .foregroundStyle(QColor.inkSecondary)
-                    if let outfit = model.hero?.appearance.outfit {
-                        Text("Образ: \(outfit.title)")
+                    if let appearance = model.hero?.appearance {
+                        Text(appearance.parts == nil ? "Образ: \(appearance.outfit.title)" : "Образ: свой набор")
                             .font(QFont.text(13))
                             .foregroundStyle(QColor.inkSecondary)
                     }

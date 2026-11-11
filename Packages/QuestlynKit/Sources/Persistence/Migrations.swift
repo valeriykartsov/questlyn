@@ -14,6 +14,7 @@ enum Migrations {
     static let stage8 = "v10_stage8"
     static let stage8c = "v11_stage8c"
     static let stage9 = "v12_stage9"
+    static let stage10 = "v13_stage10"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -330,6 +331,14 @@ enum Migrations {
         // Этап 9: длительность квеста.
         migrator.registerMigration(stage9) { db in
             try db.alter(table: "quest") { t in t.add(column: "durationMinutes", .integer) }
+        }
+
+        // Этап 10: детали героя и свой цвет акцента.
+        migrator.registerMigration(stage10) { db in
+            try db.alter(table: "hero") { t in
+                t.add(column: "parts", .text)
+                t.add(column: "accent", .integer)
+            }
         }
 
         return migrator
