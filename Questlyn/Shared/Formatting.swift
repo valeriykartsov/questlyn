@@ -84,6 +84,13 @@ enum Format {
         return whole > 0 ? "+\(whole)" : whole < 0 ? "−\(-whole)" : "0"
     }
 
+    /// «1 день», «3 дня», «91 день».
+    static func dayCount(_ n: Int) -> String {
+        let mod10 = n % 10, mod100 = n % 100
+        let word = mod10 == 1 && mod100 != 11 ? "день" : (2...4).contains(mod10) && !(12...14).contains(mod100) ? "дня" : "дней"
+        return "\(n) \(word)"
+    }
+
     static func times(_ n: Int) -> String {
         let mod10 = n % 10, mod100 = n % 100
         let word = (mod10 >= 2 && mod10 <= 4 && !(12...14).contains(mod100)) ? "раза" : "раз"

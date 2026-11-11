@@ -34,6 +34,7 @@ must happen before public release and commercial branding commitments.
 - [06_OPEN_QUESTIONS_AND_RISKS.md](06_OPEN_QUESTIONS_AND_RISKS.md) — открытые вопросы, риски, бэклог идей
 - [07_FORMULAS.md](07_FORMULAS.md) — формулы прогрессии (Rule Set v1.1, утверждён)
 - [08_VITALS_AND_CHRONICLE.md](08_VITALS_AND_CHRONICLE.md) — HP, MP, сон, вредные привычки и Летопись героя (утверждено)
+- [09_EXPLORE_RULES.md](09_EXPLORE_RULES.md) — правила мини-игры «Побродить» (черновик, требует согласования)
 - [BACKLOG.md](BACKLOG.md) — план реализации по этапам, прогресс разработки, «На потом»
 - [HANDOFF_PROMPT.md](HANDOFF_PROMPT.md) — промпт для старта разработки в новом чате
 - [../Design/README.md](../Design/README.md) — исходники макетов, токены, симуляция правил

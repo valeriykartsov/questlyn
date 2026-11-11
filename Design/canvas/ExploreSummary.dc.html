@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Побродить: итог</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 64px 20px 34px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #9A5214;">Прогулка окончена</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 28px; font-weight: 700;">Остров 12 августа — 10 ноября</h1>
+    <div style="font-size: 13px; color: #4A5368;">91 день · большой остров · 24 минуты в пути</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+    <sc-for list="{{goals}}" as="g" hint-placeholder-count="2">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 12px; color: #4A5368;">{{g.label}}</span>
+        <span style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700;">{{g.value}}</span>
+        <span style="height: 6px; border-radius: 3px; background: #E9E1D0;"><span style="display: block; width: {{g.pct}}; height: 6px; border-radius: 3px; background: #B8651B;"></span></span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; display: flex; flex-direction: column;">
+    <sc-for list="{{stats}}" as="s" hint-placeholder-count="6">
+      <div style="display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="font-size: 15px; color: #3D4354;">{{s.label}}</span><span style="font-size: 15px; font-weight: 700;">{{s.value}}</span></div>
+    </sc-for>
+  </div>
+
+  <div style="font-size: 12px; line-height: 1.45; color: #3D4354; padding: 10px 12px; border-radius: 12px; background: #E9E1D0;">Это была песочница: XP, HP, MP и Летопись героя не изменились. Итог не сохраняется.</div>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+    <a href="ExploreIsland.dc.html" style="height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Побродить ещё — другой остров</a>
+    <a href="MapFull.dc.html" style="height: 48px; border-radius: 14px; border: 1px solid #C9BCA2; color: #1F2A44; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">К карте</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const goals = [
+      { label: 'Городов посещено', value: '4 из 6', pct: '67%' },
+      { label: 'Сундуков найдено', value: '11 из 18', pct: '61%' }
+    ];
+    const stats = [
+      { label: 'Побед', value: '5' }, { label: 'Уговорено', value: '2' }, { label: 'Убежал', value: '3' },
+      { label: 'Поражений', value: '1' }, { label: 'Костров зажжено', value: '2' }, { label: 'Пройдено клеток', value: '1 240' }
+    ];
+    return { goals, stats };
+  }
+}
+</script>
+</body>
+</html>

@@ -132,6 +132,8 @@ struct MapOverviewView: View {
     @State private var week: WeekMap?
     /// Объект, по которому коснулись: подсказка-реплика над ним (8.3).
     @State private var selected: Selection?
+    /// «Побродить» (8B).
+    @State private var isExploring = false
 
     struct Selection: Equatable {
         let x: Int
@@ -162,6 +164,7 @@ struct MapOverviewView: View {
         .background(Color(hex: 0x8E8350))
         .onAppear { load(resetPosition: true) }
         .onChange(of: weekStart) { selected = nil; load(resetPosition: true) }
+        .fullScreenCover(isPresented: $isExploring) { ExploreFlowView(model: model) }
     }
 
     private func load(resetPosition: Bool) {
@@ -215,6 +218,11 @@ struct MapOverviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: QSpacing.l) {
                     slider
+                    Button { isExploring = true } label: {
+                        Label("Побродить", systemImage: "figure.walk").font(QFont.text(15, weight: .semibold))
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .accessibilityHint("Мини-игра на острове из событий за прошлые даты")
                     if let dayMap { dayDetails(dayMap) }
                 }
                 .padding(.horizontal, QSpacing.screen)

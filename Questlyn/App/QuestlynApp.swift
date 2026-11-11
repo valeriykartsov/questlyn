@@ -54,6 +54,7 @@ struct RootView: View {
                 case "settings": SettingsView(model: model)
                 case "gallery": NavigationStack { ComponentGallery() }
                 case "splash": SplashView(finish: {}, frozen: true)
+                case "explore": ExploreFlowView(model: model)
                 case "sleepFix": SleepCorrectionView(model: model, wakeDate: model.today.adding(days: -1))
                 default: OnboardingView(model: model, debugClassStep: true)
                 }
