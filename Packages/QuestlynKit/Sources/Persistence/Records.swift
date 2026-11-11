@@ -99,8 +99,10 @@ struct SkillRecord: QuestlynRecord {
     var isActive: Bool
     var createdAt: Date
     var activityTemplateId: String?
+    var deletedAt: Date?
 
     init(_ s: Skill) {
+        deletedAt = s.deletedAt
         id = s.id
         professionId = s.professionId
         title = s.title
@@ -110,7 +112,8 @@ struct SkillRecord: QuestlynRecord {
     }
 
     var domain: Skill {
-        Skill(id: id, professionId: professionId, title: title, isActive: isActive, createdAt: createdAt, activityTemplateId: activityTemplateId)
+        Skill(id: id, professionId: professionId, title: title, isActive: isActive, createdAt: createdAt,
+              activityTemplateId: activityTemplateId, deletedAt: deletedAt)
     }
 }
 
@@ -539,5 +542,31 @@ struct HarmEntryRecord: QuestlynRecord {
         return HarmEntry(id: id, kind: kind, customHabitId: customHabitId, title: title, damagePercent: damagePercent,
                          alcohol: alcohol.flatMap(AlcoholDegree.init(rawValue:)), at: at, localDate: date,
                          timezoneId: timezoneId, deletedAt: deletedAt)
+    }
+}
+
+struct BenefitEntryRecord: QuestlynRecord {
+    static let databaseTableName = "benefitEntry"
+    var id: UUID
+    var kind: String
+    var title: String
+    var at: Date
+    var localDate: String
+    var timezoneId: String
+    var deletedAt: Date?
+
+    init(_ b: BenefitEntry) {
+        id = b.id
+        kind = b.kind.rawValue
+        title = b.title
+        at = b.at
+        localDate = b.localDate.description
+        timezoneId = b.timezoneId
+        deletedAt = b.deletedAt
+    }
+
+    var domain: BenefitEntry? {
+        guard let kind = BenefitKind(rawValue: kind), let date = LocalDate(string: localDate) else { return nil }
+        return BenefitEntry(id: id, kind: kind, title: title, at: at, localDate: date, timezoneId: timezoneId, deletedAt: deletedAt)
     }
 }

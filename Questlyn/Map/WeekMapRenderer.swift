@@ -377,7 +377,7 @@ enum WeekMapRenderer {
             used.insert([i, j])
             items.append((Double(i + j), random.int(4) == 0 ? .bush(i, j) : .tree(i, j)))
         }
-        if let hour = week.heroHour { items.append((roadI(hour) + roadMid + 0.6, .hero(hour))) }
+        // Герой рисуется поверх картинки и идёт за ползунком (8C.3) — в картинку не запекается.
         items.sort { $0.depth < $1.depth }
 
         for (_, item) in items {

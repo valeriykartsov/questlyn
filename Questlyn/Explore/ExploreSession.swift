@@ -11,6 +11,9 @@ final class ExploreSession {
     let seed: UInt64
     let accent: UInt32
     let appearance: HeroAppearance?
+    /// Время года текстур суши и осадки — выбор игрока (02, 12.11.2026).
+    let season: Season
+    let precipitation: Bool
 
     var hp: Double
     var mp: Double
@@ -37,7 +40,10 @@ final class ExploreSession {
     /// Короткое сообщение поверх карты: «Сундук: …», «Костёр: +HP».
     var toast: String?
 
-    init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32) {
+    init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32,
+         season: Season, precipitation: Bool) {
+        self.season = season
+        self.precipitation = precipitation
         self.input = input
         self.hero = hero
         self.seed = input.seed(attempt: attempt)

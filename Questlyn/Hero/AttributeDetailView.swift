@@ -166,6 +166,8 @@ struct SkillDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var pendingTemplate: ActivityTemplate?
+    @State private var title = ""
+    @State private var isConfirmingDelete = false
 
     private var skill: Skill? { model.skills.first { $0.id == skillId } }
 
@@ -173,6 +175,15 @@ struct SkillDetailView: View {
         NavigationStack {
             Form {
                 if let skill {
+                    Section {
+                        TextField("Название", text: $title, prompt: Text("Название навыка").foregroundStyle(QColor.placeholder))
+                            .font(QFont.text(17, weight: .semibold))
+                            .submitLabel(.done)
+                            .onSubmit { rename(skill) }
+                    } header: {
+                        Text("Навык")
+                    }
+                    .listRowBackground(QColor.sheet)
                     activitySection(skill)
                     Section {
                         LabeledContent("Профессия", value: model.profession(id: skill.professionId)?.title ?? "—")
@@ -193,9 +204,24 @@ struct SkillDetailView: View {
                         Text("Мастерство меняете только вы.")
                     }
                     .listRowBackground(QColor.sheet)
+                    Section {
+                        Button("Удалить навык", role: .destructive) { isConfirmingDelete = true }
+                    } footer: {
+                        Text("Профессию навыка не меняем — от неё зависят начисления. Удалённый навык пропадёт из выбора, история останется.")
+                    }
+                    .listRowBackground(QColor.sheet)
                 }
             }
             .paperScreen()
+            .onAppear { title = skill?.title ?? "" }
+            .confirmationDialog("Удалить навык «\(skill?.title ?? "")»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+                Button("Удалить навык", role: .destructive) {
+                    Task { if await model.deleteSkill(skillId) { dismiss() } }
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("XP и записи в Летописи останутся. У открытых квестов и привычек навык снимется; выполненные квесты не меняются.")
+            }
             .confirmationDialog(pendingTitle, isPresented: Binding(get: { pendingTemplate != nil }, set: { if !$0 { pendingTemplate = nil } }),
                                 titleVisibility: .visible) {
                 Button("Перенести") {
@@ -208,13 +234,20 @@ struct SkillDetailView: View {
             }
             .navigationTitle(skill?.title ?? "Навык")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { if let skill { rename(skill) }; dismiss() } } }
         }
         .tint(QColor.amber)
     }
 }
 
 extension SkillDetailView {
+    /// Переименование (8C.6): пустое название не сохраняется.
+    private func rename(_ skill: Skill) {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name != skill.title else { return }
+        Task { _ = await model.renameSkill(skill.id, title: name) }
+    }
+
     private var pendingTitle: String {
         guard let template = pendingTemplate, let owner = model.linkedSkill(templateId: template.id) else { return "" }
         return "Перенести «\(template.title)» с навыка «\(owner.title)»?"

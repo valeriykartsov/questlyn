@@ -155,6 +155,21 @@ public struct SkillService: Sendable {
         try await store.linkActivityTemplate(templateId, toSkill: skillId)
     }
 
+    /// Переименование навыка (8C.6). Профессия навыка не меняется — от неё зависят начисления.
+    public func rename(skillId: UUID, title: String) async throws {
+        let name = trimmed(title)
+        guard !name.isEmpty else { throw QuestlynError.emptyName }
+        guard var skill = try await store.skills().first(where: { $0.id == skillId && $0.deletedAt == nil }) else { throw QuestlynError.skillNotFound }
+        skill.title = name
+        try await store.save(skill)
+    }
+
+    /// Удаление пометкой (8C.6): XP и Летопись остаются, у открытых квестов и привычек навык снимается.
+    public func delete(skillId: UUID, now: Date) async throws {
+        guard try await store.skills().contains(where: { $0.id == skillId && $0.deletedAt == nil }) else { throw QuestlynError.skillNotFound }
+        try await store.deleteSkill(id: skillId, at: now)
+    }
+
     /// Мастерство 1–5 меняется только вручную и хранится как факт оценки (07, раздел 6).
     public func assess(skillId: UUID, mastery: Int, now: Date) async throws {
         guard try await store.skills().contains(where: { $0.id == skillId }) else { throw QuestlynError.skillNotFound }
@@ -370,6 +385,7 @@ public struct TodayOverview: Sendable, Equatable {
     public var customHarmHabits: [CustomHarmHabit] = []
     /// Отметки здоровья за сегодня — для удаления ошибочных.
     public var todayHarms: [HarmEntry] = []
+    public var todayBenefits: [BenefitEntry] = []
     /// Отметки настроения (без удалённых) — флажки и погода на карте дня.
     public var moods: [MoodEntry] = []
 }
@@ -385,7 +401,8 @@ public struct TodayService: Sendable {
         let hero = try await store.currentHero()
         var professions: [Profession] = []
         if let hero { professions = try await store.professions(heroId: hero.id) }
-        let skills = try await store.skills()
+        // Удалённые навыки скрыты везде (8C.6); Летопись берёт их из хранилища сама.
+        let skills = try await store.skills().filter { $0.deletedAt == nil }
         let quests = try await store.questsForToday(date)
         let completions = try await store.activeCompletions(questIds: quests.map(\.id))
 
@@ -465,6 +482,7 @@ public struct TodayService: Sendable {
                              lastMood: lastMood, weather: Weather.from(lastMood?.mood, on: date),
                              customHarmHabits: try await store.customHarmHabits().filter(\.isActive),
                              todayHarms: try await store.harmEntries().filter { $0.isActive && $0.localDate == date },
+                             todayBenefits: try await store.benefitEntries().filter { $0.isActive && $0.localDate == date },
                              moods: moods)
     }
 }

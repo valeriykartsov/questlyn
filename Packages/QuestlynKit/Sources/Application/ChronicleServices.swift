@@ -156,7 +156,7 @@ public struct ChronicleService: Sendable {
         }
         let vitals = VitalsCalculator.state(heroCreatedAt: hero.createdAt, grants: grants, spends: spends, sleeps: try await store.sleepSessions(),
                                             steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone,
-                                            harms: try await store.harmEntries())
+                                            harms: try await store.harmEntries(), benefits: try await store.benefitEntries())
         for (index, entry) in vitals.log.enumerated() {
             switch entry.kind {
             case let .night(night):
@@ -195,6 +195,10 @@ public struct ChronicleService: Sendable {
                                                detail: "−\(harm.damagePercent)% HP за отметку", changes: [.hp(-hpDamage)],
                                                isCancelled: false, note: nil, isMilestone: false))
                 }
+            case let .benefit(benefit, restored):
+                items.append(ChronicleItem(id: "benefit:\(benefit.id)", at: entry.at, category: .health, title: "Полезное: \(benefit.title)",
+                                           detail: restored >= 0.5 ? "+3% HP за отметку" : "дневной предел +10% HP набран или HP полное",
+                                           changes: restored >= 0.5 ? [.hp(restored)] : [], isCancelled: false, note: nil, isMilestone: false))
             case let .sedentary(_, steps, goal, damage):
                 items.append(ChronicleItem(id: "sedentary:\(index)", at: entry.at, category: .health, title: "Сидячий день",
                                            detail: "\(steps) из \(goal) шагов", changes: [.hp(-damage)],
@@ -206,6 +210,10 @@ public struct ChronicleService: Sendable {
         for harm in try await store.harmEntries() where !harm.isActive {
             items.append(ChronicleItem(id: "harm:\(harm.id)", at: harm.at, category: .health, title: harm.title, detail: nil, changes: [],
                                        isCancelled: true, note: "Удалено · урон возвращён", isMilestone: false))
+        }
+        for benefit in try await store.benefitEntries() where !benefit.isActive {
+            items.append(ChronicleItem(id: "benefit:\(benefit.id)", at: benefit.at, category: .health, title: "Полезное: \(benefit.title)",
+                                       detail: nil, changes: [], isCancelled: true, note: "Удалено", isMilestone: false))
         }
         for mood in try await store.moodEntries() {
             let weather = Weather.from(mood.mood, on: mood.localDate)

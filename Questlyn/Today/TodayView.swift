@@ -33,7 +33,6 @@ struct TodayView: View {
                 activitySection
                 section(.overdue, title: "Просрочено")
                 section(.today, title: "Квесты на сегодня", showEmpty: true)
-                section(.undated, title: "Без даты")
             }
             .padding(.horizontal, QSpacing.screen)
             .padding(.top, QSpacing.l)

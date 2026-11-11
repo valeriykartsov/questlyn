@@ -95,6 +95,11 @@ public enum HabitMarkingRules {
         date == today || date == today.adding(days: -1)
     }
 
+    /// Недельный квест можно отметить за любой день текущей недели (02, 12.11.2026), а также за вчера (воскресенье в понедельник).
+    public static func canMark(_ date: LocalDate, today: LocalDate, kind: HabitKind) -> Bool {
+        kind == .weekly ? canMark(date, today: today) || (date >= today.weekStart && date <= today) : canMark(date, today: today)
+    }
+
     /// Отметку недельного квеста можно снять за любой день текущей недели (02, 11.11.2026); закрытые недели не меняются.
     public static func canUnmarkWeekly(_ date: LocalDate, today: LocalDate) -> Bool {
         date >= today.weekStart && date <= today

@@ -32,21 +32,23 @@ struct JournalView: View {
 
     private var daily: [HabitStatus] {
         model.habits.filter { $0.habit.kind == .daily && matches($0.habit.title) }
-            .sorted { ($0.isScheduledToday ? 0 : 1, $0.habit.createdAt) < ($1.isScheduledToday ? 0 : 1, $1.habit.createdAt) }
+            .sorted { ($0.isScheduledToday ? 0 : 1, $0.habit.time == nil ? 1 : 0, $0.habit.time?.description ?? "", $0.habit.createdAt)
+                < ($1.isScheduledToday ? 0 : 1, $1.habit.time == nil ? 1 : 0, $1.habit.time?.description ?? "", $1.habit.createdAt) }
     }
     private var weekly: [HabitStatus] { model.habits.filter { $0.habit.kind == .weekly && matches($0.habit.title) } }
     private var epics: [EpicStatus] {
         model.epics.filter { matches($0.epic.title) }.sorted { (!$0.epic.isCompleted ? 0 : 1) < (!$1.epic.isCompleted ? 0 : 1) }
     }
     private var openQuests: [TodayItem] {
-        (model.overview?.journal ?? []).filter { !$0.isCompleted && matches($0.quest.title) }.sorted { lhs, rhs in
+        // Шаги Epic — только под своим Epic (8C.7).
+        (model.overview?.journal ?? []).filter { !$0.isCompleted && $0.quest.epicId == nil && matches($0.quest.title) }.sorted { lhs, rhs in
             let far = LocalDate(year: 9999, month: 1, day: 1)
             return (lhs.quest.dueDate ?? far, lhs.quest.dueTime?.description ?? "99", lhs.quest.createdAt)
                 < (rhs.quest.dueDate ?? far, rhs.quest.dueTime?.description ?? "99", rhs.quest.createdAt)
         }
     }
     private var doneQuests: [TodayItem] {
-        (model.overview?.journal ?? []).filter { $0.isCompleted && matches($0.quest.title) }
+        (model.overview?.journal ?? []).filter { $0.isCompleted && $0.quest.epicId == nil && matches($0.quest.title) }
             .sorted { ($0.completion?.completedAt ?? .distantPast) > ($1.completion?.completedAt ?? .distantPast) }
     }
 
@@ -195,10 +197,45 @@ struct JournalView: View {
             empty("Epic — большая цель из шагов. Добавьте через «+».")
         } else {
             ForEach(epics) { status in
-                Button { openedEpic = status.id } label: { epicCard(status) }
-                    .buttonStyle(.plain)
+                let expanded = isExpanded(status)
+                VStack(spacing: QSpacing.s) {
+                    Button { openedEpic = status.id } label: { epicCard(status) }
+                        .buttonStyle(.plain)
+                    // Раскрытие шагов — под карточкой Epic, карточка во всю ширину (8C.7).
+                    if !status.steps.isEmpty {
+                        Button { withAnimation { toggleEpic(status.id) } } label: {
+                            HStack(spacing: QSpacing.s) {
+                                Text(expanded ? "Скрыть шаги" : "Шаги · \(status.steps.count)")
+                                Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.system(size: 12, weight: .semibold))
+                            }
+                            .font(QFont.text(13, weight: .semibold))
+                            .foregroundStyle(QColor.amberDeep)
+                            .frame(maxWidth: .infinity, minHeight: 36)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, -QSpacing.xs)
+                    }
+                    if expanded {
+                        ForEach(status.steps) { journalQuestRow($0, showsEpic: false).padding(.leading, QSpacing.xl) }
+                    }
+                }
             }
         }
+    }
+
+    /// Шаги активного Epic по умолчанию раскрыты, завершённого — свёрнуты; касание меняет (8C.7).
+    @AppStorage("journal.epic.toggled") private var toggledEpics = ""
+
+    private func isExpanded(_ status: EpicStatus) -> Bool {
+        let toggled = toggledEpics.split(separator: ",").contains { $0 == status.id.uuidString }
+        return status.epic.isCompleted ? toggled : !toggled
+    }
+
+    private func toggleEpic(_ id: UUID) {
+        var ids = Set(toggledEpics.split(separator: ",").map(String.init))
+        if ids.contains(id.uuidString) { ids.remove(id.uuidString) } else { ids.insert(id.uuidString) }
+        toggledEpics = ids.sorted().joined(separator: ",")
     }
 
     /// Профессия Epic, если она задана и активна.
@@ -266,7 +303,7 @@ struct JournalView: View {
         }
     }
 
-    private func journalQuestRow(_ item: TodayItem) -> some View {
+    private func journalQuestRow(_ item: TodayItem, showsEpic: Bool = true) -> some View {
         HStack(spacing: QSpacing.l) {
             Button {
                 Task {
@@ -286,7 +323,7 @@ struct JournalView: View {
                             .strikethrough(item.isCompleted, color: QColor.inkSecondary)
                             .foregroundStyle(item.isCompleted ? QColor.inkSecondary : QColor.ink)
                             .multilineTextAlignment(.leading)
-                        if let epic = model.epic(id: item.quest.epicId) {
+                        if showsEpic, let epic = model.epic(id: item.quest.epicId) {
                             Text(epic.epic.title).font(QFont.text(12)).foregroundStyle(QColor.amberDeep)
                         }
                     }

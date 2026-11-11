@@ -12,6 +12,7 @@ enum Migrations {
     static let wellbeing = "v8_wellbeing"
     static let softDelete = "v9_softDelete"
     static let stage8 = "v10_stage8"
+    static let stage8c = "v11_stage8c"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -309,6 +310,20 @@ enum Migrations {
             try db.drop(table: "sleepSession")
             try db.rename(table: "sleepSession_v10", to: "sleepSession")
             try db.create(index: "index_sleepSession_on_wakeDate", on: "sleepSession", columns: ["wakeDate"], ifNotExists: true)
+        }
+
+        // Этап 8C: удаление навыка пометкой, полезные действия.
+        migrator.registerMigration(stage8c) { db in
+            try db.alter(table: "skill") { t in t.add(column: "deletedAt", .datetime) }
+            try db.create(table: "benefitEntry") { t in
+                t.primaryKey("id", .text)
+                t.column("kind", .text).notNull()
+                t.column("title", .text).notNull()
+                t.column("at", .datetime).notNull()
+                t.column("localDate", .text).notNull().indexed()
+                t.column("timezoneId", .text).notNull()
+                t.column("deletedAt", .datetime)
+            }
         }
 
         return migrator

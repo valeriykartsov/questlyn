@@ -69,7 +69,7 @@ struct HabitDetailView: View {
                 }
                 weekStrip(status)
                 Text(habit.kind == .weekly
-                     ? "Засчитывается в конце недели, в воскресенье 23:59, долей выполнения. Сверх цели — без вклада в дисциплину."
+                     ? "Касание дня — отметить или снять отметку за этот день. Засчитывается в конце недели, в воскресенье 23:59, долей выполнения. Сверх цели — без вклада в дисциплину."
                      : "Дисциплина пересчитается в понедельник по доле выполненных за неделю. Отметить можно за сегодня и за вчера.")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
             }
@@ -128,10 +128,27 @@ struct HabitDetailView: View {
                     }
                     .frame(width: 30, height: 30)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .contentShape(Rectangle())
+                .onTapGesture { toggleWeekDay(day, status: status, count: count) }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(day.weekday.shortTitle): \(count > 0 ? "отмечено \(count)" : (scheduled ? "не отмечено" : "не запланировано"))")
+                .accessibilityAddTraits(canToggle(day, status: status) ? .isButton : [])
             }
+        }
+    }
+
+    /// Недельный квест: касание дня текущей недели (не позже сегодня) — отметить или снять отметку (8C.8).
+    private func canToggle(_ day: LocalDate, status: HabitStatus) -> Bool {
+        status.habit.kind == .weekly && day <= status.today && day >= status.today.weekStart && day >= status.habit.startDate
+    }
+
+    private func toggleWeekDay(_ day: LocalDate, status: HabitStatus, count: Int) {
+        guard canToggle(day, status: status) else { return }
+        if count > 0, let mark = weekMarks.last(where: { $0.localDate == day }) {
+            pendingUnmark = mark
+        } else if count == 0 {
+            Task { await model.markHabit(habitId, on: day) }
         }
     }
 
@@ -187,7 +204,9 @@ struct HabitDetailView: View {
     private func actions(_ status: HabitStatus) -> some View {
         let today = status.today
         let yesterday = today.adding(days: -1)
-        let canYesterday = yesterday >= status.habit.startDate && (status.habit.kind == .weekly || status.habit.isScheduled(on: yesterday))
+        // У недельного дни этой недели отмечаются касанием дня; «за вчера» — только когда вчера была прошлая неделя.
+        let canYesterday = yesterday >= status.habit.startDate
+            && (status.habit.kind == .weekly ? yesterday < today.weekStart : status.habit.isScheduled(on: yesterday))
         VStack(spacing: QSpacing.m) {
             if status.habit.kind == .weekly {
                 Button("Отметить выполнение") { Task { await model.markHabit(habitId, on: today) } }

@@ -30,7 +30,26 @@ enum ExploreRenderer {
 
     // MARK: Остров
 
-    static func islandImage(_ island: Island, seed: UInt64) -> CGImage? {
+    /// Цвета суши по времени года (кроме моря и берега).
+    struct LandPalette {
+        let grass: (UInt32, UInt32)
+        let detail: UInt32
+        let forest: UInt32
+        let leaves: (UInt32, UInt32)
+        let snowCap: Bool
+
+        static func of(_ season: Season) -> LandPalette {
+            switch season {
+            case .winter: LandPalette(grass: (0xE6ECF0, 0xDCE3E8), detail: 0xC5CFD6, forest: 0xCBD5DC, leaves: (0x3F5E4A, 0x355241), snowCap: true)
+            case .spring: LandPalette(grass: (0xA9C46C, 0x9EBB62), detail: 0xE7B8C8, forest: 0x86A85A, leaves: (0x6E9E48, 0x5E8C3E), snowCap: false)
+            case .summer: LandPalette(grass: (0x7FA552, 0x76994B), detail: 0x5E8540, forest: 0x5F8A43, leaves: (0x3E6B2E, 0x335C26), snowCap: false)
+            case .autumn: LandPalette(grass: (0x9DB06A, 0x93A762), detail: 0x6E8A4A, forest: 0x7E9656, leaves: (0xC9772E, 0xA8582A), snowCap: false)
+            }
+        }
+    }
+
+    static func islandImage(_ island: Island, seed: UInt64, season: Season = .autumn) -> CGImage? {
+        let palette = LandPalette.of(season)
         let side = island.side
         let size = imageSize(side: side)
         var canvas = RGBACanvas(width: size.width, height: size.height, fill: 0x3F6E9C)
@@ -49,8 +68,8 @@ enum ExploreRenderer {
                 let center = pixel(x: Double(x), y: Double(y), side: side)
                 let base: UInt32 = switch terrain {
                 case .sand: 0xE3CF9A
-                case .forest: 0x7E9656
-                default: random.unit() < 0.5 ? 0x9DB06A : 0x93A762
+                case .forest: palette.forest
+                default: random.unit() < 0.5 ? palette.grass.0 : palette.grass.1
                 }
                 diamond(&canvas, cx: Int(center.x), cy: Int(center.y), color: base)
                 if terrain == .sand, island.terrain(at: TilePoint(x, y + 1)) == .water || island.terrain(at: TilePoint(x + 1, y)) == .water {
@@ -58,7 +77,7 @@ enum ExploreRenderer {
                     for dx in -3...3 { canvas.set(Int(center.x) + dx, Int(center.y) + 4, 0xC9B27A) }
                 }
                 if terrain == .grass, random.unit() < 0.15 {
-                    canvas.set(Int(center.x) + random.int(6) - 3, Int(center.y) + random.int(3) - 1, 0x6E8A4A)
+                    canvas.set(Int(center.x) + random.int(6) - 3, Int(center.y) + random.int(3) - 1, palette.detail)
                 }
             }
         }
@@ -67,7 +86,7 @@ enum ExploreRenderer {
         for y in 0..<side { for x in 0..<side where island.terrain[y * side + x] == .forest && random.unit() < 0.55 {
             let c = pixel(x: Double(x), y: Double(y), side: side)
             let shade = random.unit() < 0.5
-            items.append((Double(x + y), { tree(&$0, x: Int(c.x), y: Int(c.y), dark: shade) }))
+            items.append((Double(x + y), { tree(&$0, x: Int(c.x), y: Int(c.y), dark: shade, palette: palette) }))
         } }
         let roofs: [UInt32] = [0xB8651B, 0x8A4B3A, 0x3E5C8A, 0x2F6B4F, 0x6B4FA3]
         for (index, place) in (island.cities + island.villages).enumerated() {
@@ -93,14 +112,19 @@ enum ExploreRenderer {
         }
     }
 
-    static func tree(_ canvas: inout RGBACanvas, x: Int, y: Int, dark: Bool) {
+    static func tree(_ canvas: inout RGBACanvas, x: Int, y: Int, dark: Bool, palette: LandPalette = .of(.autumn)) {
         for k in 0..<3 { canvas.set(x, y - k, 0x5C3A1E) }
-        let leaf: UInt32 = dark ? 0x3F5E31 : 0x4E6E3A
+        let leaf: UInt32 = dark ? palette.leaves.1 : palette.leaves.0
         for dy in 0..<5 {
             let half = dy < 3 ? dy + 1 : 5 - dy
             for dx in -half...half { canvas.set(x + dx, y - 3 - (4 - dy), leaf) }
         }
-        canvas.set(x - 1, y - 6, 0x6E8A4A)
+        if palette.snowCap {
+            for dx in -1...1 { canvas.set(x + dx, y - 7, 0xF4F7F9) }
+            canvas.set(x, y - 8, 0xF4F7F9)
+        } else {
+            canvas.set(x - 1, y - 6, PixelColor.mix(leaf, 0xFFFFFF, 0.25))
+        }
     }
 
     static func house(_ canvas: inout RGBACanvas, x: Int, y: Int, height: Int, roof: UInt32) {
@@ -117,7 +141,7 @@ enum ExploreRenderer {
     // MARK: Мини-карта
 
     /// Вид сверху: клетка — пиксель.
-    static func minimap(_ island: Island) -> CGImage? {
+    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = []) -> CGImage? {
         var canvas = RGBACanvas(width: island.side, height: island.side, fill: 0x3F6E9C)
         for (index, terrain) in island.terrain.enumerated() {
             let color: UInt32? = switch terrain {
@@ -130,6 +154,13 @@ enum ExploreRenderer {
         }
         for city in island.cities {
             for dx in -1...1 { for dy in -1...1 { canvas.set(city.center.x + dx, city.center.y + dy, 0x1F2A44) } }
+        }
+        // Неоткрытые сундуки и незажжённые костры (8C.9).
+        for chest in island.chests where !opened.contains(chest.id) {
+            for dx in 0...1 { for dy in 0...1 { canvas.set(chest.position.x + dx, chest.position.y + dy, 0xB8651B) } }
+        }
+        for fire in island.campfires where !lit.contains(fire.id) {
+            for dx in 0...1 { for dy in 0...1 { canvas.set(fire.position.x + dx, fire.position.y + dy, 0xE5482B) } }
         }
         return canvas.image
     }

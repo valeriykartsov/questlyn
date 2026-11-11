@@ -91,7 +91,7 @@ public struct HabitMarkService: Sendable {
     public func mark(habitId: UUID, on date: LocalDate, now: Date, timeZone: TimeZone) async throws -> [ProgressGrant] {
         guard let habit = try await store.habit(id: habitId) else { throw QuestlynError.habitNotFound }
         let today = LocalDate(now, timeZone: timeZone)
-        guard HabitMarkingRules.canMark(date, today: today), date >= habit.startDate else { throw QuestlynError.cannotMarkDate }
+        guard HabitMarkingRules.canMark(date, today: today, kind: habit.kind), date >= habit.startDate else { throw QuestlynError.cannotMarkDate }
         if habit.kind == .daily {
             guard habit.isScheduled(on: date) else { throw QuestlynError.notScheduled }
             guard try await store.occurrences(from: date, through: date).allSatisfy({ $0.habitId != habitId }) else {
@@ -244,6 +244,11 @@ struct HabitStatusBuilder {
                 marks[occurrence.localDate, default: 0] += 1
             }
             return HabitStatus(habit: habit, skill: skills.first { $0.id == habit.skillId }, weekMarks: marks, today: today)
+        }
+        // По времени, без времени — внизу (8C.5); внутри — по созданию.
+        .sorted { lhs, rhs in
+            (lhs.habit.time == nil ? 1 : 0, lhs.habit.time?.description ?? "", lhs.habit.createdAt)
+                < (rhs.habit.time == nil ? 1 : 0, rhs.habit.time?.description ?? "", rhs.habit.createdAt)
         }
     }
 }

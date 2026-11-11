@@ -15,6 +15,8 @@ struct ExploreFlowView: View {
     @State private var chosen: [UUID] = []
     @State private var attempt = 0
     @State private var session: ExploreSession?
+    @State private var season: Season = Season.of(LocalDate(.now, timeZone: .current))
+    @State private var precipitation = false
 
     init(model: AppModel) {
         self.model = model
@@ -27,7 +29,10 @@ struct ExploreFlowView: View {
         Group {
             switch phase {
             case .setup:
-                NavigationStack { ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen, start: start) }
+                NavigationStack {
+                    ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen, season: $season,
+                                     precipitation: $precipitation, start: start)
+                }
             case .game:
                 if let session { ExploreGameView(session: session) { phase = .summary } }
             case .summary:
@@ -48,7 +53,8 @@ struct ExploreFlowView: View {
         let (a, b) = range
         let skills = model.exploreSkills.filter { chosen.contains($0.id) }
         session = ExploreSession(input: model.exploreInput(first: a, last: b), hero: model.exploreHero(skills: skills),
-                                 attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent)
+                                 attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
+                                 season: season, precipitation: precipitation)
         phase = .game
     }
 
@@ -57,6 +63,8 @@ struct ExploreFlowView: View {
         // `-QuestlynExploreAuto YES` — сразу на остров (проверка в симуляторе без нажатий).
         guard UserDefaults.standard.bool(forKey: "QuestlynExploreAuto"), phase == .setup else { return }
         first = Calendar.current.date(byAdding: .day, value: -60, to: last) ?? first
+        if let value = UserDefaults.standard.string(forKey: "QuestlynExploreSeason"), let chosenSeason = Season(rawValue: value) { season = chosenSeason }
+        precipitation = UserDefaults.standard.bool(forKey: "QuestlynExplorePrecipitation")
         chosen = Array(model.exploreSkills.prefix(2).map(\.id))
         start()
         if UserDefaults.standard.bool(forKey: "QuestlynExploreEncounter"), let session, let npc = session.island.npcs.last {
@@ -81,6 +89,8 @@ struct ExploreSetupView: View {
     @Binding var first: Date
     @Binding var last: Date
     @Binding var chosen: [UUID]
+    @Binding var season: Season
+    @Binding var precipitation: Bool
     let start: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var preview: Island?
@@ -110,6 +120,21 @@ struct ExploreSetupView: View {
                     preset("3 месяца", days: ExploreRules.maxDays)
                 }
                 summary
+                CapsHeader(title: "Время года и погода")
+                VStack(spacing: QSpacing.m) {
+                    Picker("Время года", selection: $season) {
+                        Text("Осень").tag(Season.autumn)
+                        Text("Зима").tag(Season.winter)
+                        Text("Весна").tag(Season.spring)
+                        Text("Лето").tag(Season.summer)
+                    }
+                    .pickerStyle(.segmented)
+                    Picker("Погода", selection: $precipitation) {
+                        Text("Ясно").tag(false)
+                        Text(season == .winter ? "Снег" : "Дождь").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
                 skillsSection
                 Text("Песочница: XP, HP, MP и Летопись героя не меняются. HP и MP в игре стартуют с текущих.")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
@@ -325,7 +350,7 @@ struct ExploreGameView: View {
     private var minimap: some View {
         let side = CGFloat(session.island.side)
         return ZStack(alignment: .topLeading) {
-            if let image = ExploreRenderer.minimap(session.island) {
+            if let image = ExploreRenderer.minimap(session.island, opened: session.openedChests, lit: session.litCampfires) {
                 Image(decorative: image, scale: 1).resizable().interpolation(.none)
             }
             Rectangle().fill(Color(hex: 0xE2A04A))
@@ -534,6 +559,18 @@ struct ExploreSummaryView: View {
                     row("Пройдено клеток", session.steps)
                 }
                 .sheetCard()
+                let found = session.island.chests.filter { session.openedChests.contains($0.id) }
+                if !found.isEmpty {
+                    CapsHeader(title: "Найденные сундуки")
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(found) { chest in
+                            Text(chest.title).font(QFont.text(15)).frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                                .padding(.horizontal, QSpacing.xl)
+                                .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
+                        }
+                    }
+                    .sheetCard()
+                }
                 Text("Это была песочница: XP, HP, MP и Летопись героя не изменились. Итог не сохраняется.")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                     .padding(QSpacing.l).frame(maxWidth: .infinity, alignment: .leading)

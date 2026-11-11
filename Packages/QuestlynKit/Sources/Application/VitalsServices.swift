@@ -15,7 +15,7 @@ public struct VitalsService: Sendable {
         }
         return VitalsCalculator.state(heroCreatedAt: hero.createdAt, grants: grants, spends: spends, sleeps: sleeps,
                                       steps: try await store.stepDays(), settings: settings, now: now, timeZone: timeZone,
-                                      harms: try await store.harmEntries())
+                                      harms: try await store.harmEntries(), benefits: try await store.benefitEntries())
     }
 
     public func updateSettings(_ settings: VitalSettings) async throws {

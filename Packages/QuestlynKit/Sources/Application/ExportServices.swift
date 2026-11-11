@@ -23,6 +23,8 @@ public struct QuestlynExport: Codable, Sendable {
     public var stepDays: [StepDay]
     public var moods: [MoodEntry]
     public var harms: [HarmEntry]
+    /// Полезные действия — с 12.11.2026 (8C).
+    public var benefits: [BenefitEntry]
     public var customHarmHabits: [CustomHarmHabit]
     public var chronicleEntries: [ChronicleEntry]
     public var vitalSettings: VitalSettings
@@ -42,7 +44,7 @@ public struct ExportService: Sendable {
             quests: try await store.allQuestsIncludingDeleted(), completions: try await store.allCompletions(), epics: try await store.epics(),
             habits: try await store.habits(), habitOccurrences: try await store.allOccurrences(), activities: try await store.allActivities(),
             grants: try await store.allGrants(), sleepSessions: try await store.sleepSessions(), stepDays: try await store.stepDays(),
-            moods: try await store.moodEntries(), harms: try await store.harmEntries(), customHarmHabits: try await store.customHarmHabits(),
+            moods: try await store.moodEntries(), harms: try await store.harmEntries(), benefits: try await store.benefitEntries(), customHarmHabits: try await store.customHarmHabits(),
             chronicleEntries: try await store.chronicleEntries(), vitalSettings: try await store.vitalSettings()
         )
     }

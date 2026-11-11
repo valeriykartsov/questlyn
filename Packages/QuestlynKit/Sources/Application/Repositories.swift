@@ -15,6 +15,8 @@ public protocol HeroRepository: Sendable {
 public protocol SkillRepository: Sendable {
     func skills() async throws -> [Skill]
     func save(_ skill: Skill) async throws
+    /// Удаление навыка пометкой: открытые квесты и привычки — без навыка, выполненные не меняются (8C.6).
+    func deleteSkill(id: UUID, at date: Date) async throws
     /// Привязка вида активности один к одному: вид снимается с другого навыка — одной транзакцией. nil — убрать привязку.
     func linkActivityTemplate(_ templateId: String?, toSkill skillId: UUID) async throws
     func masteries() async throws -> [SkillMastery]
@@ -118,6 +120,10 @@ public protocol WellbeingRepository: Sendable {
     func harmEntries() async throws -> [HarmEntry]
     func record(_ harms: [HarmEntry]) async throws
     func deleteHarm(id: UUID, at date: Date) async throws
+    /// Полезные действия (08, раздел 2.3), включая удалённые.
+    func benefitEntries() async throws -> [BenefitEntry]
+    func record(_ benefits: [BenefitEntry]) async throws
+    func deleteBenefit(id: UUID, at date: Date) async throws
     func customHarmHabits() async throws -> [CustomHarmHabit]
     func save(_ habit: CustomHarmHabit) async throws
 }

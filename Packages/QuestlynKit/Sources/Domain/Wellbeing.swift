@@ -188,3 +188,49 @@ public struct Hangover: Hashable, Sendable {
 
     public func removedLevels(intelligence level: Int) -> Int { degree.removedLevels(of: level) }
 }
+
+// MARK: - Полезные действия (08, раздел 2.3)
+
+public enum BenefitKind: String, CaseIterable, Codable, Sendable {
+    case water, vegetables, outdoorWalk, stretching, nap, custom
+
+    public var title: String {
+        switch self {
+        case .water: "Вода 2 л"
+        case .vegetables: "Овощи и фрукты"
+        case .outdoorWalk: "Прогулка на воздухе"
+        case .stretching: "Растяжка"
+        case .nap: "Дневной отдых"
+        case .custom: "Своё действие"
+        }
+    }
+}
+
+/// Факт: полезное действие. Восстанавливает HP; удаление — пометкой.
+public struct BenefitEntry: Identifiable, Hashable, Codable, Sendable {
+    public var id: UUID
+    public var kind: BenefitKind
+    public var title: String
+    public var at: Date
+    public var localDate: LocalDate
+    public var timezoneId: String
+    public var deletedAt: Date?
+
+    public init(id: UUID = UUID(), kind: BenefitKind, title: String, at: Date, localDate: LocalDate, timezoneId: String, deletedAt: Date? = nil) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.at = at
+        self.localDate = localDate
+        self.timezoneId = timezoneId
+        self.deletedAt = deletedAt
+    }
+
+    public var isActive: Bool { deletedAt == nil }
+}
+
+public enum BenefitRules {
+    /// +3% MaxHP за отметку, не больше +10% MaxHP за день (08, раздел 2.3).
+    public static let healShare = 0.03
+    public static let dailyCapShare = 0.10
+}

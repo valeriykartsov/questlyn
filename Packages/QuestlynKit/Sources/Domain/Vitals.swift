@@ -252,6 +252,8 @@ public struct VitalsLogEntry: Hashable, Sendable {
         case sedentary(date: LocalDate, steps: Int, goal: Int, damage: Double)
         /// Отметка блока «Здоровье»: урон HP или начало похмелья (тогда — сгоревшая мана).
         case harm(HarmEntry, hpDamage: Double, mpBurned: Double)
+        /// Полезное действие: восстановлено HP (с учётом дневного предела).
+        case benefit(BenefitEntry, hpRestored: Double)
     }
 
     public var at: Date
@@ -314,12 +316,14 @@ public enum VitalsCalculator {
         case spend(Double)
         case sedentary(LocalDate)
         case harm(HarmEntry)
+        case benefit(BenefitEntry)
     }
 
     /// Проекция HP и MP на момент `now`. Старт — полные HP и MP в момент создания героя.
     public static func state(
         heroCreatedAt: Date, grants: [ProgressGrant], spends: [ManaSpend], sleeps: [SleepSession],
-        steps: [StepDay], settings: VitalSettings, now: Date, timeZone: TimeZone, harms: [HarmEntry] = []
+        steps: [StepDay], settings: VitalSettings, now: Date, timeZone: TimeZone, harms: [HarmEntry] = [],
+        benefits: [BenefitEntry] = []
     ) -> VitalsState {
         let hangovers = Hangover.timeline(harms)
         let firstDay = LocalDate(heroCreatedAt, timeZone: timeZone)
@@ -343,6 +347,9 @@ public enum VitalsCalculator {
 
         var events: [(at: Date, event: Event)] = spends.filter { $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .spend($0.cost)) }
         events += harms.filter { $0.isActive && $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .harm($0)) }
+        events += benefits.filter { $0.isActive && $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .benefit($0)) }
+        /// Восстановлено полезными действиями за день — доля MaxHP.
+        var healedShare: [LocalDate: Double] = [:]
 
         /// MaxMP с учётом похмелья: −5 MP за каждый снятый уровень INT.
         func topMana(_ levels: [Attribute: Int], at moment: Date) -> Double {
@@ -379,6 +386,12 @@ public enum VitalsCalculator {
                 let damage = min(hp, topHP * Double(entry.damagePercent) / 100)
                 hp -= damage
                 log.append(VitalsLogEntry(at: at, kind: .harm(entry, hpDamage: damage, mpBurned: manaBefore - mp)))
+            case let .benefit(entry):
+                let left = max(0, BenefitRules.dailyCapShare - healedShare[entry.localDate, default: 0])
+                let restored = min(topHP - hp, topHP * min(BenefitRules.healShare, left))
+                healedShare[entry.localDate, default: 0] += min(BenefitRules.healShare, left)
+                hp += max(0, restored)
+                log.append(VitalsLogEntry(at: at, kind: .benefit(entry, hpRestored: max(0, restored))))
             case let .spend(cost):
                 mp = max(0, mp - cost)
             case let .sedentary(day):
