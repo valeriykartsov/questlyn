@@ -13,6 +13,7 @@ enum Migrations {
     static let softDelete = "v9_softDelete"
     static let stage8 = "v10_stage8"
     static let stage8c = "v11_stage8c"
+    static let stage9 = "v12_stage9"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -324,6 +325,11 @@ enum Migrations {
                 t.column("timezoneId", .text).notNull()
                 t.column("deletedAt", .datetime)
             }
+        }
+
+        // Этап 9: длительность квеста.
+        migrator.registerMigration(stage9) { db in
+            try db.alter(table: "quest") { t in t.add(column: "durationMinutes", .integer) }
         }
 
         return migrator

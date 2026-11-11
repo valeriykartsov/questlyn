@@ -169,7 +169,9 @@ struct TodayView: View {
 
     @ViewBuilder
     private var habitsSection: some View {
-        let habits = model.habits.filter(\.isScheduledToday)
+        // Недельные — под ежедневными (9.7); внутри — по времени.
+        let scheduled = model.habits.filter(\.isScheduledToday)
+        let habits = scheduled.filter { $0.habit.kind == .daily } + scheduled.filter { $0.habit.kind == .weekly }
         if !habits.isEmpty {
             let daily = habits.filter { $0.habit.kind == .daily }
             VStack(alignment: .leading, spacing: QSpacing.m) {

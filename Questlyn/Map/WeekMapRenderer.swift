@@ -222,7 +222,16 @@ enum WeekMapRenderer {
 
     // MARK: Неделя
 
-    static func render(_ week: WeekMap, appearance: HeroAppearance?, accent: UInt32, timeZone: TimeZone) -> Rendered {
+    /// Монстр лагеря (9.2): красный — квест открыт, серый — выполнен.
+    static func monster(_ buffer: inout PixelBuffer, x: Int, y: Int, done: Bool) {
+        let body: UInt32 = done ? 0x8E8576 : 0xA8432F, shade: UInt32 = done ? 0x6E675C : 0x6E2A1F
+        for dy in 0..<5 { for dx in -2...2 where !(dy == 0 && abs(dx) == 2) { buffer.set(x + dx, y - dy, dy == 0 ? shade : body) } }
+        buffer.set(x - 1, y - 3, 0xFFFCF6); buffer.set(x + 1, y - 3, 0xFFFCF6)
+        buffer.set(x - 2, y - 5, body); buffer.set(x + 2, y - 5, body)
+    }
+
+    static func render(_ week: WeekMap, appearance: HeroAppearance?, accent: UInt32, timeZone: TimeZone,
+                       farm: [ClosedRange<Double>] = []) -> Rendered {
         var random = SeededRandom(UInt64(week.start.year * 10_000 + week.start.month * 100 + week.start.day))
         var buffer = PixelBuffer(width: size.width, height: size.height, fill: 0x8E8350)
         func dayIndex(_ i: Int) -> Int { min(6, max(0, (i - 2) / tilesPerDay)) }
@@ -253,7 +262,7 @@ enum WeekMapRenderer {
             }
         }
 
-        enum Item { case house(Int, Int, Int, UInt32), tree(Int, Int), person(Double, Double, HeroAppearance, UInt32), hero(Double), camp(Int, Int, Bool), sign(Int, Int), bush(Int, Int), fence(Int, Int) }
+        enum Item { case house(Int, Int, Int, UInt32), tree(Int, Int), person(Double, Double, HeroAppearance, UInt32), hero(Double), camp(Int, Int, Bool), sign(Int, Int), bush(Int, Int), fence(Int, Int), monster(Int, Int, Bool) }
         var items: [(depth: Double, item: Item)] = []
         var labels: [Label] = []
         var used = Set<[Int]>()
@@ -334,11 +343,31 @@ enum WeekMapRenderer {
                 }
             }
             for marker in day.questMarkers {
-                let (x, y) = iso(roadI(offset + marker.hour), Double(roadJ.1) + 0.3)
-                PixelMapRenderer.flag(&buffer, x: x, baseY: y + 4, height: 9, color: MapStyle.questColor(done: marker.isDone))
-                labels.append(Label(x: x, y: y - 2, title: marker.title, kind: .quest(done: marker.isDone),
-                                    callout: Callout(caption: marker.isDone ? "Квест · выполнен" : "Квест", title: marker.title,
-                                                     lines: [MapText.time(marker.hour)], weekHour: offset + marker.hour)))
+                guard let minutes = marker.durationMinutes else {
+                    let (x, y) = iso(roadI(offset + marker.hour), Double(roadJ.1) + 0.3)
+                    PixelMapRenderer.flag(&buffer, x: x, baseY: y + 4, height: 9, color: MapStyle.questColor(done: marker.isDone))
+                    labels.append(Label(x: x, y: y - 2, title: marker.title, kind: .quest(done: marker.isDone),
+                                        callout: Callout(caption: marker.isDone ? "Квест · выполнен" : "Квест", title: marker.title,
+                                                         lines: [MapText.time(marker.hour)], weekHour: offset + marker.hour)))
+                    continue
+                }
+                // Лагерь монстров (9.2): в стороне от дороги, дальше построек, в точке своего времени.
+                let center = Int(roadI(offset + marker.hour).rounded())
+                let candidates = [[center, roadJ.1 + 6], [center, roadJ.0 - 6], [center + 1, roadJ.1 + 6], [center - 1, roadJ.0 - 6], [center, roadJ.1 + 7]]
+                let spot = candidates.first { !used.contains($0) } ?? candidates[0]
+                used.insert(spot)
+                let (x, y) = iso(Double(spot[0]), Double(spot[1]))
+                let count = marker.monsters
+                let done = marker.isDone
+                for k in 0..<count {
+                    items.append((Double(spot[0] + spot[1]) + 0.6, .monster(x - (count - 1) * 4 + k * 8, y + 3, done)))
+                }
+                if done { PixelMapRenderer.flag(&buffer, x: x + count * 4 + 3, baseY: y + 3, height: 10, color: 0x2F6B4F) }
+                let status = done ? "выполнен" : marker.isOverdue ? "просрочен" : "открыт"
+                labels.append(Label(x: x, y: y + 12, title: "\(marker.title) · \(MapText.time(marker.hour))", kind: .quest(done: done),
+                                    callout: Callout(caption: done ? "Лагерь · квест выполнен" : "Лагерь · квест", title: marker.title,
+                                                     lines: ["\(MapText.time(marker.hour)) · \(duration(minutes)) · монстров: \(count)", status],
+                                                     weekHour: offset + marker.hour)))
             }
             for mood in day.moodFlags {
                 let (x, y) = iso(roadI(offset + mood.hour), Double(roadJ.0) - 0.1)
@@ -378,6 +407,15 @@ enum WeekMapRenderer {
             items.append((Double(i + j), random.int(4) == 0 ? .bush(i, j) : .tree(i, j)))
         }
         // Герой рисуется поверх картинки и идёт за ползунком (8C.3) — в картинку не запекается.
+        // «Фарм» — янтарный пунктир по середине дороги (9.3).
+        for range in farm {
+            var hour = range.lowerBound
+            while hour < range.upperBound {
+                let (x, y) = iso(roadI(hour), roadMid)
+                if Int(hour * 4) % 2 == 0 { for dx in -2...2 { buffer.set(x + dx, y, 0xB8651B); buffer.set(x + dx, y + 1, 0x9A5214) } }
+                hour += 0.25
+            }
+        }
         items.sort { $0.depth < $1.depth }
 
         for (_, item) in items {
@@ -393,6 +431,7 @@ enum WeekMapRenderer {
                     PixelMapRenderer.drawHero(&buffer, appearance: appearance, accent: accent, centerX: x, feetY: y + 6)
                 }
             case let .camp(x, y, known): camp(&buffer, x: x, y: y, known: known)
+            case let .monster(x, y, done): monster(&buffer, x: x, y: y, done: done)
             case let .sign(x, y): signpost(&buffer, x: x, y: y)
             case let .bush(i, j): bush(&buffer, i, j, random: &random)
             case let .fence(i, j): fence(&buffer, from: i, j: j)

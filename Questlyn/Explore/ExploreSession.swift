@@ -39,6 +39,11 @@ final class ExploreSession {
     var scoutUntil: Date?
     /// Короткое сообщение поверх карты: «Сундук: …», «Костёр: +HP».
     var toast: String?
+    /// Масштаб камеры: меньше — крупнее (9.7).
+    var zoom: CGFloat = 0.5
+    static let zoomRange: ClosedRange<CGFloat> = 0.3...1.0
+    /// Призраки просроченных задач (9.6) — число, они только летают.
+    var ghostCount = 0
 
     init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32,
          season: Season, precipitation: Bool) {

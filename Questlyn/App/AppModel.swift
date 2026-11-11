@@ -153,6 +153,21 @@ final class AppModel {
         let start = VitalsCalculator.date(first, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
         let end = VitalsCalculator.date(last.adding(days: 1), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
         agendaEvents = calendar.events(from: start, to: end, hidden: calendarPreferences.hidden)
+        #if DEBUG
+        // `-QuestlynSampleEvents YES` — события каждого дня для «Пути» в симуляторе.
+        if UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") {
+            var day = first
+            while day <= last {
+                func at(_ h: Int, _ m: Int) -> Date { VitalsCalculator.date(day, LocalTime(hour: h, minute: m)!, timeZone: timeZone) }
+                agendaEvents += [
+                    AgendaEvent(id: "s1\(day)", title: "Стендап", start: at(9, 0), end: at(9, 15), isAllDay: false, calendarId: "", calendarTitle: "", attendees: 2),
+                    AgendaEvent(id: "s2\(day)", title: "Встреча", start: at(11, 0), end: at(12, 30), isAllDay: false, calendarId: "", calendarTitle: "", attendees: 2),
+                    AgendaEvent(id: "s3\(day)", title: "Созвон", start: at(15, 30), end: at(16, 30), isAllDay: false, calendarId: "", calendarTitle: "", attendees: 3),
+                ]
+                day = day.adding(days: 1)
+            }
+        }
+        #endif
     }
 
     func connectCalendar() async {
@@ -191,7 +206,8 @@ final class AppModel {
         guard calendarPreferences.sendQuests, calendar.isAuthorized else { return }
         let quests = (overview?.journal ?? []).compactMap { item -> CalendarSource.QuestEvent? in
             guard let date = item.quest.dueDate else { return nil }
-            return .init(id: item.quest.id, title: item.quest.title, date: date, time: item.quest.dueTime, isDone: item.isCompleted)
+            return .init(id: item.quest.id, title: item.quest.title, date: date, time: item.quest.dueTime, isDone: item.isCompleted,
+                         minutes: item.quest.durationMinutes ?? QuestTiming.defaultDuration)
         }
         if let mapping = try? calendar.sync(quests: quests, mapping: calendarPreferences.questEvents, timeZone: timeZone) {
             calendarPreferences.questEvents = mapping
@@ -225,7 +241,8 @@ final class AppModel {
         #endif
         let quests = (overview?.journal ?? []).filter { $0.quest.dueDate == date }.map { item in
             MapQuest(title: item.quest.title, start: item.quest.dueTime.map { VitalsCalculator.date(date, $0, timeZone: timeZone) },
-                     isDone: item.isCompleted)
+                     isDone: item.isCompleted, durationMinutes: QuestTiming.effectiveDuration(item.quest),
+                     isOverdue: QuestTiming.ghostSince(item.quest, isCompleted: item.isCompleted, now: .now, timeZone: timeZone) != nil)
         }
         return DayMapBuilder.build(date: date, events: events, quests: quests, moods: overview?.moods ?? [], now: .now, timeZone: timeZone)
     }
@@ -235,6 +252,42 @@ final class AppModel {
         let days = (0..<7).map { dayMap(for: start.adding(days: $0)) }
         let camps = SleepCampBuilder.camps(from: vitals?.log ?? [], window: vitalSettings.sleepWindow, timeZone: timeZone)
         return WeekMap.build(weekStart: start, days: days, camps: camps, now: .now, timeZone: timeZone)
+    }
+
+    // MARK: Ритм дня — этап 9
+
+    private static let workScheduleKey = "workSchedule"
+    /// «Фарм» — рабочее время на этом устройстве (9.3); только отображение.
+    var workSchedule: WorkSchedule = {
+        #if DEBUG
+        // `-QuestlynWorkDemo YES` — «Фарм» 9–18 по будням для проверки в симуляторе.
+        if UserDefaults.standard.bool(forKey: "QuestlynWorkDemo") { return WorkSchedule(isEnabled: true) }
+        #endif
+        guard let data = UserDefaults.standard.data(forKey: "workSchedule"),
+              let value = try? JSONDecoder().decode(WorkSchedule.self, from: data) else { return .default }
+        return value
+    }() {
+        didSet { if let data = try? JSONEncoder().encode(workSchedule) { UserDefaults.standard.set(data, forKey: Self.workScheduleKey) } }
+    }
+
+    /// «Фарм» дня в часах от полуночи — для дороги на картах.
+    func farmHours(on day: LocalDate) -> ClosedRange<Double>? {
+        guard let interval = workSchedule.interval(on: day, timeZone: timeZone) else { return nil }
+        let start = VitalsCalculator.date(day, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        return interval.start.timeIntervalSince(start) / 3600...interval.end.timeIntervalSince(start) / 3600
+    }
+
+    /// Призраки просроченных задач (9.6): один квест — один призрак, с момента просрочки.
+    var ghosts: [(id: UUID, title: String, since: Date)] {
+        (overview?.journal ?? []).compactMap { item in
+            QuestTiming.ghostSince(item.quest, isCompleted: item.isCompleted, now: .now, timeZone: timeZone).map { (item.quest.id, item.quest.title, $0) }
+        }
+        .sorted { $0.since < $1.since }
+    }
+
+    /// Вид движения героя в момент.
+    func movementMode(at moment: Date) -> MovementMode {
+        MovementMode.at(moment, sleepWindow: vitalSettings.sleepWindow, work: workSchedule, timeZone: timeZone)
     }
 
     // MARK: Побродить — этап 8B

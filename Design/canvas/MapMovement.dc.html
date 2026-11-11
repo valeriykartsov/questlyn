@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вид движения на картах</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 56px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; overflow: hidden;">
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Миниатюра на «Сегодня»</div>
+  <div style="position: relative; border-radius: 14px; overflow: hidden;">
+    <img src="data:image/png;base64,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" alt="Миниатюра дня" style="width: 358px; height: 100px; image-rendering: pixelated; display: block;">
+    <div style="position: absolute; left: 0; right: 0; top: 84px; height: 4px; display: flex;" aria-hidden="true">
+      <span style="width: 37.5%;"></span><span style="width: 37.5%; background: repeating-linear-gradient(90deg, #B8651B 0 6px, transparent 6px 10px);"></span>
+    </div>
+    <div style="position: absolute; left: 160px; top: 70px; display: flex; align-items: center; gap: 4px; background: #E2A04A; border-radius: 7px; padding: 1px 6px; font-size: 10px; font-weight: 700;">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4l6 6-3 3-6-6zM11 7l-8 8 3 3 8-8"></path></svg>
+      D · 14:20 · Фарм
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">В поле ранга и времени — вид движения со значком. Отрезок дороги в рабочее время — пунктир цвета янтаря.</div>
+
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Три вида движения</div>
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+        <span style="display: flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 7px; background: {{m.chip}}; color: {{m.fg}}; font-size: 11px; font-weight: 700; white-space: nowrap;">{{m.chipText}}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><b style="font-size: 15px;">{{m.title}}</b><span style="font-size: 12px; color: #4A5368;">{{m.sub}}</span></span>
+        <span style="width: 34px; height: 6px; border-radius: 3px; background: {{m.road}};" aria-hidden="true"></span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Большая карта</div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.45;">Та же метка над героем, который идёт за ползунком: в 10:00 — «Фарм», в 20:00 — «Приключение», ночью у костра — «Привал». Пунктир «Фарма» — на дороге каждого рабочего дня.</div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Только отображение — на XP, HP и MP не влияет.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const modes = [
+      { chip: '#E2A04A', fg: '#1F2A44', chipText: 'D · 14:20 · Фарм', title: 'Фарм', sub: 'рабочее время · Инженер-программист', road: 'repeating-linear-gradient(90deg, #B8651B 0 6px, transparent 6px 10px)' },
+      { chip: '#1E2742', fg: '#F2B35B', chipText: 'D · 23:40 · Привал', title: 'Привал', sub: 'окно сна · костёр у дороги', road: '#1E2742' },
+      { chip: '#DCEBE2', fg: '#2F6B4F', chipText: 'D · 19:10 · Приключение', title: 'Приключение', sub: 'всё остальное время', road: '#E3CF9A' }
+    ];
+    return { modes };
+  }
+}
+</script>
+</body>
+</html>

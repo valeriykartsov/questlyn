@@ -177,6 +177,18 @@ enum ExploreRenderer {
         return canvas.image
     }
 
+    /// Призрак просроченной задачи (9.6): полупрозрачный, с глазами.
+    static func ghost() -> CGImage? {
+        let rows = ["..XXXX..", ".XXXXXX.", "XXXXXXXX", "XX.XX.XX", "XXXXXXXX", "XXXXXXXX", "XXXXXXXX", "X.XX.XX.", "..X..X.."]
+        var canvas = RGBACanvas(width: 8, height: rows.count, fill: nil)
+        for (y, row) in rows.enumerated() {
+            for (x, ch) in row.enumerated() {
+                if ch == "X" { canvas.setAlpha(x, y, 0xEEF2F7, alpha: 0.88) } else if y == 3 { canvas.set(x, y, 0x1F2A44) }
+            }
+        }
+        return canvas.image
+    }
+
     static func chest(opened: Bool) -> CGImage? {
         var canvas = RGBACanvas(width: 10, height: 9, fill: nil)
         for y in 2..<9 { for x in 0..<10 { canvas.set(x, y, y == 2 || y == 8 || x == 0 || x == 9 ? 0x5C3410 : 0xB8651B) } }

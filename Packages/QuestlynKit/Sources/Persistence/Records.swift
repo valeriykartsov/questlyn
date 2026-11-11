@@ -130,6 +130,7 @@ struct QuestRecord: QuestlynRecord {
     var epicId: UUID?
     var createdAt: Date
     var deletedAt: Date?
+    var durationMinutes: Int?
 
     enum Columns {
         static let dueDate = Column(CodingKeys.dueDate)
@@ -149,6 +150,7 @@ struct QuestRecord: QuestlynRecord {
         epicId = quest.epicId
         createdAt = quest.createdAt
         deletedAt = quest.deletedAt
+        durationMinutes = quest.durationMinutes
     }
 
     var domain: Quest {
@@ -158,7 +160,7 @@ struct QuestRecord: QuestlynRecord {
             skillId: skillId,
             dueDate: dueDate.flatMap(LocalDate.init(string:)),
             dueTime: dueTime.flatMap(LocalTime.init(string:)),
-            timezoneId: timezoneId, epicId: epicId, createdAt: createdAt, deletedAt: deletedAt
+            timezoneId: timezoneId, epicId: epicId, createdAt: createdAt, deletedAt: deletedAt, durationMinutes: durationMinutes
         )
     }
 }

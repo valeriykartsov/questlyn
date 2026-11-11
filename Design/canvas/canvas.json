@@ -478,6 +478,48 @@
       "w": 390,
       "x": 1410,
       "y": 16994
+    },
+    "QuestDuration.dc.html": {
+      "h": 844,
+      "title": "9.1 · Новый квест: длительность",
+      "w": 390,
+      "x": 0,
+      "y": 18208
+    },
+    "MapCamps.dc.html": {
+      "h": 844,
+      "title": "9.2 · Большая карта: лагеря монстров",
+      "w": 390,
+      "x": 470,
+      "y": 18208
+    },
+    "SettingsWork.dc.html": {
+      "h": 844,
+      "title": "9.3 · Настройки: «Фарм» — рабочее время",
+      "w": 390,
+      "x": 940,
+      "y": 18208
+    },
+    "MapMovement.dc.html": {
+      "h": 844,
+      "title": "9.4 · Вид движения на картах: Фарм · Привал · Приключение",
+      "w": 390,
+      "x": 1410,
+      "y": 18208
+    },
+    "GanttDay.dc.html": {
+      "h": 844,
+      "title": "9.5 · Календарь «Путь»: Гант дня",
+      "w": 390,
+      "x": 1880,
+      "y": 18208
+    },
+    "GanttLandscape.dc.html": {
+      "h": 390,
+      "title": "9.6 · «Путь» повёрнут: низом к левой грани",
+      "w": 844,
+      "x": 2350,
+      "y": 18208
     }
   },
   "createdOnFiles": {
@@ -579,6 +621,13 @@
       "text": "На review (11.11.2026): этап 8B «Побродить» — мини-игра на острове из событий",
       "x": 0,
       "y": 16744
+    },
+    "r13": {
+      "kind": "title1",
+      "maxW": 12000,
+      "text": "На review (12.11.2026): этап 9 — длительность квестов, лагеря монстров, «Фарм», Гант «Путь героя»",
+      "x": 0,
+      "y": 17958
     }
   },
   "order": [
@@ -649,7 +698,13 @@
     "ExploreSetup.dc.html",
     "ExploreIsland.dc.html",
     "ExploreEncounter.dc.html",
-    "ExploreSummary.dc.html"
+    "ExploreSummary.dc.html",
+    "QuestDuration.dc.html",
+    "MapCamps.dc.html",
+    "SettingsWork.dc.html",
+    "MapMovement.dc.html",
+    "GanttDay.dc.html",
+    "GanttLandscape.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"

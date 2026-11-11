@@ -7,11 +7,15 @@ struct CalendarView: View {
     let model: AppModel
     @Environment(\.scenePhase) private var scenePhase
 
-    enum Mode: String, CaseIterable { case week = "Неделя", month = "Месяц" }
+    enum Mode: String, CaseIterable { case week = "Неделя", month = "Месяц", path = "Путь" }
 
     @AppStorage("calendar.mode") private var mode: Mode = .week
     @State private var anchor: LocalDate?
     @State private var selected: LocalDate?
+    /// «Путь» повёрнут кнопкой (9.4); закрытие сбрасывает поворот.
+    @State private var isRotated = false
+    @State private var pathZoom: CGFloat = 1
+    @State private var pathZoomBase: CGFloat = 1
 
     private var today: LocalDate { model.today }
     private var current: LocalDate { anchor ?? today }
@@ -22,7 +26,11 @@ struct CalendarView: View {
         return (0..<days).map { monthStart.adding(days: $0) }
     }
     private var range: (LocalDate, LocalDate) {
-        mode == .week ? (weekDays[0], weekDays[6]) : (monthStart, monthDays.last ?? monthStart)
+        switch mode {
+        case .week: (weekDays[0], weekDays[6])
+        case .month: (monthStart, monthDays.last ?? monthStart)
+        case .path: (current, current)
+        }
     }
 
     var body: some View {
@@ -32,7 +40,11 @@ struct CalendarView: View {
                 modePicker
                 pager
                 if !model.isCalendarAuthorized { connectCard }
-                if mode == .week { weekList } else { monthGrid; dayCard(selected ?? today) }
+                switch mode {
+                case .week: weekList
+                case .month: monthGrid; dayCard(selected ?? today)
+                case .path: pathSection
+                }
                 Text("Цветная полоса — профессия или навык, к которым привязан календарь (только оформление, XP не даёт). Настройки — «Настройки › Календари».")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
             }
@@ -43,6 +55,9 @@ struct CalendarView: View {
         .paperScreen()
         .onAppear(perform: reload)
         .onChange(of: mode) { reload() }
+        .fullScreenCover(isPresented: $isRotated) {
+            PathLandscapeView(model: model, day: current, events: events(on: current))
+        }
         .onChange(of: anchor) { reload() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { reload() } }
         .refreshable {
@@ -96,13 +111,16 @@ struct CalendarView: View {
     private var pagerTitle: String {
         let ru = Locale(identifier: "ru_RU")
         if mode == .month { return monthStart.date?.formatted(.dateTime.month(.wide).locale(ru)).capitalized ?? "" }
+        if mode == .path { return current.date.map { Format.longDay($0) } ?? "" }
         guard let first = weekDays.first?.date, let last = weekDays.last?.date else { return "" }
         let tail = last.formatted(.dateTime.day().month(.wide).locale(ru))
         return weekDays[0].month == weekDays[6].month ? "\(weekDays[0].day)–\(tail)" : "\(first.formatted(.dateTime.day().month(.abbreviated).locale(ru))) – \(tail)"
     }
 
     private func shift(_ step: Int) {
-        if mode == .week {
+        if mode == .path {
+            anchor = current.adding(days: step)
+        } else if mode == .week {
             anchor = current.adding(days: 7 * step)
         } else {
             var parts = DateComponents(year: monthStart.year, month: monthStart.month + step, day: 1)
@@ -123,6 +141,42 @@ struct CalendarView: View {
         }
         .padding(QSpacing.xl)
         .sheetCard()
+    }
+
+    // MARK: «Путь героя» (9.4, макет 9.5)
+
+    private var pathSection: some View {
+        VStack(alignment: .leading, spacing: QSpacing.s) {
+            HStack {
+                Text("Тяните полосу — время, нижний край — длительность. Щипок — масштаб.").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                Spacer()
+                Button { isRotated = true } label: {
+                    Image(systemName: "rotate.right").font(.system(size: 16, weight: .semibold))
+                        .frame(width: 40, height: 40)
+                        .background(QColor.sheet, in: Circle())
+                        .overlay(Circle().strokeBorder(QColor.lineStrong))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(QColor.ink)
+                .accessibilityLabel("Повернуть «Путь»")
+            }
+            ScrollViewReader { reader in
+                ScrollView(.vertical, showsIndicators: false) {
+                    ZStack(alignment: .topLeading) {
+                        VStack(spacing: 0) { ForEach(0..<24, id: \.self) { Color.clear.frame(height: 44 * pathZoom).id($0) } }
+                        PathTimeline(model: model, day: current, events: events(on: current), axis: .vertical, zoom: pathZoom)
+                    }
+                }
+                .frame(height: 520)
+                .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.card))
+                .clipShape(RoundedRectangle(cornerRadius: QRadius.card))
+                .overlay(RoundedRectangle(cornerRadius: QRadius.card).strokeBorder(QColor.line))
+                .simultaneousGesture(PathZoom.gesture(zoom: $pathZoom, base: $pathZoomBase))
+                .onAppear { reader.scrollTo(7, anchor: .top) }
+            }
+            Text("Справа — события календарей, только чтение. Квесты без времени и привычки не показываются; выполненные не переносятся.")
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        }
     }
 
     // MARK: Данные дня

@@ -195,7 +195,7 @@ enum PixelMapRenderer {
 
     static let stripSize = (width: 180, height: 50)
 
-    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32) -> CGImage? {
+    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32, farm: ClosedRange<Double>? = nil) -> CGImage? {
         let (w, h) = stripSize
         let groundY = 36, roadTop = 39, roadBottom = 42
         let light = map.light
@@ -218,6 +218,10 @@ enum PixelMapRenderer {
         for x in 0..<w { buffer[x, roadBottom] = biome.road.edge }
 
         func x(_ hour: Double) -> Int { Int((4 + hour / 24 * Double(w - 8)).rounded()) }
+        // «Фарм» — янтарный пунктир по дороге (9.3).
+        if let farm {
+            for px in x(farm.lowerBound)..<x(farm.upperBound) where (px / 3) % 2 == 0 { buffer.set(px, roadTop + 1, 0xB8651B) }
+        }
 
         // Деревья там, где нет поселений.
         let occupied = map.settlements.map { (x($0.startHour) - 3, max(x($0.startHour) + 8, x($0.endHour)) + 4) }

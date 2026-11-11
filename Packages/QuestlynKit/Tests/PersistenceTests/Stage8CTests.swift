@@ -114,3 +114,22 @@ struct Stage8CTests {
         #expect(order == ["Утро", "Вечер", "Без времени"])
     }
 }
+
+/// Этап 9: длительность квеста сохраняется и проверяется.
+struct Stage9Tests {
+    @Test func questDurationRoundTripAndValidation() async throws {
+        let store = GRDBStore(try AppDatabase.inMemory())
+        let utc = TimeZone(identifier: "UTC")!
+        let now = ISO8601DateFormatter().date(from: "2026-11-10T18:00:00Z")!
+        let quests = QuestService(store: store)
+        let quest = try await quests.create(QuestDraft(title: "Слайды", dueDate: LocalDate(now, timeZone: utc),
+                                                       dueTime: LocalTime(hour: 15, minute: 0), durationMinutes: 120), now: now, timeZone: utc)
+        #expect(try await store.quest(id: quest.id)?.durationMinutes == 120)
+        var draft = QuestDraft(quest: quest)
+        draft.durationMinutes = 45
+        await #expect(throws: QuestlynError.invalidDuration) { try await quests.update(questId: quest.id, with: draft) }
+        draft.durationMinutes = nil
+        try await quests.update(questId: quest.id, with: draft)
+        #expect(try await store.quest(id: quest.id)?.durationMinutes == nil)
+    }
+}

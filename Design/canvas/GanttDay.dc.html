@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Календарь: Путь героя</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 56px 16px 0; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; position: relative; overflow: hidden;">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-size: 13px; color: #4A5368;">Ноябрь 2026</div><div style="font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700;">Календарь</div></div>
+    <a href="GanttLandscape.dc.html" aria-label="Повернуть «Путь»" style="width: 40px; height: 40px; border-radius: 20px; background: #FFFCF6; border: 1px solid #C9BCA2; display: flex; align-items: center; justify-content: center; color: #1F2A44; margin-bottom: 4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"></rect><path d="M3 14a8 8 0 0 0 6 6M3 14l-1 3M3 14l3 1"></path></svg></a>
+  </div>
+  <div style="display: flex; padding: 3px; border-radius: 12px; background: #FFFCF6; border: 1px solid #E3D9C6; font-size: 13px; margin-top: 12px;"><span style="padding: 6px 0; flex: 1; text-align: center; font-weight: 600;">Неделя</span><span style="padding: 6px 0; flex: 1; text-align: center; font-weight: 600;">Месяц</span><span style="padding: 6px 0; flex: 1; text-align: center; border-radius: 9px; background: #1F2A44; color: #FFFCF6; font-weight: 600;">Путь</span></div>
+  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; margin-top: 10px;"><span>‹</span><span>Среда, 11 ноября</span><span>›</span></div>
+
+  <div style="position: absolute; left: 16px; right: 16px; top: 214px; height: 528px; border-radius: 14px; overflow: hidden; background: #FFFCF6; border: 1px solid #E3D9C6;">
+    <sc-for list="{{zones}}" as="z" hint-placeholder-count="5">
+      <div style="position: absolute; left: 0; right: 0; top: {{z.top}}; height: {{z.h}}; background: {{z.bg}};"><span style="position: absolute; right: 6px; top: 3px; font-size: 10px; font-weight: 700; color: {{z.fg}}; letter-spacing: .04em; text-transform: uppercase;">{{z.label}}</span></div>
+    </sc-for>
+    <sc-for list="{{hours}}" as="h" hint-placeholder-count="16">
+      <div style="position: absolute; left: 0; right: 0; top: {{h.top}}; height: 1px; background: rgba(31,42,68,.08);"><span style="position: absolute; left: 6px; top: -7px; font-size: 10px; color: #4A5368; background: transparent;">{{h.label}}</span></div>
+    </sc-for>
+
+    <div style="position: absolute; left: 44px; top: {{epic.top}}; height: {{epic.h}}; width: 4px; border-radius: 2px; background: #B8651B;" aria-hidden="true"></div>
+    <div style="position: absolute; left: 22px; top: {{epic.labelTop}}; transform: rotate(-90deg); transform-origin: left top; font-size: 10px; font-weight: 700; color: #9A5214; white-space: nowrap;">Повышение до тимлида</div>
+
+    <sc-for list="{{quests}}" as="q" hint-placeholder-count="3">
+      <div style="position: absolute; left: 54px; width: 196px; top: {{q.top}}; height: {{q.h}}; box-sizing: border-box; border-radius: 8px; background: {{q.bg}}; border: {{q.border}}; padding: 3px 8px; display: flex; flex-direction: column; overflow: hidden;">
+        <span style="font-size: 12px; font-weight: 700; color: {{q.fg}};">{{q.title}}</span>
+        <span style="font-size: 10px; color: {{q.sub}};">{{q.meta}}</span>
+        <sc-if value="{{q.handle}}" hint-placeholder-val="{{ true }}"><span style="position: absolute; left: 50%; bottom: 3px; width: 24px; height: 4px; margin-left: -12px; border-radius: 2px; background: rgba(255,252,246,.8);"></span></sc-if>
+      </div>
+    </sc-for>
+
+    <sc-for list="{{events}}" as="e" hint-placeholder-count="3">
+      <div style="position: absolute; left: 258px; right: 6px; top: {{e.top}}; height: {{e.h}}; box-sizing: border-box; border-radius: 6px; background: repeating-linear-gradient(135deg, #E6E8EE 0 4px, #DCE0E8 4px 8px); border-left: 3px solid {{e.color}}; padding: 2px 5px; overflow: hidden;">
+        <span style="font-size: 10px; font-weight: 600;">{{e.title}}</span>
+      </div>
+    </sc-for>
+
+    <div style="position: absolute; left: 0; right: 0; top: {{now}}; height: 2px; background: #A8432F;"><span style="position: absolute; left: 4px; top: -8px; padding: 0 4px; border-radius: 4px; background: #A8432F; color: #FFFCF6; font-size: 9px; font-weight: 700;">14:20</span></div>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; top: 748px; font-size: 11px; color: #4A5368; line-height: 1.35;">Квесты — тянуть полосу (время) и нижний край (длительность). Справа — события календарей, только чтение. Квесты без времени и привычки не показываются.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const start = 6, px = 528 / 17;
+    const y = (h) => ((h - start) * px).toFixed(1) + 'px';
+    const hh = (d) => (d * px).toFixed(1) + 'px';
+    const zones = [
+      { from: 6, to: 7, bg: 'rgba(30,39,66,.82)', fg: '#F2B35B', label: 'Привал' },
+      { from: 7, to: 9, bg: 'rgba(220,235,226,.7)', fg: '#2F6B4F', label: 'Приключение' },
+      { from: 9, to: 18, bg: 'rgba(241,227,211,.75)', fg: '#9A5214', label: 'Фарм' },
+      { from: 18, to: 23, bg: 'rgba(220,235,226,.7)', fg: '#2F6B4F', label: 'Приключение' },
+      { from: 23, to: 23.01 + 0.99, bg: 'rgba(30,39,66,.82)', fg: '#F2B35B', label: 'Привал' }
+    ].map((z) => ({ ...z, top: y(z.from), h: hh(z.to - z.from) }));
+    const hours = [];
+    for (let h = 7; h <= 23; h++) hours.push({ top: y(h), label: String(h).padStart(2, '0') + ':00' });
+    const quests = [
+      { from: 10, d: 0.5, title: 'Код-ревью ✓', meta: '10:00 · 30 мин · выполнен, не двигается', bg: '#DCEBE2', border: '1px solid #2F6B4F', fg: '#2F6B4F', sub: '#2F6B4F', handle: false },
+      { from: 15, d: 2, title: 'Слайды для ретро', meta: '15:00–17:00 · 2 ч · Epic', bg: '#1F2A44', border: 'none', fg: '#FFFCF6', sub: '#C9BCA2', handle: true },
+      { from: 18, d: 0.5, title: 'Сдать отчёт', meta: '18:00 · 30 мин · Epic', bg: '#B8651B', border: 'none', fg: '#FFFCF6', sub: '#F6E4D0', handle: true }
+    ].map((q) => ({ ...q, top: y(q.from), h: hh(Math.max(q.d, 0.75)) }));
+    const events = [
+      { from: 9, d: 0.25, title: 'Стендап', color: '#2F6B4F' },
+      { from: 11, d: 1.5, title: 'Встреча', color: '#2F6B4F' },
+      { from: 15.5, d: 1, title: 'Созвон', color: '#3E5C8A' },
+      { from: 19, d: 1, title: 'Тренировка', color: '#B8651B' }
+    ].map((e) => ({ ...e, top: y(e.from), h: hh(Math.max(e.d, 0.6)) }));
+    const epic = { top: y(10), h: hh(8.5), labelTop: y(17.6) };
+    return { zones, hours, quests, events, epic, now: y(14 + 20 / 60) };
+  }
+}
+</script>
+</body>
+</html>
