@@ -8,6 +8,9 @@ struct HabitDetailView: View {
     let habitId: UUID
     @Environment(\.dismiss) private var dismiss
     @State private var isEditing = false
+    /// Отметки недельного квеста за текущую неделю (8.5) и отметка, которую собираются снять.
+    @State private var weekMarks: [HabitOccurrence] = []
+    @State private var pendingUnmark: HabitOccurrence?
 
     private var status: HabitStatus? { model.habit(id: habitId) }
 
@@ -23,6 +26,19 @@ struct HabitDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Закрыть") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) { Button("Изменить") { isEditing = true } }
+            }
+            .task(id: status.map { "\($0.weekDone)-\($0.today)" }) {
+                if status?.habit.kind == .weekly { weekMarks = await model.weekOccurrences(habitId: habitId) }
+            }
+            .alert(pendingUnmark.map { "Снять отметку за \(Format.shortDay($0.localDate).lowercased())?" } ?? "",
+                   isPresented: Binding(get: { pendingUnmark != nil }, set: { if !$0 { pendingUnmark = nil } })) {
+                Button("Снять отметку", role: .destructive) {
+                    guard let mark = pendingUnmark else { return }
+                    Task { await model.unmarkWeekly(occurrenceId: mark.id) }
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text(unmarkMessage)
             }
             .sheet(isPresented: $isEditing) {
                 if let habit = status?.habit {
@@ -59,6 +75,8 @@ struct HabitDetailView: View {
             }
             .padding(QSpacing.xl)
             .sheetCard()
+
+            if habit.kind == .weekly, !weekMarks.isEmpty { weekMarkList(target: habit.targetPerWeek) }
 
             VStack(spacing: 0) {
                 if habit.kind == .daily {
@@ -117,6 +135,48 @@ struct HabitDetailView: View {
         }
     }
 
+    /// «Отметки недели»: любую отметку текущей недели можно снять (8.5, макет 8.22).
+    private func weekMarkList(target: Int) -> some View {
+        VStack(alignment: .leading, spacing: QSpacing.s) {
+            Text("Отметки недели").font(QFont.text(12, weight: .semibold)).textCase(.uppercase).tracking(0.7)
+                .foregroundStyle(QColor.inkSecondary)
+            VStack(spacing: 0) {
+                ForEach(Array(weekMarks.enumerated()), id: \.element.id) { index, mark in
+                    if index > 0 { Divider().overlay(QColor.line) }
+                    HStack(spacing: QSpacing.l) {
+                        Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(QColor.sheet)
+                            .frame(width: 22, height: 22).background(QColor.forest, in: RoundedRectangle(cornerRadius: QRadius.chip))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(Format.shortDay(mark.localDate)).font(QFont.text(15))
+                            Text(mark.completedAt.formatted(.dateTime.hour().minute().locale(Locale(identifier: "ru_RU")))
+                                 + (index >= target ? " · сверх цели" : ""))
+                                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Снять") { pendingUnmark = mark }
+                            .font(QFont.text(14, weight: .semibold)).foregroundStyle(QColor.hp)
+                            .frame(minWidth: 64, minHeight: 44)
+                            .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.lineStrong))
+                            .accessibilityLabel("Снять отметку за \(Format.shortDay(mark.localDate))")
+                    }
+                    .padding(.vertical, QSpacing.s)
+                }
+            }
+            .padding(.horizontal, QSpacing.xl)
+            .sheetCard()
+            Text("Снять можно любую отметку этой недели. Сверх цели — тот же XP, что у обычной отметки; в дисциплину идёт не больше 100%. Прошлые недели закрыты.")
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        }
+    }
+
+    private var unmarkMessage: String {
+        guard let skill = status?.skill else {
+            return "Отметка пропадёт, вклад в недельную дисциплину пересчитается. В Летописи запись станет зачёркнутой."
+        }
+        return "Очки опыта за неё будут потеряны: −5 XP навыка «\(skill.title)» и −5 XP атрибутам. В Летописи запись станет зачёркнутой."
+    }
+
     private func rewardText(_ status: HabitStatus, profession: Profession?) -> String {
         guard let skill = status.skill, let profession else { return "Вклад в недельную дисциплину. Свяжите с навыком, чтобы получать XP." }
         let attrs = profession.attributes.map(\.code).joined(separator: ", ")
@@ -132,10 +192,6 @@ struct HabitDetailView: View {
             if status.habit.kind == .weekly {
                 Button("Отметить выполнение") { Task { await model.markHabit(habitId, on: today) } }
                     .buttonStyle(PrimaryButtonStyle())
-                if status.doneToday {
-                    Button("Снять отметку за сегодня") { Task { await model.unmarkHabit(habitId, on: today) } }
-                        .buttonStyle(SecondaryButtonStyle())
-                }
             } else if status.isScheduledToday {
                 if status.doneToday {
                     Button("Снять отметку за сегодня") { Task { await model.unmarkHabit(habitId, on: today) } }

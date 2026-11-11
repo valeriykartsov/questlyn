@@ -94,6 +94,11 @@ public enum HabitMarkingRules {
     public static func canMark(_ date: LocalDate, today: LocalDate) -> Bool {
         date == today || date == today.adding(days: -1)
     }
+
+    /// Отметку недельного квеста можно снять за любой день текущей недели (02, 11.11.2026); закрытые недели не меняются.
+    public static func canUnmarkWeekly(_ date: LocalDate, today: LocalDate) -> Bool {
+        date >= today.weekStart && date <= today
+    }
 }
 
 /// Epic Quest: большая цель из шагов. XP не даёт, только веха (02, 07).
@@ -106,9 +111,12 @@ public struct EpicQuest: Identifiable, Hashable, Codable, Sendable {
     public var createdAt: Date
     /// Удалён пользователем: пропадает из журнала, начисления за выполненные шаги остаются.
     public var deletedAt: Date?
+    /// Необязательная профессия: только акцент и порядок в журнале (02, 11.11.2026), на награды не влияет.
+    public var professionId: UUID?
 
     public init(id: UUID = UUID(), title: String, details: String? = nil, deadline: LocalDate? = nil,
-                completedAt: Date? = nil, createdAt: Date, deletedAt: Date? = nil) {
+                completedAt: Date? = nil, createdAt: Date, deletedAt: Date? = nil, professionId: UUID? = nil) {
+        self.professionId = professionId
         self.deletedAt = deletedAt
         self.id = id
         self.title = title

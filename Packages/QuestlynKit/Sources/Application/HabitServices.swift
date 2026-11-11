@@ -114,6 +114,18 @@ public struct HabitMarkService: Sendable {
         return grants
     }
 
+    /// Снять конкретную отметку недельного квеста за любой день текущей недели (8.5). XP за неё отменяется.
+    public func unmarkWeekly(occurrenceId: UUID, now: Date, timeZone: TimeZone) async throws {
+        let today = LocalDate(now, timeZone: timeZone)
+        guard let occurrence = try await store.allOccurrences().first(where: { $0.id == occurrenceId && $0.isActive }),
+              let habit = try await store.habit(id: occurrence.habitId) else { throw QuestlynError.notCompleted }
+        guard habit.kind == .weekly, HabitMarkingRules.canUnmarkWeekly(occurrence.localDate, today: today) else {
+            throw QuestlynError.cannotMarkDate
+        }
+        try await store.undoOccurrence(id: occurrence.id, at: now)
+        try await DisciplineService(store: store).settle(now: now, timeZone: timeZone)
+    }
+
     /// Снять последнюю отметку за день.
     public func unmark(habitId: UUID, on date: LocalDate, now: Date, timeZone: TimeZone) async throws {
         let today = LocalDate(now, timeZone: timeZone)
@@ -258,12 +270,12 @@ public struct EpicService: Sendable {
     public init(store: any QuestlynStore) { self.store = store }
 
     @discardableResult
-    public func create(title: String, details: String, deadline: LocalDate?, steps: [QuestDraft],
+    public func create(title: String, details: String, deadline: LocalDate?, steps: [QuestDraft], professionId: UUID? = nil,
                        now: Date, timeZone: TimeZone) async throws -> EpicQuest {
         let name = trimmed(title)
         guard !name.isEmpty else { throw QuestlynError.emptyName }
         let text = trimmed(details)
-        let epic = EpicQuest(title: name, details: text.isEmpty ? nil : text, deadline: deadline, createdAt: now)
+        let epic = EpicQuest(title: name, details: text.isEmpty ? nil : text, deadline: deadline, createdAt: now, professionId: professionId)
         let quests = try steps.filter { !trimmed($0.title).isEmpty }.enumerated().map { index, draft in
             // Порядок шагов сохраняется через время создания.
             try QuestService.makeQuest(draft, now: now.addingTimeInterval(Double(index) / 1000), timeZone: timeZone, epicId: epic.id)
@@ -300,7 +312,7 @@ public struct EpicService: Sendable {
 
     /// Изменение Epic (3): название, описание, срок и шаги. Убранные шаги удаляются пометкой, их начисления остаются.
     public func update(epicId: UUID, title: String, details: String, deadline: LocalDate?, steps: [StepEdit],
-                       now: Date, timeZone: TimeZone) async throws {
+                       professionId: UUID? = nil, now: Date, timeZone: TimeZone) async throws {
         guard var epic = try await store.epic(id: epicId) else { throw QuestlynError.epicNotFound }
         let name = trimmed(title)
         guard !name.isEmpty else { throw QuestlynError.emptyName }
@@ -310,6 +322,7 @@ public struct EpicService: Sendable {
         let text = trimmed(details)
         epic.details = text.isEmpty ? nil : text
         epic.deadline = deadline
+        epic.professionId = professionId
         let existing = try await store.allQuests().filter { $0.epicId == epicId }
         let quests = QuestService(store: store)
         for (index, step) in kept.enumerated() {

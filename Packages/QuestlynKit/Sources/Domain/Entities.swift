@@ -114,8 +114,12 @@ public struct Skill: Identifiable, Hashable, Codable, Sendable {
     public var title: String
     public var isActive: Bool
     public var createdAt: Date
+    /// Привязанный вид активности (`ActivityTemplate.id`): один к одному (02, 11.11.2026). Подставляет навык в «Новой активности».
+    public var activityTemplateId: String?
 
-    public init(id: UUID = UUID(), professionId: UUID, title: String, isActive: Bool = true, createdAt: Date) {
+    public init(id: UUID = UUID(), professionId: UUID, title: String, isActive: Bool = true, createdAt: Date,
+                activityTemplateId: String? = nil) {
+        self.activityTemplateId = activityTemplateId
         self.id = id
         self.professionId = professionId
         self.title = title

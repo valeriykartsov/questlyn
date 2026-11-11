@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Новый Epic: профессия</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 788px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="JournalEpicColor.dc.html" style="font-size: 16px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Новый Epic</div>
+      <div style="width: 60px;"></div>
+    </div>
+
+    <label style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Цель</span>
+      <input type="text" value="Запустить пет-проект" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 2px solid #1F2A44; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+    </label>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Профессия · необязательно</span>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+        <sc-for list="{{profs}}" as="p" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{p.on}}" style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border: none; border-bottom: 1px solid #E3D9C6; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+            <span style="width: 14px; height: 14px; border-radius: 4px; background: {{p.color}}; border: {{p.ring}}; box-sizing: border-box; flex-shrink: 0;"></span>
+            <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: {{p.weight}};">{{p.name}}</span><span style="font-size: 12px; color: #4A5368;">{{p.sub}}</span></span>
+            <span style="width: 22px; height: 22px; border-radius: 11px; background: {{p.check}}; border: {{p.checkRing}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">Профессия красит Epic в её цвет и поднимает его в журнале выше остальных. Навык и награды шагов не меняются — их задаёт каждый шаг.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Так Epic будет выглядеть</span>
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+        <span style="width: 40px; height: 40px; border-radius: 12px; background: #F1E3D3; color: #B8651B; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h11l-2 4 2 4H5"></path></svg></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9A5214;">Epic · Инженер-программист</span>
+          <span style="font-size: 16px; font-weight: 600;">Запустить пет-проект</span>
+          <span style="font-size: 12px; color: #4A5368;">0 из 0 шагов</span>
+        </span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #E6E8EE;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+      <div style="font-size: 13px; line-height: 1.45;">Epic с любой профессией — в акцентном цвете приложения (янтарь, в тёмной теме — костёр). Без профессии — без акцента, как обычные квесты.</div>
+    </div>
+
+    <a href="JournalEpicColor.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Создать Epic</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const src = [
+      { name: 'Без профессии', sub: 'обычный Epic', color: 'transparent', sel: false },
+      { name: 'Инженер-программист', sub: 'основная · INT · MNT · CHR', color: '#B8651B', sel: true },
+      { name: 'Атлет', sub: 'вторая · STR · END · MNT', color: '#B8651B', sel: false },
+      { name: 'Менеджер проектов', sub: 'третья · CHR · MNT · INT', color: '#B8651B', sel: false }
+    ];
+    const profs = src.map((p) => ({
+      name: p.name, sub: p.sub, color: p.color,
+      ring: p.color === 'transparent' ? '1.5px dashed #4A5368' : 'none',
+      on: p.sel ? 'true' : 'false',
+      weight: p.sel ? '600' : '500',
+      check: p.sel ? '#1F2A44' : 'transparent',
+      checkRing: p.sel ? 'none' : '2px solid #C9BCA2'
+    }));
+    return { profs };
+  }
+}
+</script>
+</body>
+</html>

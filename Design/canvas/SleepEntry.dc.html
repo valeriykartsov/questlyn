@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Вход в исправление сна и запись Летописи</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 56px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">«Сегодня» · блок сна</div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 36px; height: 36px; border-radius: 10px; background: #1E2742; color: #F2B35B; display: flex; align-items: center; justify-content: center;" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path></svg></div>
+      <div style="flex: 1; display: flex; flex-direction: column;"><span style="font-size: 12px; color: #4A5368;">Сон · ночь на среду</span><span style="font-size: 16px; font-weight: 700;">23:40–07:10 · 7 ч 30 мин</span></div>
+      <a href="SleepEdit.dc.html" aria-label="Исправить сон" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #C9BCA2; display: flex; align-items: center; justify-content: center; color: #1F2A44;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg></a>
+    </div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 600;">
+      <span style="padding: 2px 8px; border-radius: 999px; background: #F1E3D3; color: #5C3410;">качество 85%</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #F6E4DF; color: #A8432F;">+43 HP</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #E2EAF4; color: #3E6FA3;">MP полностью</span>
+      <span style="padding: 2px 8px; border-radius: 999px; background: #E9E1D0; color: #3D4354;">Apple Health</span>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Карандаш открывает «Исправить сон» с выбранной последней ночью. Тот же вход — в «Настройки › Здоровье героя › Сон за 7 дней» и по касанию ночи в Летописи.</div>
+
+  <div style="height: 1px; background: #E3D9C6; margin: 4px 0;"></div>
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+    <div style="font-family: Literata, Georgia, serif; font-size: 24px; font-weight: 700;">Летопись</div>
+    <span style="padding: 6px 12px; border-radius: 16px; background: #1F2A44; color: #FFFCF6; font-size: 13px; font-weight: 600;">Здоровье</span>
+  </div>
+
+  <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Вторник, 10 ноября</div>
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; display: flex; flex-direction: column;">
+    <a href="SleepEdit.dc.html" style="display: flex; gap: 12px; padding: 12px 14px; text-decoration: none; color: #1F2A44; border-bottom: 1px solid #E3D9C6;">
+      <span style="font-size: 13px; color: #4A5368; width: 44px; flex-shrink: 0;">07:10</span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 15px; font-weight: 600;">Сон 7 ч 30 мин, режим соблюдён</span>
+        <span style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+          <span style="padding: 1px 8px; border-radius: 999px; border: 1px solid #9A5214; color: #7A3F0E; font-size: 11px; font-weight: 700;">исправлено</span>
+          <span style="font-size: 12px; color: #4A5368;">было 5 ч 30 мин · Apple Health</span>
+        </span>
+        <span style="font-size: 13px; color: #3D4354;">+105 HP · MP полностью</span>
+      </span>
+    </a>
+    <div style="display: flex; gap: 12px; padding: 12px 14px;">
+      <span style="font-size: 13px; color: #4A5368; width: 44px; flex-shrink: 0;">13:05</span>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 15px; font-weight: 600;">Кофеин</span>
+        <span style="font-size: 13px; color: #3D4354;">−3 HP</span>
+      </span>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Одна запись с пометкой: старое значение — серой строкой рядом. HP и MP в записи — уже по исправленной ночи. Пометка видна и в фильтре «Все».</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

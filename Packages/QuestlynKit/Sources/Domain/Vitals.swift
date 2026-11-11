@@ -32,7 +32,8 @@ public struct VitalSettings: Hashable, Codable, Sendable {
     public static let `default` = VitalSettings()
 }
 
-public enum SleepSource: String, Codable, Sendable { case manual, health }
+/// `corrected` — исправление пользователя за одну из последних 7 ночей: побеждает остальные записи той ночи (02, 11.11.2026).
+public enum SleepSource: String, Codable, Sendable { case manual, health, corrected }
 
 /// Факт сна. Ночь относится к дню пробуждения.
 public struct SleepSession: Identifiable, Hashable, Codable, Sendable {
@@ -159,6 +160,45 @@ public enum SleepRules {
     }
 
     /// Отклонение начала сна от начала окна той же ночи, минуты (по модулю).
+    /// Сколько последних ночей можно исправить (02, 11.11.2026).
+    public static let correctionDays = 7
+
+    /// Ночи, которые можно исправить: дни пробуждения от `today − 6` до `today`.
+    public static func correctableWakeDates(today: LocalDate) -> [LocalDate] {
+        (0..<correctionDays).map { today.adding(days: -(correctionDays - 1) + $0) }
+    }
+
+    /// Запись ночи для расчёта: исправление (последнее) побеждает, иначе — самая длинная запись.
+    public static func nights(_ sleeps: [SleepSession]) -> [LocalDate: SleepSession] {
+        var nights: [LocalDate: SleepSession] = [:]
+        for session in sleeps {
+            guard let current = nights[session.wakeDate] else { nights[session.wakeDate] = session; continue }
+            switch (session.source == .corrected, current.source == .corrected) {
+            case (true, true): if session.createdAt > current.createdAt { nights[session.wakeDate] = session }
+            case (true, false): nights[session.wakeDate] = session
+            case (false, true): break
+            case (false, false): if session.durationMinutes > current.durationMinutes { nights[session.wakeDate] = session }
+            }
+        }
+        return nights
+    }
+
+    /// Для исправленных ночей — прежняя запись (самая длинная из неисправленных): для пометки в Летописи.
+    public static func replacedNights(_ sleeps: [SleepSession]) -> [LocalDate: SleepSession] {
+        let corrected = Set(sleeps.filter { $0.source == .corrected }.map(\.wakeDate))
+        return nights(sleeps.filter { $0.source != .corrected && corrected.contains($0.wakeDate) })
+    }
+
+    /// Исправление ночи по точному интервалу. Длительность и отклонение отбоя — как у ночи из HealthKit (08).
+    public static func correction(wakeDate: LocalDate, startedAt: Date, endedAt: Date, window: SleepWindow,
+                                  timeZone: TimeZone, now: Date) -> SleepSession? {
+        let minutes = Int((endedAt.timeIntervalSince(startedAt) / 60).rounded())
+        guard minutes > 0, minutes <= 1440, endedAt <= now else { return nil }
+        return SleepSession(wakeDate: wakeDate, durationMinutes: minutes,
+                            bedtimeDeviationMinutes: bedtimeDeviation(startedAt: startedAt, wakeDate: wakeDate, window: window, timeZone: timeZone),
+                            startedAt: startedAt, endedAt: endedAt, source: .corrected, timezoneId: timeZone.identifier, createdAt: now)
+    }
+
     public static func bedtimeDeviation(startedAt: Date, wakeDate: LocalDate, window: SleepWindow, timeZone: TimeZone) -> Int {
         // Окно через полночь (23:00–07:00) начинается накануне дня пробуждения.
         let startDay = window.start > window.end ? wakeDate.adding(days: -1) : wakeDate
@@ -189,6 +229,8 @@ public struct ManaSpend: Hashable, Sendable {
 public struct NightSummary: Hashable, Sendable {
     public var wakeDate: LocalDate
     public var session: SleepSession?
+    /// Прежняя запись исправленной ночи (её заменило исправление).
+    public var replaced: SleepSession?
     public var durationFactor: Double?
     public var regimeFactor: Double?
     public var quality: Double
@@ -295,11 +337,8 @@ public enum VitalsCalculator {
             return result
         }
 
-        // Самая длинная запись сна за ночь.
-        var nights: [LocalDate: SleepSession] = [:]
-        for session in sleeps where nights[session.wakeDate].map({ session.durationMinutes > $0.durationMinutes }) ?? true {
-            nights[session.wakeDate] = session
-        }
+        let nights = SleepRules.nights(sleeps)
+        let replaced = SleepRules.replacedNights(sleeps)
         let stepsByDay = Dictionary(steps.map { ($0.date, $0.steps) }, uniquingKeysWith: { _, latest in latest })
 
         var events: [(at: Date, event: Event)] = spends.filter { $0.at >= heroCreatedAt && $0.at <= now }.map { ($0.at, .spend($0.cost)) }
@@ -350,7 +389,7 @@ public enum VitalsCalculator {
                 let factors = session.map(SleepRules.quality)
                 let q = factors?.q ?? SleepRules.neutralQuality
                 let summary = NightSummary(
-                    wakeDate: wakeDate, session: session, durationFactor: factors?.d, regimeFactor: factors?.r, quality: q,
+                    wakeDate: wakeDate, session: session, replaced: session?.source == .corrected ? replaced[wakeDate] : nil, durationFactor: factors?.d, regimeFactor: factors?.r, quality: q,
                     hpBefore: hp, hpAfter: min(topHP, hp + SleepRules.hpRestoreShare * topHP * q),
                     mpBefore: mp, mpAfter: min(topMP, mp + topMP * q), maxHP: topHP, maxMP: topMP
                 )

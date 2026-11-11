@@ -34,6 +34,8 @@ public struct ChronicleItem: Identifiable, Hashable, Sendable {
     public var note: String?
     /// Веха — выделяется в ленте.
     public var isMilestone: Bool
+    /// Короткая пометка рядом с заголовком, например «исправлено» у ночи (8.1).
+    public var badge: String? = nil
 }
 
 public struct ChronicleDay: Identifiable, Hashable, Sendable {
@@ -165,7 +167,10 @@ public struct ChronicleService: Sendable {
                 } else {
                     title = "Сон: нет данных · ночь нейтральная"
                 }
-                let source = night.session.map { $0.source == .health ? "Apple Health" : "вручную" }
+                let source: String? = night.session.map { session in
+                    guard session.source == .corrected else { return Self.sourceTitle(session.source) }
+                    return night.replaced.map { "было \(Self.duration($0.durationMinutes)), \(Self.sourceTitle($0.source))" } ?? "было: нет данных"
+                }
                 // Нулевые изменения не показываем: HP и MP уже были полными.
                 let restored = [ChronicleChange.hp(night.hpAfter - night.hpBefore), .mp(night.mpAfter - night.mpBefore)].filter { change in
                     switch change {
@@ -176,7 +181,8 @@ public struct ChronicleService: Sendable {
                 let full = restored.isEmpty ? "HP и MP уже полные" : nil
                 items.append(ChronicleItem(id: "night:\(index)", at: entry.at, category: .health, title: title,
                                            detail: [source, "качество \(Int((night.quality * 100).rounded()))%", full].compactMap { $0 }.joined(separator: " · "),
-                                           changes: restored, isCancelled: false, note: nil, isMilestone: false))
+                                           changes: restored, isCancelled: false, note: nil, isMilestone: false,
+                                           badge: night.session?.source == .corrected ? "исправлено" : nil))
             case let .harm(harm, hpDamage, mpBurned):
                 if harm.kind == .alcohol {
                     var rowChanges: [ChronicleChange] = []
@@ -246,6 +252,14 @@ public struct ChronicleService: Sendable {
         let byDay = Dictionary(grouping: items.filter { $0.at <= now }) { LocalDate($0.at, timeZone: timeZone) }
         return byDay.keys.sorted(by: >).map { date in
             ChronicleDay(date: date, items: byDay[date]!.sorted { ($0.at, $0.isMilestone ? 1 : 0) > ($1.at, $1.isMilestone ? 1 : 0) })
+        }
+    }
+
+    static func sourceTitle(_ source: SleepSource) -> String {
+        switch source {
+        case .health: "Apple Health"
+        case .manual: "вручную"
+        case .corrected: "исправлено"
         }
     }
 

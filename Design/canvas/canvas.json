@@ -387,6 +387,69 @@
       "w": 390,
       "x": 2350,
       "y": 14510
+    },
+    "SleepEdit.dc.html": {
+      "h": 844,
+      "title": "8.17 · Исправление сна: точный интервал (8.1)",
+      "w": 390,
+      "x": 0,
+      "y": 15724
+    },
+    "SleepEntry.dc.html": {
+      "h": 844,
+      "title": "8.18 · «Сегодня» и Летопись: вход в исправление и пометка (8.1)",
+      "w": 390,
+      "x": 470,
+      "y": 15724
+    },
+    "MapCallout.dc.html": {
+      "h": 844,
+      "title": "8.19 · Подсказка по касанию на большой карте (8.3)",
+      "w": 390,
+      "x": 940,
+      "y": 15724
+    },
+    "EpicProfession.dc.html": {
+      "h": 844,
+      "title": "8.20 · Новый Epic: профессия (8.4)",
+      "w": 390,
+      "x": 1410,
+      "y": 15724
+    },
+    "JournalEpicColor.dc.html": {
+      "h": 844,
+      "title": "8.21 · Журнал: Epic с профессией выше (8.4)",
+      "w": 390,
+      "x": 1880,
+      "y": 15724
+    },
+    "WeeklyUnmark.dc.html": {
+      "h": 844,
+      "title": "8.22 · Недельный квест: снятие отметок недели (8.5)",
+      "w": 390,
+      "x": 2350,
+      "y": 15724
+    },
+    "SkillActivity.dc.html": {
+      "h": 844,
+      "title": "8.23 · Навык: привязка к виду активности (8.6)",
+      "w": 390,
+      "x": 2820,
+      "y": 15724
+    },
+    "ActivitySkillAuto.dc.html": {
+      "h": 844,
+      "title": "8.24 · Новая активность: навык из привязки (8.6)",
+      "w": 390,
+      "x": 3290,
+      "y": 15724
+    },
+    "Splash.dc.html": {
+      "h": 900,
+      "title": "8.25 · Экран загрузки: два варианта искры (8.2)",
+      "w": 1280,
+      "x": 3760,
+      "y": 15724
     }
   },
   "createdOnFiles": {
@@ -474,6 +537,13 @@
       "text": "На review (11.11.2026): общая шапка, блок сна, календарь, карта на весь экран — пункты 9–12",
       "x": 0,
       "y": 14260
+    },
+    "r11": {
+      "kind": "title1",
+      "maxW": 12000,
+      "text": "На review (11.11.2026): этап 8 — исправление сна, экран загрузки, подсказки на карте, Epic с профессией, отметки недели, навык и активность",
+      "x": 0,
+      "y": 15474
     }
   },
   "order": [
@@ -531,7 +601,16 @@
     "CalendarWeek.dc.html",
     "CalendarMonth.dc.html",
     "SettingsCalendars.dc.html",
-    "MapFull.dc.html"
+    "MapFull.dc.html",
+    "SleepEdit.dc.html",
+    "SleepEntry.dc.html",
+    "MapCallout.dc.html",
+    "EpicProfession.dc.html",
+    "JournalEpicColor.dc.html",
+    "WeeklyUnmark.dc.html",
+    "SkillActivity.dc.html",
+    "ActivitySkillAuto.dc.html",
+    "Splash.dc.html"
   ],
   "pages": [],
   "title": "Questlyn — дизайн"

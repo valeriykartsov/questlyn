@@ -130,6 +130,14 @@ struct MapOverviewView: View {
     @State private var position: Double = 0
     @State private var rendered: WeekMapRenderer.Rendered?
     @State private var week: WeekMap?
+    /// Объект, по которому коснулись: подсказка-реплика над ним (8.3).
+    @State private var selected: Selection?
+
+    struct Selection: Equatable {
+        let x: Int
+        let y: Int
+        let callout: WeekMapRenderer.Callout
+    }
 
     init(model: AppModel) {
         self.model = model
@@ -153,7 +161,7 @@ struct MapOverviewView: View {
         }
         .background(Color(hex: 0x8E8350))
         .onAppear { load(resetPosition: true) }
-        .onChange(of: weekStart) { load(resetPosition: true) }
+        .onChange(of: weekStart) { selected = nil; load(resetPosition: true) }
     }
 
     private func load(resetPosition: Bool) {
@@ -166,6 +174,12 @@ struct MapOverviewView: View {
         // `-QuestlynMapHour 31` — открыть неделю в заданном часе (проверка в симуляторе).
         let debugHour = UserDefaults.standard.double(forKey: "QuestlynMapHour")
         if resetPosition, debugHour > 0 { position = debugHour }
+        // `-QuestlynMapCallout YES` — сразу открыть подсказку первого поселения.
+        if UserDefaults.standard.bool(forKey: "QuestlynMapCallout"),
+           let label = rendered?.labels.first(where: { if case .settlement = $0.kind { $0.callout != nil } else { false } }), let callout = label.callout {
+            selected = Selection(x: label.x, y: label.y, callout: callout)
+            position = callout.weekHour
+        }
         #endif
         dragStart = position
     }
@@ -250,22 +264,43 @@ struct MapOverviewView: View {
                 ForEach(Array((rendered?.labels ?? []).enumerated()), id: \.offset) { _, label in
                     let x = (CGFloat(label.x) - originX) * scale, y = (CGFloat(label.y) - originY) * scale
                     if x > -60, x < proxy.size.width + 60, y > -10, y < proxy.size.height + 10 {
-                        labelView(label).position(x: x, y: y)
+                        if let callout = label.callout {
+                            Button { select(Selection(x: label.x, y: label.y, callout: callout)) } label: {
+                                labelView(label).padding(8).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(callout.caption + ": " + callout.title)
+                            .position(x: x, y: y)
+                        } else {
+                            labelView(label).position(x: x, y: y)
+                        }
                     }
                 }
                 if let hero = week?.heroHour, abs(hero - position) < 10 {
                     let point = WeekMapRenderer.roadPoint(hero)
-                    Text("\(model.progress.rank?.letter ?? "—") · \(Date.now.formatted(date: .omitted, time: .shortened))")
-                        .font(QFont.text(10, weight: .bold))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
-                        .fixedSize()
-                        .position(x: (CGFloat(point.x) - originX) * scale, y: (CGFloat(point.y) - originY) * scale + 22)
+                    Button { select(Selection(x: point.x, y: point.y + 16, callout: heroCallout(hour: hero))) } label: {
+                        Text("\(model.progress.rank?.letter ?? "—") · \(Date.now.formatted(date: .omitted, time: .shortened))")
+                            .font(QFont.text(10, weight: .bold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
+                            .fixedSize()
+                            .padding(10).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color(hex: 0x1F2A44))
+                    .accessibilityLabel("Герой")
+                    .position(x: (CGFloat(point.x) - originX) * scale, y: (CGFloat(point.y) - originY) * scale + 22)
+                }
+                if let selected {
+                    let x = (CGFloat(selected.x) - originX) * scale, y = (CGFloat(selected.y) - originY) * scale
+                    MapCallout(callout: selected.callout, anchorX: x, width: proxy.size.width) { self.selected = nil }
+                        .position(x: min(max(x, 136), proxy.size.width - 136), y: y - 12)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .clipped()
             .contentShape(Rectangle())
+            .onTapGesture { selected = nil }
             .gesture(DragGesture().onChanged { value in
                 // Перетаскивание карты двигает ползунок: вдоль дороги вправо-вниз — вперёд по времени.
                 let along = -(value.translation.width + value.translation.height * 2) / scale
@@ -296,8 +331,13 @@ struct MapOverviewView: View {
         case .camp(known: true): (Color(hex: 0x5C3410), Color(hex: 0xF6D9A6))
         case .camp(known: false): (QColor.inkSecondary, QColor.sheet.opacity(0.9))
         case .day: (QColor.sheet, QColor.amberDeep)
+        case .quest: (.clear, .clear)
         }
-        return HStack(spacing: 3) {
+        if case .quest = label.kind {
+            // Флажок квеста нарисован на карте — здесь только место касания.
+            return AnyView(Color.clear.frame(width: 28, height: 28))
+        }
+        return AnyView(HStack(spacing: 3) {
             if case .camp = label.kind { Image(systemName: "flame.fill").font(.system(size: 8)) }
             Text(label.title)
         }
@@ -306,7 +346,20 @@ struct MapOverviewView: View {
         .padding(.horizontal, 6).padding(.vertical, 2)
         .foregroundStyle(fg)
         .background(bg, in: RoundedRectangle(cornerRadius: 7))
-        .fixedSize()
+        .fixedSize())
+    }
+
+    private func select(_ selection: Selection) {
+        selected = selected == selection ? nil : selection
+    }
+
+    /// Подсказка героя: ранг, HP и MP сейчас.
+    private func heroCallout(hour: Double) -> WeekMapRenderer.Callout {
+        var lines = ["Ранг: \(model.progress.rank.map { "\($0.letter) · \($0.title)" } ?? "без ранга")"]
+        if let vitals = model.vitals {
+            lines.append("HP \(Vitals.whole(vitals.hp)) / \(Vitals.whole(vitals.maxHP)) · MP \(Vitals.whole(vitals.mp)) / \(Vitals.whole(vitals.maxMP))")
+        }
+        return WeekMapRenderer.Callout(caption: "Герой · сейчас", title: model.hero?.name ?? "Герой", lines: lines, weekHour: hour)
     }
 
     // MARK: Ползунок
@@ -360,7 +413,7 @@ struct MapOverviewView: View {
                         Text("Привал \(camp.start.formatted(date: .omitted, time: .shortened))–\(camp.end.formatted(date: .omitted, time: .shortened))")
                             .font(QFont.text(13, weight: .semibold))
                         Text(camp.source == nil ? "нет данных о сне · ночь нейтральная"
-                             : "\(WeekMapRenderer.duration(camp.minutes)) · \(camp.source == .health ? "Apple Health" : "вручную")")
+                             : "\(WeekMapRenderer.duration(camp.minutes)) · \(camp.source.map(SleepCard.sourceTitle) ?? "")")
                             .font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
                     }
                 }
@@ -373,6 +426,7 @@ struct MapOverviewView: View {
                     .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
             }
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                let isSelected = selected.map { abs($0.callout.weekHour - (Double(selectedDay) * 24 + row.0)) < 0.01 } ?? false
                 HStack(spacing: QSpacing.m) {
                     Text(MapText.time(row.0)).font(QFont.text(13, weight: .bold)).monospacedDigit().frame(width: 44, alignment: .leading)
                     VStack(alignment: .leading, spacing: 0) {
@@ -388,7 +442,8 @@ struct MapOverviewView: View {
                 }
                 .padding(.horizontal, QSpacing.m)
                 .frame(minHeight: 36)
-                .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.small))
+                .background(isSelected ? QColor.warmFill : QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.small))
+                .overlay(RoundedRectangle(cornerRadius: QRadius.small).strokeBorder(isSelected ? QColor.amber : .clear, lineWidth: 1.5))
                 .onTapGesture { withAnimation { position = Double(selectedDay) * 24 + row.0; dragStart = position } }
             }
             if !map.offMap.isEmpty {
@@ -402,4 +457,59 @@ struct MapOverviewView: View {
             }
         }
     }
+}
+
+/// Подсказка-реплика на большой карте (8.3, макет 8.19): пиксельная рамка, хвостик к объекту, закрытие крестиком или касанием мимо.
+struct MapCallout: View {
+    let callout: WeekMapRenderer.Callout
+    /// Точка объекта по горизонтали — к ней смотрит хвостик.
+    let anchorX: CGFloat
+    let width: CGFloat
+    let close: () -> Void
+
+    private let bubbleWidth: CGFloat = 248
+
+    var body: some View {
+        let center = min(max(anchorX, bubbleWidth / 2 + 12), width - bubbleWidth / 2 - 12)
+        let tail = min(max(anchorX - (center - bubbleWidth / 2), 16), bubbleWidth - 16)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: QSpacing.xs) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(callout.caption).font(QFont.text(11, weight: .bold)).textCase(.uppercase).tracking(0.6)
+                        .foregroundStyle(QColor.forest)
+                    Spacer(minLength: QSpacing.s)
+                    Button(action: close) {
+                        Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Закрыть подсказку")
+                }
+                Text(callout.title).font(QFont.title(17, weight: .semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                ForEach(callout.lines, id: \.self) { line in
+                    Text(line).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(.horizontal, QSpacing.l).padding(.vertical, QSpacing.m)
+            .frame(width: bubbleWidth, alignment: .leading)
+            .background(QColor.sheet)
+            .overlay(Rectangle().strokeBorder(QColor.ink, lineWidth: 3))
+            .background(QColor.ink.opacity(0.35).offset(x: 4, y: 4))
+            // Ступенчатый хвостик, как в пиксельном диалоге.
+            VStack(alignment: .leading, spacing: 0) {
+                Rectangle().fill(QColor.ink).frame(width: 15, height: 3)
+                Rectangle().fill(QColor.ink).frame(width: 9, height: 3).padding(.leading, 3)
+                Rectangle().fill(QColor.ink).frame(width: 3, height: 3).padding(.leading, 6)
+            }
+            .padding(.leading, tail - 7.5)
+            .accessibilityHidden(true)
+        }
+        .frame(width: bubbleWidth)
+        .offset(x: center - min(max(anchorX, 136), width - 136), y: -bubbleHeightGuess / 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+    }
+
+    /// Пузырь стоит над объектом: сдвиг вверх на половину примерной высоты.
+    private var bubbleHeightGuess: CGFloat { 70 + CGFloat(callout.lines.count) * 16 }
 }

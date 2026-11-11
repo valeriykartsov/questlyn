@@ -98,6 +98,7 @@ struct SkillRecord: QuestlynRecord {
     var title: String
     var isActive: Bool
     var createdAt: Date
+    var activityTemplateId: String?
 
     init(_ s: Skill) {
         id = s.id
@@ -105,9 +106,12 @@ struct SkillRecord: QuestlynRecord {
         title = s.title
         isActive = s.isActive
         createdAt = s.createdAt
+        activityTemplateId = s.activityTemplateId
     }
 
-    var domain: Skill { Skill(id: id, professionId: professionId, title: title, isActive: isActive, createdAt: createdAt) }
+    var domain: Skill {
+        Skill(id: id, professionId: professionId, title: title, isActive: isActive, createdAt: createdAt, activityTemplateId: activityTemplateId)
+    }
 }
 
 struct QuestRecord: QuestlynRecord {
@@ -246,6 +250,7 @@ struct EpicRecord: QuestlynRecord {
     var completedAt: Date?
     var createdAt: Date
     var deletedAt: Date?
+    var professionId: UUID?
 
     init(_ e: EpicQuest) {
         id = e.id
@@ -255,11 +260,12 @@ struct EpicRecord: QuestlynRecord {
         completedAt = e.completedAt
         createdAt = e.createdAt
         deletedAt = e.deletedAt
+        professionId = e.professionId
     }
 
     var domain: EpicQuest {
         EpicQuest(id: id, title: title, details: details, deadline: deadline.flatMap(LocalDate.init(string:)),
-                  completedAt: completedAt, createdAt: createdAt, deletedAt: deletedAt)
+                  completedAt: completedAt, createdAt: createdAt, deletedAt: deletedAt, professionId: professionId)
     }
 }
 

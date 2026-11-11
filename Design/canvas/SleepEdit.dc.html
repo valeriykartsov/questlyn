@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Исправление сна</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 800px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="SleepEntry.dc.html" style="font-size: 15px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Исправить сон</div>
+      <div style="width: 56px;"></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Ночь · последние 7 дней</span>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+        <sc-for list="{{nights}}" as="n" hint-placeholder-count="7">
+          <button type="button" aria-pressed="{{n.on}}" aria-label="{{n.label}}" style="height: 60px; border-radius: 12px; border: {{n.border}}; background: {{n.bg}}; color: {{n.fg}}; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0;">
+            <span style="font-size: 11px; font-weight: 500;">{{n.wd}}</span>
+            <span style="font-size: 16px; font-weight: 700;">{{n.d}}</span>
+            <span style="width: 6px; height: 6px; border-radius: 3px; background: {{n.dot}};"></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 12px; font-size: 11px; color: #4A5368;">
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #3E6FA3;"></span>Apple Health</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #B8651B;"></span>ручной ввод</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 3px; border: 1px solid #4A5368; box-sizing: border-box;"></span>нет данных</span>
+      </div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+      <span style="font-size: 12px; color: #4A5368;">Сейчас · ночь на вторник, 10 ноября · Apple Health</span>
+      <span style="font-size: 16px; font-weight: 700;">00:50–06:20 · 5 ч 30 мин</span>
+      <span style="font-size: 12px; color: #4A5368;">Часы были сняты ночью — Health записал не весь сон.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Точный интервал</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <label style="background: #FFFCF6; border: 2px solid #1F2A44; border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12px; color: #4A5368;">Отбой · пн, 9 ноября</span>
+          <input type="text" value="23:40" aria-label="Время отбоя" style="border: none; background: transparent; padding: 0; font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700; color: #1F2A44; width: 100%;">
+        </label>
+        <label style="background: #FFFCF6; border: 1px solid #C9BCA2; border-radius: 14px; padding: 11px 15px; display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 12px; color: #4A5368;">Подъём · вт, 10 ноября</span>
+          <input type="text" value="07:10" aria-label="Время подъёма" style="border: none; background: transparent; padding: 0; font-family: Literata, Georgia, serif; font-size: 30px; font-weight: 700; color: #1F2A44; width: 100%;">
+        </label>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Касание поля открывает колесо времени с шагом 5 минут. Отбой — с 18:00 предыдущего дня, подъём — не позже времени, когда вносится исправление.</div>
+    </div>
+
+    <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 14px; font-weight: 700;">7 ч 30 мин</span><span style="font-size: 13px; color: #2F6B4F; font-weight: 600;">режим соблюдён</span></div>
+      <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 600;">
+        <span style="padding: 2px 8px; border-radius: 999px; background: #F1E3D3; color: #5C3410;">качество ночи: пересчитается</span>
+        <span style="padding: 2px 8px; border-radius: 999px; background: #F6E4DF; color: #A8432F;">HP с этой ночи</span>
+        <span style="padding: 2px 8px; border-radius: 999px; background: #E2EAF4; color: #3E6FA3;">MP с этой ночи</span>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.4;">Считается так же, как ночь из Apple Health. XP, уровни и ранг сон не меняет.</div>
+    </div>
+
+    <div style="display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #E9E1D0; font-size: 12px; line-height: 1.45; color: #3D4354;">Исправление заменит данные Apple Health за эту ночь и не перезапишется при следующей загрузке. Удалить ночь нельзя — только исправить.</div>
+
+    <a href="SleepEntry.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Сохранить исправление</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const src = [
+      ['чт', '5', '#3E6FA3'], ['пт', '6', '#3E6FA3'], ['сб', '7', '#B8651B'], ['вс', '8', 'transparent'],
+      ['пн', '9', '#3E6FA3'], ['вт', '10', '#3E6FA3'], ['ср', '11', '#3E6FA3']
+    ];
+    const sel = '10';
+    const nights = src.map(([wd, d, dot]) => {
+      const on = d === sel;
+      return {
+        wd, d, on: on ? 'true' : 'false',
+        label: 'Ночь на ' + wd + ', ' + d + ' ноября',
+        border: on ? 'none' : '1px solid #C9BCA2',
+        bg: on ? '#1F2A44' : '#FFFCF6',
+        fg: on ? '#FFFCF6' : '#1F2A44',
+        dot: dot === 'transparent' ? (on ? 'transparent' : '#E9E1D0') : (on ? '#FFFCF6' : dot)
+      };
+    });
+    return { nights };
+  }
+}
+</script>
+</body>
+</html>

@@ -183,7 +183,7 @@ struct JournalView: View {
         }
     }
 
-    // MARK: Epic — первый активный тёмной карточкой
+    // MARK: Epic — с профессией в акценте и выше остальных (8.4, макет 8.21)
 
     @ViewBuilder
     private var epicSection: some View {
@@ -195,54 +195,56 @@ struct JournalView: View {
             empty("Epic — большая цель из шагов. Добавьте через «+».")
         } else {
             ForEach(epics) { status in
-                Button { openedEpic = status.id } label: {
-                    if status.id == active.first?.id { featuredEpic(status) } else { compactEpic(status) }
-                }
-                .buttonStyle(.plain)
+                Button { openedEpic = status.id } label: { epicCard(status) }
+                    .buttonStyle(.plain)
             }
         }
     }
 
-    private func featuredEpic(_ status: EpicStatus) -> some View {
-        VStack(alignment: .leading, spacing: QSpacing.m) {
-            HStack(spacing: 10) {
-                Image(systemName: "flag.fill").font(.system(size: 15)).foregroundStyle(Color(hex: 0xE2A04A))
-                Text(status.epic.title).font(QFont.title(17, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
-                Text("\(status.doneCount) из \(status.steps.count)").font(QFont.text(13, weight: .bold)).monospacedDigit()
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(QColor.inkSecondary)
-                    Capsule().fill(Color(hex: 0xE2A04A))
-                        .frame(width: proxy.size.width * (status.steps.isEmpty ? 0 : Double(status.doneCount) / Double(status.steps.count)))
-                }
-            }
-            .frame(height: 6)
-            if let next = status.nextStep {
-                Text("Следующий шаг: \(next.quest.title) · \(Format.when(next.quest, today: model.today).lowercased())")
-                    .font(QFont.text(13)).foregroundStyle(QColor.muted)
-            } else if status.canComplete {
-                Text("Все шаги выполнены — можно завершить").font(QFont.text(13)).foregroundStyle(QColor.muted)
-            }
-        }
-        .foregroundStyle(QColor.sheet)
-        .padding(QSpacing.l)
-        .background(QColor.ink, in: RoundedRectangle(cornerRadius: QRadius.card))
-        .contentShape(Rectangle())
+    /// Профессия Epic, если она задана и активна.
+    private func epicProfession(_ status: EpicStatus) -> Profession? {
+        model.profession(id: status.epic.professionId).flatMap { $0.isActive ? $0 : nil }
     }
 
-    private func compactEpic(_ status: EpicStatus) -> some View {
-        HStack(spacing: 10) {
+    private func epicCard(_ status: EpicStatus) -> some View {
+        let profession = epicProfession(status)
+        let accent = profession != nil
+        let share = status.steps.isEmpty ? 0 : Double(status.doneCount) / Double(status.steps.count)
+        return HStack(spacing: QSpacing.l) {
             Image(systemName: status.epic.isCompleted ? "flag.checkered" : "flag")
-                .font(.system(size: 15)).foregroundStyle(QColor.amberDeep)
-            Text(status.epic.title).font(QFont.text(15, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading)
-            Text(status.epic.isCompleted ? "веха" : "\(status.doneCount) из \(status.steps.count)")
-                .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(accent ? QColor.amber : QColor.ink)
+                .frame(width: 40, height: 40)
+                .background(accent ? QColor.warmFill : QColor.coolFill, in: RoundedRectangle(cornerRadius: QRadius.control))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: QSpacing.xs) {
+                Text(profession.map { "Epic · \($0.title)" } ?? "Epic")
+                    .font(QFont.text(11, weight: .bold)).textCase(.uppercase).tracking(0.6)
+                    .foregroundStyle(accent ? QColor.amberDeep : QColor.inkSecondary)
+                Text(status.epic.title).font(QFont.text(16, weight: .semibold)).foregroundStyle(QColor.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: QSpacing.m) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(QColor.track)
+                            Capsule().fill(accent ? QColor.amber : QColor.ink).frame(width: proxy.size.width * share)
+                        }
+                    }
+                    .frame(height: 6)
+                    Text(status.epic.isCompleted ? "веха" : "\(status.doneCount) из \(status.steps.count)")
+                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).monospacedDigit()
+                }
+                if !status.epic.isCompleted, let next = status.nextStep {
+                    Text("Следующий шаг: \(next.quest.title)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(1)
+                } else if status.canComplete {
+                    Text("Все шаги выполнены — можно завершить").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+            }
         }
-        .padding(.horizontal, QSpacing.l)
-        .frame(minHeight: 44)
+        .padding(QSpacing.l)
         .contentShape(Rectangle())
         .sheetCard()
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Квесты — отдельные карточки без рамки

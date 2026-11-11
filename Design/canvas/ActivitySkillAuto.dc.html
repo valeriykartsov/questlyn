@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Новая активность: навык из привязки</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px;">
+    <a href="JournalAdd.dc.html" style="font-size: 15px; font-weight: 500; text-decoration: none; color: #9A5214;">Отмена</a>
+    <div style="font-size: 16px; font-weight: 600;">Новая активность</div>
+    <div style="width: 52px;"></div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Тип активности</span>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+      <sc-for list="{{templates}}" as="t" hint-placeholder-count="6">
+        <button type="button" aria-pressed="{{t.on}}" style="min-height: 56px; padding: 6px 8px; border-radius: 12px; border: {{t.border}}; background: #FFFCF6; color: #1F2A44; font-family: Inter, sans-serif; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; text-align: left; box-sizing: border-box;">
+          <span style="font-size: 13px; font-weight: 600; line-height: 1.2;">{{t.name}}</span>
+          <span style="font-size: 11px; color: {{t.subColor}};">{{t.sub}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="font-size: 12px; color: #4A5368;">Под видом — привязанный навык, если он есть.</div>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size: 15px;">Длительность</span><span style="font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700;">40 мин</span>
+  </div>
+
+  <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 14px;">
+    <a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; text-decoration: none; color: #1F2A44; border-bottom: 1px solid #E3D9C6;">
+      <span style="flex-grow: 1; font-size: 15px;">Навык</span>
+      <span style="display: flex; flex-direction: column; align-items: flex-end;"><span style="font-size: 15px; font-weight: 600;">Бег</span><span style="font-size: 12px; color: #2F6B4F; font-weight: 600;">подставлен из привязки</span></span><span style="color: #4A5368;" aria-hidden="true">›</span>
+    </a>
+    <label style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-bottom: 1px solid #E3D9C6;">
+      <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px;">Привязать к виду</span><span style="font-size: 12px; color: #4A5368;">«Бег» ↔ «Бег и кардио»</span></span>
+      <input type="checkbox" checked aria-label="Привязать навык к виду активности" style="width: 51px; height: 31px; accent-color: #2F6B4F;">
+    </label>
+    <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px;">
+      <span style="flex-grow: 1; font-size: 15px;">Закрыть квест</span><span style="font-size: 15px; color: #4A5368;">Не выбран</span><span style="color: #4A5368;" aria-hidden="true">›</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #4A5368; line-height: 1.45;">
+    <span>Навык можно сменить на этот раз — привязка остаётся, пока переключатель включён.</span>
+    <span>Выключить переключатель — убрать привязку (в навыке тоже). Включить при другом навыке — привязать вид к нему.</span>
+    <span>Если активность закрывает квест, навык по-прежнему берётся из квеста.</span>
+  </div>
+
+  <div style="border-radius: 14px; background: #F1E3D3; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; color: #5C3410;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Награда · 40 мин</div>
+    <div style="font-size: 14px; line-height: 1.45;">Как сейчас — по Rule Set v1.1: XP навыку «Бег» и атрибутам вида. Привязка награду не меняет.</div>
+  </div>
+
+  <button type="button" style="margin-top: auto; height: 52px; border-radius: 14px; border: none; background: #1F2A44; color: #FFFCF6; font: 600 16px Inter, sans-serif;">Записать</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const src = [
+      ['Силовая тренировка', 'навык «Жим»', false, true],
+      ['Бег и кардио', 'навык «Бег»', true, true],
+      ['Командный спорт', 'END · STR · CHR', false, false],
+      ['Прогулка', 'END', false, false],
+      ['Учёба и чтение', 'INT', false, false],
+      ['Работа в фокусе', 'INT · MNT', false, false]
+    ];
+    const templates = src.map(([name, sub, on, linked]) => ({
+      name, sub, on: on ? 'true' : 'false',
+      border: on ? '2px solid #1F2A44' : '1px solid #E3D9C6',
+      subColor: linked ? '#2F6B4F' : '#4A5368'
+    }));
+    return { templates };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Навык: привязка к виду активности</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 788px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="HeroV2.dc.html" style="font-size: 16px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Навык</div>
+      <a href="HeroV2.dc.html" style="font-size: 16px; font-weight: 600; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Готово</a>
+    </div>
+
+    <label style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Навык</span>
+      <input type="text" value="Бег" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 1px solid #C9BCA2; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+    </label>
+
+    <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="flex: 1; font-size: 15px; color: #4A5368;">Профессия</span><span style="font-size: 15px; font-weight: 600;">Атлет</span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px;"><span style="flex: 1; font-size: 15px; color: #4A5368;">Мастерство</span><span style="font-size: 15px; font-weight: 600;">3 из 5</span></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Вид активности · один</span>
+      <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+        <sc-for list="{{kinds}}" as="k" hint-placeholder-count="6">
+          <button type="button" aria-pressed="{{k.on}}" style="display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 14px; border: none; border-bottom: 1px solid #E3D9C6; background: transparent; text-align: left; font-family: Inter, sans-serif; color: #1F2A44;">
+            <span style="flex-grow: 1; display: flex; flex-direction: column;"><span style="font-size: 15px; font-weight: {{k.weight}};">{{k.name}}</span><span style="font-size: 12px; color: #4A5368;">{{k.sub}}</span></span>
+            <span style="width: 22px; height: 22px; border-radius: 11px; background: {{k.check}}; border: {{k.ring}}; box-sizing: border-box; display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFCF6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="font-size: 13px; color: #4A5368; line-height: 1.45;">У навыка — не больше одного вида, у вида — не больше одного навыка. Выбрать занятый вид — значит перенести его сюда; прежний навык привязку теряет (об этом спросим). Атрибуты вида не меняются.</div>
+    </div>
+
+    <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #E6E8EE; margin-top: auto;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+      <div style="font-size: 13px; line-height: 1.45;">Та же привязка видна и меняется в «Новой активности» — переключатель под навыком.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const src = [
+      ['Без вида', 'навык не подставляется', false],
+      ['Бег и кардио', 'END', true],
+      ['Прогулка', 'END', false],
+      ['Силовая тренировка', 'STR · END · занят навыком «Жим»', false],
+      ['Командный спорт', 'END · STR · CHR', false],
+      ['Работа в фокусе', 'INT · MNT', false]
+    ];
+    const kinds = src.map(([name, sub, sel]) => ({
+      name, sub, on: sel ? 'true' : 'false', weight: sel ? '600' : '500',
+      check: sel ? '#1F2A44' : 'transparent', ring: sel ? 'none' : '2px solid #C9BCA2'
+    }));
+    return { kinds };
+  }
+}
+</script>
+</body>
+</html>

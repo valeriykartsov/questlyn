@@ -165,12 +165,15 @@ struct SkillDetailView: View {
     let skillId: UUID
     @Environment(\.dismiss) private var dismiss
 
+    @State private var pendingTemplate: ActivityTemplate?
+
     private var skill: Skill? { model.skills.first { $0.id == skillId } }
 
     var body: some View {
         NavigationStack {
             Form {
                 if let skill {
+                    activitySection(skill)
                     Section {
                         LabeledContent("Профессия", value: model.profession(id: skill.professionId)?.title ?? "—")
                         LabeledContent("XP практики", value: Format.xp(model.progress.skillXP[skill.id] ?? .zero))
@@ -193,11 +196,65 @@ struct SkillDetailView: View {
                 }
             }
             .paperScreen()
+            .confirmationDialog(pendingTitle, isPresented: Binding(get: { pendingTemplate != nil }, set: { if !$0 { pendingTemplate = nil } }),
+                                titleVisibility: .visible) {
+                Button("Перенести") {
+                    guard let template = pendingTemplate else { return }
+                    Task { await model.linkActivity(templateId: template.id, skillId: skillId) }
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text("У вида активности может быть только один навык.")
+            }
             .navigationTitle(skill?.title ?? "Навык")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
         }
         .tint(QColor.amber)
+    }
+}
+
+extension SkillDetailView {
+    private var pendingTitle: String {
+        guard let template = pendingTemplate, let owner = model.linkedSkill(templateId: template.id) else { return "" }
+        return "Перенести «\(template.title)» с навыка «\(owner.title)»?"
+    }
+
+    /// Вид активности навыка, один к одному (8.6, макет 8.23).
+    @ViewBuilder
+    func activitySection(_ skill: Skill) -> some View {
+        Section {
+            Picker("Вид активности", selection: Binding(
+                get: { skill.activityTemplateId },
+                set: { id in
+                    guard let id else { Task { await model.linkActivity(templateId: nil, skillId: skill.id) }; return }
+                    if let owner = model.linkedSkill(templateId: id), owner.id != skill.id {
+                        pendingTemplate = ActivityTemplate.template(id: id)
+                    } else {
+                        Task { await model.linkActivity(templateId: id, skillId: skill.id) }
+                    }
+                }
+            )) {
+                Text("Без вида").tag(String?.none)
+                ForEach(ActivityTemplate.all) { template in
+                    let owner = model.linkedSkill(templateId: template.id)
+                    VStack(alignment: .leading, spacing: QSpacing.xxs) {
+                        Text(template.title).font(QFont.text(16)).foregroundStyle(QColor.ink)
+                        Text(owner.map { $0.id == skill.id ? template.attributes.map(\.code).joined(separator: " · ") : "занят навыком «\($0.title)»" }
+                             ?? template.attributes.map(\.code).joined(separator: " · "))
+                            .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                    }
+                    .tag(String?.some(template.id))
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } header: {
+            Text("Вид активности · один")
+        } footer: {
+            Text("В «Новой активности» этот навык подставится сам. У вида — не больше одного навыка. На награды привязка не влияет.")
+        }
+        .listRowBackground(QColor.sheet)
     }
 }
 

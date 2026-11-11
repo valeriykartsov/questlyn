@@ -16,7 +16,7 @@ struct DatabaseTests {
                 #expect(exists, "нет таблицы \(table)")
             }
         }
-        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics, Migrations.honestProgress, Migrations.activities, Migrations.heroOutfit, Migrations.vitals, Migrations.chronicle, Migrations.wellbeing, Migrations.softDelete])
+        #expect(try database.writer.read { try Migrations.migrator.appliedIdentifiers($0) } == [Migrations.initial, Migrations.habitsAndEpics, Migrations.honestProgress, Migrations.activities, Migrations.heroOutfit, Migrations.vitals, Migrations.chronicle, Migrations.wellbeing, Migrations.softDelete, Migrations.stage8])
     }
 
     @Test func questsForDateAreOrderedByTimeThenCreation() async throws {

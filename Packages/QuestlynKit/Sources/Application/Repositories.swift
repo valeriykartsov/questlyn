@@ -15,6 +15,8 @@ public protocol HeroRepository: Sendable {
 public protocol SkillRepository: Sendable {
     func skills() async throws -> [Skill]
     func save(_ skill: Skill) async throws
+    /// Привязка вида активности один к одному: вид снимается с другого навыка — одной транзакцией. nil — убрать привязку.
+    func linkActivityTemplate(_ templateId: String?, toSkill skillId: UUID) async throws
     func masteries() async throws -> [SkillMastery]
     func save(_ mastery: SkillMastery) async throws
 }
@@ -84,6 +86,8 @@ public protocol VitalsRepository: Sendable {
     func sleepSessions() async throws -> [SleepSession]
     /// Ручной ввод за ночь заменяет прежний ручной ввод за ту же дату.
     func saveManualSleep(_ session: SleepSession) async throws
+    /// Исправление ночи заменяет прежнее исправление той же даты; записи HealthKit и ручной ввод остаются (для «было»).
+    func saveCorrectedSleep(_ session: SleepSession) async throws
     func deleteSleep(id: UUID) async throws
     /// Записи сна из HealthKit за даты пробуждения заменяются целиком.
     func replaceHealthSleep(_ sessions: [SleepSession], wakeDates: [LocalDate]) async throws

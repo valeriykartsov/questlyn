@@ -255,6 +255,7 @@ struct HealthSettingsView: View {
     @State private var isConnecting = false
     @State private var newHabit = ""
     @State private var newHabitPercent = 5
+    @State private var correctingNight: LocalDate?
 
     init(model: AppModel) {
         self.model = model
@@ -272,6 +273,8 @@ struct HealthSettingsView: View {
                 Text("Отбой позже начала окна на 30+ минут снижает восстановление. Без данных о сне ночь считается нейтральной в конце окна.")
             }
             .listRowBackground(QColor.sheet)
+
+            sleepHistorySection
 
             Section {
                 Stepper(value: $settings.stepGoal, in: VitalSettings.stepGoalRange, step: VitalSettings.stepGoalStep) {
@@ -344,9 +347,44 @@ struct HealthSettingsView: View {
         .keyboardDismissal()
         .navigationTitle("Здоровье героя")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: Binding(get: { correctingNight != nil }, set: { if !$0 { correctingNight = nil } })) {
+            SleepCorrectionView(model: model, wakeDate: correctingNight)
+        }
         .onChange(of: settings) { _, new in
             Task { await model.updateVitalSettings(new) }
         }
+    }
+
+    /// «Сон за 7 дней»: вход в исправление любой из последних ночей (8.1).
+    private var sleepHistorySection: some View {
+        let nights = (model.vitals?.log ?? []).compactMap { entry -> NightSummary? in
+            if case let .night(summary) = entry.kind { return summary }
+            return nil
+        }
+        let byDate = Dictionary(nights.map { ($0.wakeDate, $0) }, uniquingKeysWith: { _, last in last })
+        return Section {
+            ForEach(SleepRules.correctableWakeDates(today: model.today).reversed(), id: \.self) { date in
+                Button { correctingNight = date } label: {
+                    HStack {
+                        Text("Ночь на \(Format.shortDay(date).lowercased())").foregroundStyle(QColor.ink)
+                        Spacer()
+                        if let session = byDate[date]?.session {
+                            Text("\(WeekMapRenderer.duration(session.durationMinutes)) · \(SleepCard.sourceTitle(session.source))")
+                                .foregroundStyle(QColor.inkSecondary)
+                        } else {
+                            Text("нет данных").foregroundStyle(QColor.inkSecondary)
+                        }
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+                    }
+                    .font(QFont.text(15))
+                }
+            }
+        } header: {
+            Text("Сон за 7 дней")
+        } footer: {
+            Text("Ночь можно исправить точным интервалом — исправление заменит данные Apple Health за эту ночь. Удалить ночь нельзя.")
+        }
+        .listRowBackground(QColor.sheet)
     }
 
     /// Привязка LocalTime к DatePicker.
@@ -367,6 +405,7 @@ struct HealthSettingsView: View {
 struct SleepCard: View {
     let model: AppModel
     let enterSleep: () -> Void
+    @State private var isCorrecting = false
 
     private var settings: VitalSettings { model.vitalSettings }
     private var wakeTime: Date { VitalsCalculator.date(model.today, settings.sleepWindow.end, timeZone: .current) }
@@ -391,7 +430,17 @@ struct SleepCard: View {
                 }
                 Spacer(minLength: 0)
                 if let source = night?.session?.source {
-                    Text(source == .health ? "Apple Health" : "вручную").font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                    Text(Self.sourceTitle(source)).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                }
+                // Исправить прошлую ночь (8.1, макет 8.18) — когда ночь уже закончилась.
+                if night != nil {
+                    Button { isCorrecting = true } label: {
+                        Image(systemName: "pencil").font(.system(size: 16, weight: .semibold)).foregroundStyle(QColor.ink)
+                            .frame(width: 44, height: 44)
+                            .overlay(Circle().strokeBorder(QColor.lineStrong))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Исправить сон")
                 }
             }
             content
@@ -399,7 +448,16 @@ struct SleepCard: View {
         .padding(.horizontal, QSpacing.xl)
         .padding(.vertical, QSpacing.l)
         .sheetCard()
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .sheet(isPresented: $isCorrecting) { SleepCorrectionView(model: model) }
+    }
+
+    static func sourceTitle(_ source: SleepSource) -> String {
+        switch source {
+        case .health: "Apple Health"
+        case .manual: "вручную"
+        case .corrected: "исправлено"
+        }
     }
 
     /// «ночь на среду» — винительный падеж дня пробуждения.

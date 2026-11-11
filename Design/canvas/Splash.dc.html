@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Экран загрузки: искра</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+.spA{animation:spA 1.8s ease-out infinite}
+.lgA{animation:lgA 1.8s ease-out infinite}
+.spB{animation:spB 2s cubic-bezier(.3,.7,.4,1) infinite}
+.lgB{animation:lgB 2s ease-out infinite}
+@keyframes spA{0%,18%{transform:scale(0);opacity:0}32%{transform:scale(1.3);opacity:1}46%{transform:scale(.85) rotate(20deg);opacity:1}60%{transform:scale(1.05) rotate(45deg);opacity:1}72%,100%{transform:scale(0) rotate(90deg);opacity:0}}
+@keyframes lgA{0%{opacity:0}14%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes spB{0%{transform:translate(-150px,130px) scale(.5);opacity:0}8%{opacity:1}42%{transform:translate(0,0) scale(1);opacity:1}52%{transform:translate(0,0) scale(1.5);opacity:1}64%{transform:translate(0,0) scale(.9);opacity:1}84%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(0,0) scale(0)}}
+@keyframes lgB{0%,42%{opacity:.18}54%{opacity:1}86%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.spA,.lgA,.spB,.lgB{animation:none}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 40px 48px; background: #EFE9DC; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 20px;">
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A5214;">8.2 · экран загрузки</div>
+    <h1 style="margin: 0; font-family: Literata, Georgia, serif; font-size: 32px; font-weight: 700;">Искра в правом верхнем углу «Пиксельной Q»</h1>
+    <div style="font-size: 14px; color: #3D4354; line-height: 1.5;">Только при запуске с нуля, не дольше ~1 с, касание — пропустить, при «Уменьшении движения» — неподвижный знак без искры, при возврате из фона — не показывается. Превью ниже повторяются по кругу с паузой.</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; flex: 1;">
+    <sc-for list="{{variants}}" as="v" hint-placeholder-count="2">
+      <div style="background: #FFFCF6; border: 1px solid #E3D9C6; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;"><span style="font-size: 18px; font-weight: 700;">{{v.name}}</span><span style="font-size: 13px; color: #4A5368;">{{v.time}}</span></div>
+        <div style="display: flex; gap: 16px;">
+          <sc-for list="{{v.themes}}" as="t" hint-placeholder-count="2">
+            <div style="width: 248px; height: 300px; border-radius: 28px; background: {{t.bg}}; border: 1px solid {{t.line}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; overflow: hidden; position: relative;">
+              <div style="position: relative; width: 96px; height: 96px;">
+                <div class="{{v.logoClass}}" style="display: grid; grid-template-columns: repeat(8, 12px); grid-auto-rows: 12px;" role="img" aria-label="Пиксельная Q"><sc-for list="{{t.q}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for></div>
+                <div class="{{v.sparkClass}}" style="position: absolute; left: 76px; top: -8px; width: 28px; height: 28px;" aria-hidden="true">
+                  <div style="position: absolute; left: 12px; top: 0; width: 4px; height: 28px; background: {{t.spark}};"></div>
+                  <div style="position: absolute; left: 0; top: 12px; width: 28px; height: 4px; background: {{t.spark}};"></div>
+                  <div style="position: absolute; left: 8px; top: 8px; width: 12px; height: 12px; background: {{t.spark}};"></div>
+                  <div style="position: absolute; left: 11px; top: 11px; width: 6px; height: 6px; background: {{t.core}};"></div>
+                </div>
+              </div>
+              <div style="font-family: Literata, Georgia, serif; font-size: 22px; font-weight: 700; color: {{t.ink}};">Questlyn</div>
+              <div style="position: absolute; bottom: 14px; font-size: 11px; color: {{t.sub}};">{{t.label}}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Раскадровка</span>
+          <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+            <sc-for list="{{v.frames}}" as="f" hint-placeholder-count="5">
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                <div style="width: 96px; height: 84px; border-radius: 12px; background: #F5F0E6; border: 1px solid #E3D9C6; position: relative; overflow: hidden;">
+                  <div style="position: absolute; left: 24px; top: 20px; width: 48px; height: 48px;">
+                    <div style="display: grid; grid-template-columns: repeat(8, 6px); grid-auto-rows: 6px; opacity: {{f.qo}};"><sc-for list="{{qLight}}" as="p" hint-placeholder-count="64"><div style="background: {{p.c}};"></div></sc-for></div>
+                    <div style="position: absolute; left: {{f.sx}}; top: {{f.sy}}; width: 14px; height: 14px; opacity: {{f.so}}; transform: scale({{f.ss}});">
+                      <div style="position: absolute; left: 6px; top: 0; width: 2px; height: 14px; background: #F2B35B;"></div>
+                      <div style="position: absolute; left: 0; top: 6px; width: 14px; height: 2px; background: #F2B35B;"></div>
+                      <div style="position: absolute; left: 4px; top: 4px; width: 6px; height: 6px; background: #F2B35B;"></div>
+                    </div>
+                  </div>
+                </div>
+                <span style="font-size: 12px; font-weight: 600;">{{f.t}}</span>
+                <span style="font-size: 11px; color: #4A5368; text-align: center; line-height: 1.3;">{{f.d}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="font-size: 13px; color: #3D4354; line-height: 1.5;">{{v.note}}</div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const rows = ['.XXXXX..', 'XX...XX.', 'XX...XX.', 'XX...XX.', 'XX.XXXX.', 'XX..XX..', '.XXXXXX.', '......XX'];
+    const toPx = (col) => {
+      const out = [];
+      rows.forEach((r) => { for (const ch of r) out.push({ c: ch === 'X' ? col : 'transparent' }); });
+      return out;
+    };
+    const qLight = toPx('#B8651B');
+    const themes = [
+      { bg: '#F5F0E6', line: '#E3D9C6', q: qLight, spark: '#F2B35B', core: '#FFFCF6', ink: '#1F2A44', sub: '#4A5368', label: 'светлая' },
+      { bg: '#0F1424', line: '#27314F', q: toPx('#4FD1C5'), spark: '#F2B35B', core: '#FFFCF6', ink: '#E8ECF7', sub: '#AEB8D2', label: 'тёмная' }
+    ];
+    const fA = [
+      { t: '0 с', d: 'знак проявляется', qo: '0.3', so: '0', ss: '0', sx: '38px', sy: '-4px' },
+      { t: '0,25 с', d: 'искра вспыхивает', qo: '1', so: '1', ss: '1.3', sx: '38px', sy: '-4px' },
+      { t: '0,45 с', d: 'мерцание', qo: '1', so: '1', ss: '0.85', sx: '38px', sy: '-4px' },
+      { t: '0,65 с', d: 'гаснет', qo: '1', so: '0.4', ss: '0.4', sx: '38px', sy: '-4px' },
+      { t: '0,9 с', d: '«Сегодня»', qo: '0', so: '0', ss: '0', sx: '38px', sy: '-4px' }
+    ];
+    const fB = [
+      { t: '0 с', d: 'тусклый знак, искра снизу слева', qo: '0.18', so: '1', ss: '0.6', sx: '-16px', sy: '48px' },
+      { t: '0,3 с', d: 'летит по дуге', qo: '0.18', so: '1', ss: '0.8', sx: '14px', sy: '12px' },
+      { t: '0,5 с', d: 'касается угла', qo: '0.6', so: '1', ss: '1.5', sx: '38px', sy: '-4px' },
+      { t: '0,7 с', d: 'Q загорелась', qo: '1', so: '1', ss: '1', sx: '38px', sy: '-4px' },
+      { t: '1,0 с', d: '«Сегодня»', qo: '0', so: '0', ss: '0', sx: '38px', sy: '-4px' }
+    ];
+    const variants = [
+      { name: 'A · Вспышка', time: '≈ 0,9 с', logoClass: 'lgA', sparkClass: 'spA', themes, frames: fA,
+        note: 'Знак сразу виден, искра в углу вспыхивает, мерцает и гаснет. Тише и короче; меньше всего отвлекает при частых запусках.' },
+      { name: 'B · Пролёт и зажигание', time: '≈ 1,0 с', logoClass: 'lgB', sparkClass: 'spB', themes, frames: fB,
+        note: 'Искра прилетает по дуге в правый верхний угол и «зажигает» Q. Заметнее и сюжетнее, но на грани лимита ~1 с.' }
+    ];
+    return { variants, qLight };
+  }
+}
+</script>
+</body>
+</html>
