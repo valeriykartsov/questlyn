@@ -26,11 +26,17 @@ public struct MapQuest: Hashable, Sendable {
     public var title: String
     public var start: Date?
     public var isDone: Bool
+    /// Длительность для лагеря монстров (9.2): у квеста со временем — своя или 30 минут.
+    public var durationMinutes: Int?
+    /// Просрочен (призрак, 9.6).
+    public var isOverdue: Bool
 
-    public init(title: String, start: Date?, isDone: Bool) {
+    public init(title: String, start: Date?, isDone: Bool, durationMinutes: Int? = nil, isOverdue: Bool = false) {
         self.title = title
         self.start = start
         self.isDone = isDone
+        self.durationMinutes = durationMinutes
+        self.isOverdue = isOverdue
     }
 }
 
@@ -90,6 +96,10 @@ public struct DayMap: Hashable, Sendable {
         public var hour: Double
         public var title: String
         public var isDone: Bool
+        /// Лагерь монстров: длительность квеста, минуты; nil — простой флажок.
+        public var durationMinutes: Int? = nil
+        public var isOverdue = false
+        public var monsters: Int { durationMinutes.map(QuestTiming.monsters(minutes:)) ?? 0 }
     }
 
     public struct MoodFlag: Hashable, Sendable {
@@ -159,7 +169,8 @@ public enum DayMapBuilder {
         var markers: [DayMap.Marker] = []
         for quest in quests {
             if let start = quest.start, start >= dayStart, start < dayEnd {
-                markers.append(.init(hour: hour(start), title: quest.title, isDone: quest.isDone))
+                markers.append(.init(hour: hour(start), title: quest.title, isDone: quest.isDone,
+                                     durationMinutes: quest.durationMinutes, isOverdue: quest.isOverdue))
             } else if quest.start == nil {
                 offMap.append("Квест: \(quest.title)")
             }

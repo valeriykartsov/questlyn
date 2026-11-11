@@ -34,6 +34,7 @@ enum MapText {
 struct DayStripCard: View {
     let model: AppModel
     let open: () -> Void
+    static let ghostImage = ExploreRenderer.ghost()
 
     var body: some View {
         let map = model.dayMap(for: model.today)
@@ -42,8 +43,20 @@ struct DayStripCard: View {
                 GeometryReader { proxy in
                     let scale = proxy.size.width / CGFloat(PixelMapRenderer.stripSize.width)
                     ZStack(alignment: .topLeading) {
-                        if let image = PixelMapRenderer.strip(map, appearance: model.hero?.appearance, accent: model.heroAccent) {
+                        if let image = PixelMapRenderer.strip(map, appearance: model.hero?.appearance, accent: model.heroAccent,
+                                                              farm: model.farmHours(on: model.today)) {
                             Image(decorative: image, scale: 1).resizable().interpolation(.none)
+                        }
+                        // Призраки просроченных задач кружат рядом с героем (9.6).
+                        if let hour = map.heroHour, let ghost = Self.ghostImage {
+                            let x = (4 + hour / 24 * Double(PixelMapRenderer.stripSize.width - 8)) * scale
+                            ForEach(Array(model.ghosts.prefix(6).enumerated()), id: \.offset) { index, _ in
+                                let dx = Double(index % 2 == 0 ? -1 : 1) * Double(9 + (index / 2) * 7)
+                                Image(decorative: ghost, scale: 1).resizable().interpolation(.none)
+                                    .frame(width: 8 * scale * 0.8, height: 9 * scale * 0.8)
+                                    .position(x: x + dx * scale * 0.8, y: Double(18 + (index % 3) * 4) * scale)
+                                    .accessibilityHidden(true)
+                            }
                         }
                         Text("\(MapText.season(map)) · \(MapText.weather(map, lastMood: model.lastMood))")
                             .font(QFont.text(10)).foregroundStyle(QColor.inkSecondary)
@@ -53,7 +66,7 @@ struct DayStripCard: View {
                         if let hour = map.heroHour {
                             // Под героем: буква ранга и время (11.11.2026). Без ранга — тире.
                             let x = (4 + hour / 24 * Double(PixelMapRenderer.stripSize.width - 8)) * scale
-                            Text("\(model.progress.rank?.letter ?? "—") · \(MapText.time(hour))")
+                            Text("\(model.progress.rank?.letter ?? "—") · \(MapText.time(hour)) · \(model.movementMode(at: .now).title)")
                                 .font(QFont.text(10, weight: .bold))
                                 .foregroundStyle(Color(hex: 0x1F2A44))
                                 .padding(.horizontal, 6).padding(.vertical, 1)
@@ -172,7 +185,10 @@ struct MapOverviewView: View {
     private func load(resetPosition: Bool) {
         let map = model.weekMap(start: weekStart)
         week = map
-        rendered = WeekMapRenderer.render(map, appearance: model.hero?.appearance, accent: model.heroAccent, timeZone: .current)
+        let farm = (0..<7).compactMap { index in
+            model.farmHours(on: weekStart.adding(days: index)).map { ($0.lowerBound + Double(index) * 24)...($0.upperBound + Double(index) * 24) }
+        }
+        rendered = WeekMapRenderer.render(map, appearance: model.hero?.appearance, accent: model.heroAccent, timeZone: .current, farm: farm)
         if heroImage == nil, let appearance = model.hero?.appearance { heroImage = ExploreRenderer.person(appearance, accent: model.heroAccent) }
         // По умолчанию — «сейчас»; в другой неделе — полдень понедельника.
         if resetPosition { position = map.heroHour ?? 12 }
@@ -300,6 +316,19 @@ struct MapOverviewView: View {
                     .position(x: (CGFloat(point.x) - originX) * scale, y: (CGFloat(point.y) - originY) * scale - 10)
                     .accessibilityHidden(true)
                 }
+                // Призраки просроченных задач — рядом с героем с момента просрочки (9.6).
+                if let ghost = DayStripCard.ghostImage {
+                    let point = WeekMapRenderer.roadPoint(position)
+                    let visible = model.ghosts.filter { $0.since <= positionDate }
+                    ForEach(Array(visible.prefix(8).enumerated()), id: \.element.id) { index, item in
+                        let angle = Double(index) / Double(max(visible.prefix(8).count, 1)) * 2 * .pi
+                        Image(decorative: ghost, scale: 1).resizable().interpolation(.none)
+                            .frame(width: 8 * scale, height: 9 * scale)
+                            .position(x: (CGFloat(point.x) + CGFloat(cos(angle) * 16) - originX) * scale,
+                                      y: (CGFloat(point.y) - 14 + CGFloat(sin(angle) * 7) - originY) * scale)
+                            .accessibilityLabel("Призрак: \(item.title)")
+                    }
+                }
                 // Герой идёт по дороге за ползунком и перетаскиванием (8C.3).
                 if let image = heroImage {
                     let point = WeekMapRenderer.roadPoint(position)
@@ -313,7 +342,7 @@ struct MapOverviewView: View {
                     let hero = position
                     let point = WeekMapRenderer.roadPoint(hero)
                     Button { select(Selection(x: point.x, y: point.y + 16, callout: heroCallout(hour: hero))) } label: {
-                        Text("\(model.progress.rank?.letter ?? "—") · \(positionTime)")
+                        Text("\(model.progress.rank?.letter ?? "—") · \(positionTime) · \(model.movementMode(at: positionDate).title)")
                             .font(QFont.text(10, weight: .bold))
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: 7))
@@ -383,11 +412,13 @@ struct MapOverviewView: View {
         .fixedSize())
     }
 
-    /// Время точки ползунка — подпись над героем.
-    private var positionTime: String {
-        let start = VitalsCalculator.date(weekStart, LocalTime(hour: 0, minute: 0)!, timeZone: .current)
-        return start.addingTimeInterval(position * 3600).formatted(date: .omitted, time: .shortened)
+    /// Момент точки ползунка.
+    private var positionDate: Date {
+        VitalsCalculator.date(weekStart, LocalTime(hour: 0, minute: 0)!, timeZone: .current).addingTimeInterval(position * 3600)
     }
+
+    /// Время точки ползунка — подпись над героем.
+    private var positionTime: String { positionDate.formatted(date: .omitted, time: .shortened) }
 
     private func select(_ selection: Selection) {
         selected = selected == selection ? nil : selection
@@ -437,7 +468,8 @@ struct MapOverviewView: View {
         let rows = (map.settlements.map { ($0.startHour, $0.titles.joined(separator: " + "),
                                           $0.kind == .city ? ($0.density > 1 ? "Город · пересекаются" : "Город") : "Деревня",
                                           $0.attendees > 0 ? "участников: \($0.attendees)" : "", 0) }
-                    + map.questMarkers.map { ($0.hour, $0.title, $0.isDone ? "Квест ✓" : "Квест", "", 1) })
+                    + map.questMarkers.map { ($0.hour, $0.title, ($0.durationMinutes != nil ? "Лагерь" : "Квест") + ($0.isDone ? " ✓" : ""),
+                                               $0.durationMinutes.map { "\(WeekMapRenderer.duration($0)) · монстров: \(QuestTiming.monsters(minutes: $0))" } ?? "", 1) })
             .sorted { $0.0 < $1.0 }
         let camp = week?.camps.first { $0.wakeDate == map.date }
         VStack(alignment: .leading, spacing: QSpacing.s) {

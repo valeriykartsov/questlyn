@@ -55,6 +55,7 @@ struct ExploreFlowView: View {
         session = ExploreSession(input: model.exploreInput(first: a, last: b), hero: model.exploreHero(skills: skills),
                                  attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
                                  season: season, precipitation: precipitation)
+        session?.ghostCount = model.ghosts.count
         phase = .game
     }
 
@@ -278,7 +279,10 @@ struct ExploreGameView: View {
                     HStack(alignment: .top) {
                         goals
                         Spacer()
-                        minimap
+                        VStack(spacing: QSpacing.s) {
+                            minimap
+                            zoomButtons
+                        }
                     }
                     if let toast = session.toast {
                         Text(toast).font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.ink)
@@ -335,6 +339,25 @@ struct ExploreGameView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(code) \(Int(value.rounded())) из \(Int(max.rounded()))")
+    }
+
+    /// Масштаб +/− (9.7).
+    private var zoomButtons: some View {
+        HStack(spacing: 0) {
+            Button { session.zoom = max(ExploreSession.zoomRange.lowerBound, session.zoom - 0.1) } label: {
+                Image(systemName: "plus").frame(width: 40, height: 36)
+            }
+            .accessibilityLabel("Крупнее")
+            Divider().frame(height: 20)
+            Button { session.zoom = min(ExploreSession.zoomRange.upperBound, session.zoom + 0.1) } label: {
+                Image(systemName: "minus").frame(width: 40, height: 36)
+            }
+            .accessibilityLabel("Мельче")
+        }
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(QColor.ink)
+        .buttonStyle(.plain)
+        .background(QColor.sheet.opacity(0.94), in: Capsule())
     }
 
     private var goals: some View {

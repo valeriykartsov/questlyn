@@ -146,12 +146,15 @@ public struct Quest: Identifiable, Hashable, Codable, Sendable {
     public var createdAt: Date
     /// Удалён (вместе с Epic или из его редактирования). Выполнения и начисления остаются — прогресс не отнимается.
     public var deletedAt: Date?
+    /// Длительность, минуты (9.1): 15–180, необязательна; на XP не влияет.
+    public var durationMinutes: Int?
 
     public init(
         id: UUID = UUID(), title: String, details: String? = nil, priority: QuestPriority = .default,
         skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil,
-        timezoneId: String, epicId: UUID? = nil, createdAt: Date, deletedAt: Date? = nil
+        timezoneId: String, epicId: UUID? = nil, createdAt: Date, deletedAt: Date? = nil, durationMinutes: Int? = nil
     ) {
+        self.durationMinutes = durationMinutes
         self.deletedAt = deletedAt
         self.epicId = epicId
         self.id = id

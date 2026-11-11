@@ -186,9 +186,13 @@ public struct QuestDraft: Sendable, Equatable {
     public var dueDate: LocalDate?
     public var dueTime: LocalTime?
     public var epicId: UUID?
+    /// Длительность, минуты (9.1); nil — без длительности.
+    public var durationMinutes: Int?
 
     public init(title: String = "", details: String = "", priority: QuestPriority = .default,
-                skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil, epicId: UUID? = nil) {
+                skillId: UUID? = nil, dueDate: LocalDate? = nil, dueTime: LocalTime? = nil, epicId: UUID? = nil,
+                durationMinutes: Int? = nil) {
+        self.durationMinutes = durationMinutes
         self.epicId = epicId
         self.title = title
         self.details = details
@@ -201,7 +205,7 @@ public struct QuestDraft: Sendable, Equatable {
     /// Черновик из существующего квеста — для изменения.
     public init(quest: Quest) {
         self.init(title: quest.title, details: quest.details ?? "", priority: quest.priority, skillId: quest.skillId,
-                  dueDate: quest.dueDate, dueTime: quest.dueTime, epicId: quest.epicId)
+                  dueDate: quest.dueDate, dueTime: quest.dueTime, epicId: quest.epicId, durationMinutes: quest.durationMinutes)
     }
 }
 
@@ -228,11 +232,13 @@ public struct QuestService: Sendable {
         let title = trimmed(draft.title)
         guard !title.isEmpty else { throw QuestlynError.emptyName }
         guard draft.dueTime == nil || draft.dueDate != nil else { throw QuestlynError.timeWithoutDate }
+        if let minutes = draft.durationMinutes, !QuestTiming.durations.contains(minutes) { throw QuestlynError.invalidDuration }
         let details = trimmed(draft.details)
         return Quest(
             title: title, details: details.isEmpty ? nil : details, priority: draft.priority,
             skillId: draft.skillId, dueDate: draft.dueDate, dueTime: draft.dueTime,
-            timezoneId: timeZone.identifier, epicId: epicId ?? draft.epicId, createdAt: now
+            timezoneId: timeZone.identifier, epicId: epicId ?? draft.epicId, createdAt: now,
+            durationMinutes: draft.durationMinutes
         )
     }
 

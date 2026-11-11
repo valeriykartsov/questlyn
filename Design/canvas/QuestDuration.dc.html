@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Новый квест: длительность</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div style="height: 788px; box-sizing: border-box; border-radius: 24px 24px 0 0; background: #F5F0E6; color: #1F2A44; padding: 10px 20px 34px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="width: 40px; height: 5px; border-radius: 3px; background: #C9BCA2; align-self: center;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="Journal.dc.html" style="font-size: 16px; text-decoration: none; min-height: 44px; display: flex; align-items: center;">Отмена</a>
+      <div style="font-family: Literata, Georgia, serif; font-size: 18px; font-weight: 600;">Новый квест</div>
+      <div style="width: 60px;"></div>
+    </div>
+    <label style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Что нужно сделать</span>
+      <input type="text" value="Подготовить слайды для ретро" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 1px solid #C9BCA2; background: #FFFCF6; font: 500 17px Inter, sans-serif; color: #1F2A44; box-sizing: border-box;">
+    </label>
+    <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFCF6; border: 1px solid #E3D9C6; overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="width: 90px; font-size: 14px; color: #4A5368;">Приоритет</span><span style="flex: 1; font-size: 15px; font-weight: 500;">Средний</span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 14px; border-bottom: 1px solid #E3D9C6;"><span style="width: 90px; font-size: 14px; color: #4A5368;">Навык</span><span style="flex: 1; font-size: 15px; font-weight: 500;">Публичные выступления</span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 14px;"><span style="width: 90px; font-size: 14px; color: #4A5368;">Когда</span><span style="flex: 1; font-size: 15px; font-weight: 500;">Чт, 12 ноя · 15:00</span><span style="color: #4A5368;" aria-hidden="true">›</span></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Длительность · необязательно</span>
+        <span style="font-size: 13px; font-weight: 700;">15:00–15:30</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="8">
+          <button type="button" aria-pressed="{{c.on}}" style="height: 40px; border-radius: 20px; border: {{c.border}}; background: {{c.bg}}; color: {{c.fg}}; font: {{c.font}} 14px Inter, sans-serif;">{{c.label}}</button>
+        </sc-for>
+      </div>
+      <div style="font-size: 12px; color: #4A5368; line-height: 1.45;">По умолчанию 30 минут, если у квеста есть время. Длительность нужна карте, «Пути» и календарю «Questlyn» — на XP не влияет: награда зависит только от приоритета.</div>
+    </div>
+
+    <div style="display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #E6E8EE; align-items: center;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M3 20l5-9 4 6 3-4 6 7z"></path><circle cx="16" cy="6" r="2"></circle></svg>
+      <div style="font-size: 13px; line-height: 1.45;">На большой карте — лагерь монстров у дороги в 15:00: 30 мин → 1 монстр, 60–90 → 2, 120+ → 3.</div>
+    </div>
+
+    <a href="Journal.dc.html" style="margin-top: auto; height: 52px; border-radius: 14px; background: #1F2A44; color: #FFFCF6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Добавить в журнал</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const values = ['Нет', '15 мин', '30 мин', '1 ч', '1,5 ч', '2 ч', '2,5 ч', '3 ч'];
+    const chips = values.map((label) => {
+      const on = label === '30 мин';
+      return {
+        label, on: on ? 'true' : 'false',
+        border: on ? 'none' : '1px solid #C9BCA2', bg: on ? '#1F2A44' : 'transparent',
+        fg: on ? '#FFFCF6' : '#1F2A44', font: on ? '700' : '500'
+      };
+    });
+    return { chips };
+  }
+}
+</script>
+</body>
+</html>

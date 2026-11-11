@@ -33,6 +33,9 @@ final class ExploreScene: SKScene {
         var chasing = false
     }
     private var npcs: [NPCState] = []
+    /// Призраки просроченных задач (9.6): летают по острову и не нападают.
+    private var ghostNodes: [SKSpriteNode] = []
+    private var ghostStates: [(x: Double, y: Double, tx: Double, ty: Double)] = []
     private var random: ExploreRandom
     private var now: TimeInterval = 0
     private var restAccumulator: Double = 0
@@ -65,14 +68,15 @@ final class ExploreScene: SKScene {
         for city in island.cities + island.villages {
             let label = SKLabelNode(text: city.name)
             label.fontName = "HelveticaNeue-Bold"
-            label.fontSize = 7
+            // Подписи — в масштабе персонажей (×0,5): мельче вместе с ними.
+            label.fontSize = 4
             label.fontColor = city.isCity ? .white : UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 1)
-            label.position = point(Double(city.center.x), Double(city.center.y), lift: city.isCity ? 30 : 20)
+            label.position = point(Double(city.center.x), Double(city.center.y), lift: city.isCity ? 24 : 14)
             label.zPosition = 9_000
-            let plate = SKShapeNode(rectOf: CGSize(width: label.frame.width + 8, height: 11), cornerRadius: 3)
+            let plate = SKShapeNode(rectOf: CGSize(width: label.frame.width + 5, height: 6.5), cornerRadius: 2)
             plate.fillColor = city.isCity ? UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 0.9) : UIColor(white: 1, alpha: 0.85)
             plate.strokeColor = .clear
-            plate.position = CGPoint(x: 0, y: 3)
+            plate.position = CGPoint(x: 0, y: 1.6)
             plate.zPosition = -1
             label.addChild(plate)
             addChild(label)
@@ -119,10 +123,19 @@ final class ExploreScene: SKScene {
             badge.strokeColor = UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 1)
             badge.lineWidth = 1
             badge.position = CGPoint(x: 0, y: 32)
-            badge.setScale(1 / Self.characterScale)
             node.addChild(badge)
             npcBadges.append(badge)
             npcs.append(NPCState(x: Double(npc.home.x), y: Double(npc.home.y)))
+        }
+        for _ in 0..<session.ghostCount {
+            let node = sprite(ExploreRenderer.ghost())
+            node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            node.alpha = 0.85
+            node.zPosition = 9_400
+            addChild(node)
+            ghostNodes.append(node)
+            let start = randomLand()
+            ghostStates.append((Double(start.x), Double(start.y), Double(start.x), Double(start.y)))
         }
         if let appearance = session.appearance, let image = ExploreRenderer.person(appearance, accent: session.accent) {
             heroNode.texture = SKTexture(cgImage: image)
@@ -142,7 +155,6 @@ final class ExploreScene: SKScene {
         heroLabel.position = CGPoint(x: 0, y: 34)
         // Пометка ранга — поверх подписей городов.
         heroLabel.zPosition = 9_500
-        heroLabel.setScale(1 / Self.characterScale)
         let plate = SKShapeNode(rectOf: CGSize(width: heroLabel.frame.width + 8, height: 9), cornerRadius: 3)
         plate.fillColor = UIColor(red: 0xE2 / 255, green: 0xA0 / 255, blue: 0x4A / 255, alpha: 1)
         plate.strokeColor = .clear
@@ -152,7 +164,7 @@ final class ExploreScene: SKScene {
         heroNode.addChild(heroLabel)
 
         camera = cameraNode
-        cameraNode.setScale(0.5)
+        cameraNode.setScale(session.zoom)
         addChild(cameraNode)
         fogNode.zPosition = 20_000
         cameraNode.addChild(fogNode)
@@ -162,7 +174,7 @@ final class ExploreScene: SKScene {
     }
 
     /// Персонажи мельче при прежнем масштабе карты (8C.9).
-    static let characterScale: CGFloat = 0.65
+    static let characterScale: CGFloat = 0.5
 
     /// Осадки поверх острова: дождь или снег (зимой).
     private func precipitationNode(snow: Bool) -> SKEmitterNode {
@@ -228,9 +240,11 @@ final class ExploreScene: SKScene {
         now += dt
         moveHero(dt)
         moveNPCs(dt)
+        moveGhosts(dt)
         interact(dt)
         layoutDynamic()
         updateFog()
+        if abs(cameraNode.xScale - session.zoom) > 0.001 { cameraNode.run(.scale(to: session.zoom, duration: 0.15)) }
     }
 
     private func moveHero(_ dt: Double) {
@@ -277,6 +291,31 @@ final class ExploreScene: SKScene {
                 }
             }
             npcs[index] = state
+        }
+    }
+
+    private func randomLand() -> TilePoint {
+        for _ in 0..<200 {
+            let point = TilePoint(random.int(side), random.int(side))
+            if session.island.isLand(point) { return point }
+        }
+        return session.island.start
+    }
+
+    /// Призраки плывут к случайной точке острова (над водой тоже), затем выбирают новую.
+    private func moveGhosts(_ dt: Double) {
+        for index in ghostStates.indices {
+            var ghost = ghostStates[index]
+            let dx = ghost.tx - ghost.x, dy = ghost.ty - ghost.y
+            let distance = hypot(dx, dy)
+            if distance < 0.3 {
+                let target = randomLand()
+                ghost.tx = Double(target.x); ghost.ty = Double(target.y)
+            } else {
+                let step = min(distance, 1.2 * dt)
+                ghost.x += dx / distance * step; ghost.y += dy / distance * step
+            }
+            ghostStates[index] = ghost
         }
     }
 
@@ -350,6 +389,9 @@ final class ExploreScene: SKScene {
         heroNode.position = point(heroPosition.x, heroPosition.y, lift: bob)
         heroNode.zPosition = depth(heroPosition.x, heroPosition.y) + 0.5
         cameraNode.position = point(heroPosition.x, heroPosition.y, lift: 20)
+        for (index, ghost) in ghostStates.enumerated() {
+            ghostNodes[index].position = point(ghost.x, ghost.y, lift: 14 + sin(now * 2 + Double(index)) * 3)
+        }
         for (index, state) in npcs.enumerated() {
             npcNodes[index].position = point(state.x, state.y)
             npcNodes[index].zPosition = depth(state.x, state.y) + 0.4

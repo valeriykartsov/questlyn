@@ -48,6 +48,21 @@ struct SettingsView: View {
                 }
                 .listRowBackground(QColor.sheet)
 
+                Section {
+                    NavigationLink {
+                        DayRhythmSettingsView(model: model)
+                    } label: {
+                        LabeledContent {
+                            Text(model.workSchedule.isEnabled ? "Фарм \(model.workSchedule.start)–\(model.workSchedule.end)" : "")
+                        } label: {
+                            Label("Ритм дня", systemImage: "sun.and.horizon")
+                        }
+                    }
+                } footer: {
+                    Text("«Фарм», «Привал» и «Приключение» на картах и в «Пути». Только отображение.")
+                }
+                .listRowBackground(QColor.sheet)
+
                 Section("Календарь") {
                     NavigationLink {
                         CalendarSettingsView(model: model)

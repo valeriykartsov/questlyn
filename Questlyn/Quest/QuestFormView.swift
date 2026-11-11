@@ -26,7 +26,8 @@ struct QuestFormView: View {
         let calendar = Calendar.current
         if let quest = editing {
             _draft = State(initialValue: QuestDraft(title: quest.title, details: quest.details ?? "", priority: quest.priority,
-                                                    skillId: quest.skillId, dueDate: quest.dueDate, dueTime: quest.dueTime, epicId: quest.epicId))
+                                                    skillId: quest.skillId, dueDate: quest.dueDate, dueTime: quest.dueTime, epicId: quest.epicId,
+                                                    durationMinutes: quest.durationMinutes))
             _hasDate = State(initialValue: quest.dueDate != nil)
             _day = State(initialValue: quest.dueDate?.date ?? .now)
             _hasTime = State(initialValue: quest.dueTime != nil)
@@ -113,6 +114,7 @@ struct QuestFormView: View {
                     if hasTime {
                         DatePicker("Время", selection: $time, displayedComponents: .hourAndMinute)
                             .environment(\.locale, Locale(identifier: "ru_RU"))
+                        durationPicker
                     }
                 }
             }
@@ -139,6 +141,46 @@ struct QuestFormView: View {
         .onAppear { if editing == nil { titleFocused = true } }
     }
 
+    /// Длительность (9.1, макет 9.1): по умолчанию 30 минут; на XP не влияет.
+    private var durationPicker: some View {
+        VStack(alignment: .leading, spacing: QSpacing.s) {
+            HStack {
+                Text("Длительность").font(QFont.text(15))
+                Spacer()
+                if let minutes = draft.durationMinutes {
+                    let end = time.addingTimeInterval(Double(minutes) * 60)
+                    Text("\(time.formatted(date: .omitted, time: .shortened))–\(end.formatted(date: .omitted, time: .shortened))")
+                        .font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+                }
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: QSpacing.s), count: 4), spacing: QSpacing.s) {
+                ForEach([Int?.none] + QuestTiming.durations.map(Optional.some), id: \.self) { value in
+                    let isOn = draft.durationMinutes == value
+                    Button(value.map(Self.durationTitle) ?? "Нет") { draft.durationMinutes = value }
+                        .font(QFont.text(13, weight: isOn ? .bold : .medium))
+                        .foregroundStyle(isOn ? QColor.sheet : QColor.ink)
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(isOn ? QColor.ink : Color.clear, in: Capsule())
+                        .overlay(Capsule().strokeBorder(isOn ? .clear : QColor.lineStrong))
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(isOn ? .isSelected : [])
+                }
+            }
+            Text("Нужна карте, «Пути» и календарю «Questlyn». На XP не влияет — награда зависит от приоритета.")
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        }
+        .padding(.vertical, QSpacing.xs)
+        .onAppear { if editing == nil, draft.durationMinutes == nil { draft.durationMinutes = QuestTiming.defaultDuration } }
+    }
+
+    static func durationTitle(_ minutes: Int) -> String {
+        switch minutes {
+        case ..<60: "\(minutes) мин"
+        case 60: "1 ч"
+        default: minutes % 60 == 0 ? "\(minutes / 60) ч" : "\(minutes / 60),5 ч"
+        }
+    }
+
     private var rewardHint: String {
         let k = draft.priority.multiplier
         let fmt = { (value: Double) in Format.number(value) }
@@ -156,6 +198,7 @@ struct QuestFormView: View {
             draft.dueTime = LocalTime(hour: parts.hour ?? 0, minute: parts.minute ?? 0)
         } else {
             draft.dueTime = nil
+            draft.durationMinutes = nil
         }
         isSaving = true
         Task {

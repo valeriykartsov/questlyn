@@ -131,6 +131,8 @@ final class CalendarSource {
         let date: LocalDate
         let time: LocalTime?
         let isDone: Bool
+        /// Длительность события, минуты (9.1); по умолчанию 30.
+        var minutes = QuestTiming.defaultDuration
     }
 
     /// Квест с датой — событие на весь день, с датой и временем — на 30 минут; выполненный — «✓» в названии.
@@ -147,7 +149,7 @@ final class CalendarSource {
             if let time = quest.time {
                 event.isAllDay = false
                 event.startDate = VitalsCalculator.date(quest.date, time, timeZone: timeZone)
-                event.endDate = event.startDate.addingTimeInterval(30 * 60)
+                event.endDate = event.startDate.addingTimeInterval(Double(quest.minutes) * 60)
             } else {
                 event.isAllDay = true
                 event.startDate = VitalsCalculator.date(quest.date, LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
