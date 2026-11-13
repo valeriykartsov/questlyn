@@ -3,6 +3,7 @@ import Testing
 @testable import Application
 @testable import Domain
 @testable import Persistence
+import GRDB
 
 /// «Отказаться от квеста» (12.11.2026): квест скрыт, прогресс и выполнение остаются.
 struct QuestRefusalTests {
@@ -28,5 +29,25 @@ struct QuestRefusalTests {
         #expect(try await store.allGrants().count == grantsBefore)
         #expect(try await store.activeCompletion(questId: done.id) != nil)
         await #expect(throws: QuestlynError.questNotFound) { try await quests.delete(questId: open.id, now: now + 200) }
+    }
+}
+
+/// Миграция v14: прошлые отметки курения пересчитываются на −1% (13.11.2026).
+struct SmokingMigrationTests {
+    @Test func smokingEntriesBecomeOnePercent() throws {
+        let queue = try DatabaseQueue()
+        var migrator = Migrations.migrator
+        try migrator.migrate(queue, upTo: Migrations.stage10)
+        try queue.write { db in
+            try db.execute(sql: """
+                INSERT INTO harmEntry (id, kind, title, damagePercent, at, localDate, timezoneId)
+                VALUES ('a', 'smoking', 'Курение', 3, '2026-11-10 10:00:00.000', '2026-11-10', 'UTC'),
+                       ('b', 'fastFood', 'Фастфуд', 5, '2026-11-10 10:00:00.000', '2026-11-10', 'UTC')
+                """)
+        }
+        try migrator.migrate(queue)
+        let values = try queue.read { try Int.fetchAll($0, sql: "SELECT damagePercent FROM harmEntry ORDER BY id") }
+        #expect(values == [1, 5])
+        _ = migrator
     }
 }

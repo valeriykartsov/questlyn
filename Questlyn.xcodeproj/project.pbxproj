@@ -28,7 +28,7 @@
 		000000000000000150000000 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstSubfolder = PlugIns;
 			files = (
 				0000000000000000000000B5 /* QuestlynWidgets.appex in Embed Foundation Extensions */,
 			);

@@ -15,6 +15,7 @@ enum Migrations {
     static let stage8c = "v11_stage8c"
     static let stage9 = "v12_stage9"
     static let stage10 = "v13_stage10"
+    static let stage12d = "v14_stage12d"
 
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -339,6 +340,11 @@ enum Migrations {
                 t.add(column: "parts", .text)
                 t.add(column: "accent", .integer)
             }
+        }
+
+        // Этап 12D: курение −1% MaxHP вместо −3% — прошлые отметки пересчитываются (решение 13.11.2026).
+        migrator.registerMigration(stage12d) { db in
+            try db.execute(sql: "UPDATE harmEntry SET damagePercent = 1 WHERE kind = 'smoking'")
         }
 
         return migrator

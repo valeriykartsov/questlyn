@@ -44,7 +44,8 @@ struct DayStripCard: View {
                     let scale = proxy.size.width / CGFloat(PixelMapRenderer.stripSize.width)
                     ZStack(alignment: .topLeading) {
                         if let image = PixelMapRenderer.strip(map, appearance: model.hero?.appearance, accent: model.heroAccent,
-                                                              farm: model.farmHours(on: model.today), aura: model.auraTier) {
+                                                              farm: model.farmHours(on: model.today), aura: model.auraTier,
+                                                              badge: model.heroBadge) {
                             Image(decorative: image, scale: 1).resizable().interpolation(.none)
                         }
                         // Призраки просроченных задач кружат рядом с героем (9.6).
@@ -341,6 +342,15 @@ struct MapOverviewView: View {
                         .position(x: (CGFloat(point.x) - originX) * scale,
                                   y: (CGFloat(point.y + 7) - originY) * scale - CGFloat(image.height) * scale / 2)
                         .allowsHitTesting(false)
+                    // 💧 или ✨ напротив лица (12D.5).
+                    if let badge = model.heroBadge, let icon = badge.image {
+                        Image(decorative: icon, scale: 1).resizable().interpolation(.none)
+                            .frame(width: CGFloat(icon.width) * scale, height: CGFloat(icon.height) * scale)
+                            .position(x: (CGFloat(point.x) - originX) * scale + CGFloat(image.width) * scale * 0.55,
+                                      y: (CGFloat(point.y + 7) - originY) * scale - CGFloat(image.height) * scale * 0.85)
+                            .allowsHitTesting(false)
+                            .accessibilityLabel(badge.title)
+                    }
                 }
                 do {
                     let hero = position

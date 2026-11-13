@@ -43,7 +43,7 @@ struct HeroView: View {
             ScreenHeader(model: model, subtitle: model.hero?.name ?? "", title: "Герой")
             HStack(alignment: .bottom, spacing: QSpacing.l) {
                 if let hero = model.hero {
-                    HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136, aura: model.auraTier)
+                    HeroStage(appearance: hero.appearance, accent: model.heroAccent, scale: 2, height: 136, aura: model.auraTier, badge: model.heroBadge)
                         .frame(width: 96)
                         // Вход в граф героя (11, макет GraphA) — небольшая кнопка справа от миниатюры.
                         .overlay(alignment: .bottomTrailing) {

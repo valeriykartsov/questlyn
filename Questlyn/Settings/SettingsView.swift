@@ -63,6 +63,19 @@ struct SettingsView: View {
                 }
                 .listRowBackground(QColor.sheet)
 
+                Section {
+                    NavigationLink {
+                        NotificationSettingsView(model: model)
+                    } label: {
+                        LabeledContent {
+                            Text(model.notificationSettings.isAnyOn ? "включены" : "")
+                        } label: {
+                            Label("Уведомления", systemImage: "bell")
+                        }
+                    }
+                }
+                .listRowBackground(QColor.sheet)
+
                 Section("Календарь") {
                     NavigationLink {
                         CalendarSettingsView(model: model)

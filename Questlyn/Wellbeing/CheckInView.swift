@@ -82,7 +82,8 @@ struct CheckInView: View {
     @ViewBuilder private var moodExtras: some View {
         if draft.mood != nil {
             VStack(alignment: .leading, spacing: QSpacing.m) {
-                TextField("Заметка", text: $draft.note, prompt: Text("Заметка · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
+                TextField("Заметка", text: $draft.note, prompt: Text("Заметка · необязательно, видна в «Дневнике»").foregroundStyle(QColor.placeholder), axis: .vertical)
+                    .lineLimit(3...8)
                     .font(QFont.text(15))
                     .padding(QSpacing.l)
                     .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))

@@ -148,6 +148,47 @@ final class AppModel {
     private(set) var deviceCalendars: [DeviceCalendar] = []
     private(set) var calendarPreferences = CalendarPreferences.load()
 
+    // MARK: Уведомления — этап 12D
+
+    private let notifier = Notifier()
+    private(set) var notificationSettings = NotificationSettings.load()
+    /// Разрешение iOS: nil — ещё не спрашивали.
+    private(set) var notificationsAllowed: Bool?
+
+    func refreshNotificationStatus() async {
+        switch await notifier.status() {
+        case .authorized, .provisional, .ephemeral: notificationsAllowed = true
+        case .denied: notificationsAllowed = false
+        default: notificationsAllowed = nil
+        }
+    }
+
+    /// Изменить настройки; при первом включении любого уведомления — запрос разрешения iOS.
+    func changeNotifications(_ change: (inout NotificationSettings) -> Void) async {
+        change(&notificationSettings)
+        notificationSettings.save()
+        await refreshNotificationStatus()
+        if notificationSettings.isAnyOn, notificationsAllowed == nil {
+            notificationsAllowed = await notifier.requestAuthorization()
+        }
+        await scheduleNotifications()
+    }
+
+    /// Расписание пересобирается после каждого обновления данных: «если ещё не отмечено» — по сегодняшнему состоянию.
+    func scheduleNotifications() async {
+        guard notificationSettings.isAnyOn, let overview else { await notifier.replace(with: []); return }
+        let quests = overview.journal.compactMap { item -> NotificationPlanner.QuestInput? in
+            guard let date = item.quest.dueDate, let time = item.quest.dueTime else { return nil }
+            return .init(id: item.quest.id, title: item.quest.title, date: date, time: time, isDone: item.isCompleted)
+        }
+        let habits = self.habits.map { NotificationPlanner.HabitInput(habit: $0.habit, doneToday: $0.doneToday) }
+        let plans = NotificationPlanner.plan(
+            settings: notificationSettings, now: .now, timeZone: timeZone, quests: quests, habits: habits,
+            wakeTime: vitalSettings.sleepWindow.end, sleepEnteredToday: vitals?.lastNight?.session != nil,
+            daySummaryToday: overview.moods.contains { $0.isDaySummary && $0.localDate == today })
+        await notifier.replace(with: plans)
+    }
+
     /// Повестка недели или месяца (8.13–8.14): события периода без скрытых календарей.
     func loadAgenda(from first: LocalDate, through last: LocalDate) {
         isCalendarAuthorized = calendar.isAuthorized
@@ -282,9 +323,10 @@ final class AppModel {
         let snapshot = WidgetSnapshot(
             generatedAt: .now, day: Format.shortDay(day), heroName: hero.name, rankLetter: progress.rank?.letter ?? "—",
             hp: Int(vitals.hp.rounded()), maxHP: Int(vitals.maxHP.rounded()), mp: Int(vitals.mp.rounded()), maxMP: Int(vitals.maxMP.rounded()),
-            mode: movementMode(at: .now).title, quests: quests, ghosts: ghostItems.map(\.title), habits: habits, sleep: sleep)
+            mode: movementMode(at: .now).title, quests: quests, ghosts: ghostItems.map(\.title), habits: habits, sleep: sleep,
+            badge: heroBadge?.rawValue)
         let map = PixelMapRenderer.strip(dayMap(for: day), appearance: hero.appearance, accent: heroAccent,
-                                         farm: farmHours(on: day), aura: auraTier).flatMap { UIImage(cgImage: $0).pngData() }
+                                         farm: farmHours(on: day), aura: auraTier, badge: heroBadge).flatMap { UIImage(cgImage: $0).pngData() }
         try? snapshot.save(map: map)
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -376,9 +418,16 @@ final class AppModel {
         }
     }
 
+    /// 💧 интоксикация или ✨ Perfect (12D.5).
+    var heroBadge: HeroBadge? { HeroBadge(vitals) }
+
     func exploreHero(skills chosen: [ExploreSkill]) -> ExploreHero {
         let state = vitals
-        return ExploreHero(levels: progress.levels, hp: state?.hp ?? 100, maxHP: state?.maxHP ?? 100, mp: state?.mp ?? 100,
+        // Интоксикация снимает уровни STR и END и в «Побродить».
+        var levels = progress.levels
+        levels[.strength] = (levels[.strength] ?? 0) - (state?.strengthRemoved ?? 0)
+        levels[.endurance] = (levels[.endurance] ?? 0) - (state?.enduranceRemoved ?? 0)
+        return ExploreHero(levels: levels, hp: state?.hp ?? 100, maxHP: state?.maxHP ?? 100, mp: state?.mp ?? 100,
                            maxMP: state?.maxMP ?? 100, rankLetter: progress.rank?.letter ?? "—", skills: chosen)
     }
 
@@ -394,7 +443,20 @@ final class AppModel {
 
     // MARK: Состояние героя — этап 4
 
-    var vitals: VitalsState? { overview?.vitals }
+    var vitals: VitalsState? {
+        #if DEBUG
+        // `-QuestlynIntoxication YES` — интоксикация для проверки значка и штриховки в симуляторе (12D.5).
+        if UserDefaults.standard.bool(forKey: "QuestlynIntoxication"), var state = overview?.vitals {
+            state.intoxication = Intoxication(startedAt: .now - 3600, until: .now + 11 * 3600)
+            state.strengthRemoved = 1
+            state.enduranceRemoved = 1
+            state.maxHP -= 10
+            state.hp = min(state.hp, state.maxHP) * 0.7
+            return state
+        }
+        #endif
+        return overview?.vitals
+    }
     var vitalSettings: VitalSettings { overview?.vitalSettings ?? .default }
 
     private let health = HealthKitSource()
@@ -451,6 +513,7 @@ final class AppModel {
             }
             overview = try await TodayService(store: store).overview(now: .now, timeZone: timeZone)
             syncQuestEvents()
+            await scheduleNotifications()
             // Вехи фиксируются при каждом обновлении — в момент, когда они случились.
             try await ChronicleService(store: store).syncMilestones(now: .now, timeZone: timeZone)
             if !chronicle.isEmpty { chronicle = try await ChronicleService(store: store).feed(now: .now, timeZone: timeZone) }

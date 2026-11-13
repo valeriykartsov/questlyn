@@ -137,6 +137,12 @@ struct HeroWidget: Widget {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(s.heroName).font(.system(size: 14, weight: .bold)).lineLimit(1)
+                    // 💧 интоксикация или ✨ Perfect (12D.5).
+                    if let badge = s.badge {
+                        Image(systemName: badge == "intoxicated" ? "drop.fill" : "sparkles")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(badge == "intoxicated" ? Color(red: 0.25, green: 0.65, blue: 0.35) : WidgetPalette.amber)
+                    }
                     Spacer()
                     Text(s.rankLetter).font(.system(size: 11, weight: .heavy))
                         .padding(.horizontal, 6).background(WidgetPalette.amber, in: RoundedRectangle(cornerRadius: 6))

@@ -27,8 +27,8 @@ struct Stage8CTests {
 
     @Test func benefitsHealThreePercentUpToTenPerDay() async throws {
         _ = try await onboard(at: now - 3600)
-        // Курение ×5 = −15% (105 HP → 89,25), затем 4 полезных: +3% ×3 и +1% до предела 10%.
-        try await WellbeingService(store: store).checkIn(CheckInDraft(counts: [.smoking: 5]), now: now, timeZone: utc)
+        // Курение ×15 = −15% (−1% за отметку с 13.11.2026), затем 4 полезных: +3% ×3 и +1% до предела 10%.
+        try await WellbeingService(store: store).checkIn(CheckInDraft(counts: [.smoking: 15]), now: now, timeZone: utc)
         let damaged = try await vitals(at: now + 1).hp
         let report = try await WellbeingService(store: store)
             .checkIn(CheckInDraft(benefits: [.water: 1, .stretching: 2, .custom: 1], customBenefitTitle: "Баня"), now: now + 60, timeZone: utc)

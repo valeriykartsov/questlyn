@@ -2,12 +2,13 @@ import SwiftUI
 import Domain
 import Application
 
-/// Общая шапка вкладок (макеты 8.11–8.12): подзаголовок, крупный заголовок, справа «Летопись» и настройки.
+/// Общая шапка вкладок (макеты 8.11–8.12, 12D.4): подзаголовок, крупный заголовок, справа «Дневник», «Летопись» и настройки.
 struct ScreenHeader: View {
     let model: AppModel
     let subtitle: String
     let title: String
     @State private var isShowingChronicle = false
+    @State private var isShowingDiary = false
     @State private var isShowingSettings = false
 
     var body: some View {
@@ -17,9 +18,11 @@ struct ScreenHeader: View {
                 Text(title).font(QFont.title(30)).lineLimit(1).minimumScaleFactor(0.7)
             }
             Spacer(minLength: 0)
+            roundButton("text.book.closed", label: "Дневник") { isShowingDiary = true }
             roundButton("book.pages", label: "Летопись") { isShowingChronicle = true }
             roundButton("gearshape", label: "Настройки") { isShowingSettings = true }
         }
+        .sheet(isPresented: $isShowingDiary) { DiarySheet(model: model) }
         .sheet(isPresented: $isShowingChronicle) { ChronicleSheet(model: model) }
         .sheet(isPresented: $isShowingSettings) { SettingsView(model: model) }
     }

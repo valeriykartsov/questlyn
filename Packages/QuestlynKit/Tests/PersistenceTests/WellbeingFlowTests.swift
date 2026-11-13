@@ -24,10 +24,10 @@ struct WellbeingFlowTests {
         #expect(report.harms.count == 3 && report.mood?.note == "устал")
         let overview = try await TodayService(store: store).overview(now: now + 120, timeZone: utc)
         #expect(overview.weather == .rain && overview.todayHarms.count == 3)
-        // 100 − 3 − 3 − 5.
-        #expect(overview.vitals?.hp == 89)
+        // 100 − 1 − 1 − 5 (курение −1% с 13.11.2026).
+        #expect(overview.vitals?.hp == 93)
         try await service.deleteHarm(id: report.harms[2].id, now: now + 180)
-        #expect(try await TodayService(store: store).overview(now: now + 240, timeZone: utc).vitals?.hp == 94)
+        #expect(try await TodayService(store: store).overview(now: now + 240, timeZone: utc).vitals?.hp == 98)
     }
 
     @Test func daySummaryReplacesPrevious() async throws {

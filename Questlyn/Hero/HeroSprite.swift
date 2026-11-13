@@ -125,6 +125,8 @@ struct HeroStage: View {
     var height: CGFloat = 140
     /// Ступень ауры ранга (10.3); 0 — без ауры.
     var aura: Int = 0
+    /// 💧 или ✨ справа сверху, напротив лица (12D.5).
+    var badge: HeroBadge?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -136,6 +138,11 @@ struct HeroStage: View {
                 .padding(.bottom, 4)
             HeroSprite(appearance: appearance, accent: accent, scale: scale)
                 .padding(.bottom, 12)
+            if let badge {
+                HeroBadgeView(badge: badge, size: max(20, scale * 10))
+                    .offset(x: CGFloat(HeroSprite.size.width) * scale * 0.46,
+                            y: -(12 + CGFloat(HeroSprite.size.height) * scale * 0.74))
+            }
         }
         .frame(height: height)
         .clipShape(RoundedRectangle(cornerRadius: QRadius.card))
@@ -235,7 +242,7 @@ struct AppearanceEditorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: QSpacing.screen) {
-                HeroStage(appearance: appearance, accent: professionAccent, scale: 3, height: 210, aura: model.auraTier)
+                HeroStage(appearance: appearance, accent: professionAccent, scale: 3, height: 210, aura: model.auraTier, badge: model.heroBadge)
                     .overlay(alignment: .bottomLeading) {
                         Text("Аура ранга: \(AuraArt.title(model.auraTier))").font(QFont.text(11, weight: .bold))
                             .padding(.horizontal, QSpacing.s).padding(.vertical, 2)

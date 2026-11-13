@@ -105,12 +105,16 @@ struct HabitFormView: View {
             .listRowBackground(QColor.sheet)
 
             if kind == .daily {
-                Section("Время") {
+                Section {
                     Toggle("Указать время", isOn: $hasTime.animation())
                     if hasTime {
                         DatePicker("Время", selection: $time, displayedComponents: .hourAndMinute)
                             .environment(\.locale, Locale(identifier: "ru_RU"))
                     }
+                } header: {
+                    Text("Время и уведомление")
+                } footer: {
+                    Text("В это время придёт уведомление, если квест ещё не отмечен (включается в «Настройки › Уведомления»). Без времени — без уведомления.")
                 }
                 .listRowBackground(QColor.sheet)
             }
