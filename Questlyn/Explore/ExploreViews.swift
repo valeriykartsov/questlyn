@@ -73,6 +73,24 @@ struct ExploreFlowView: View {
             session.startEncounter(npc: npc)
             session.encounter?.perform(.fight)
         }
+        // `-QuestlynExploreShip shore | sail` — герой у корабля своего острова или уже на нём, в паре клеток от берега (12B).
+        if let mode = UserDefaults.standard.string(forKey: "QuestlynExploreShip"), let session, let ship = session.island.ships.last {
+            if mode == "sail" {
+                var tile = ship.position
+                let toward = session.island.regions[max(0, ship.region - 1)].center
+                for _ in 0..<12 {
+                    let dx = (toward.x - tile.x).signum(), dy = (toward.y - tile.y).signum()
+                    let next = TilePoint(tile.x + dx, tile.y + dy)
+                    guard !session.island.isLand(next) else { break }
+                    tile = next
+                }
+                session.ships[ship.id] = tile
+                session.sailing = ship.id
+                session.heroTile = tile
+            } else if let landing = session.island.landing(near: ship.position) {
+                session.heroTile = landing
+            }
+        }
         #endif
     }
 }
@@ -96,6 +114,13 @@ struct ExploreSetupView: View {
     let start: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var preview: Island?
+
+    /// «Малый остров» или «Архипелаг · 3 острова» (12B).
+    static func title(_ island: Island) -> String {
+        let count = island.regions.count
+        guard count > 1 else { return island.size.title }
+        return "Архипелаг · \(count) \(count < 5 ? "острова" : "островов")"
+    }
 
     private var yesterday: Date { Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.startOfDay(for: .now)) ?? .now }
     private var firstDay: LocalDate { LocalDate(first, timeZone: .current) }
@@ -180,7 +205,7 @@ struct ExploreSetupView: View {
     @ViewBuilder private var summary: some View {
         VStack(alignment: .leading, spacing: QSpacing.m) {
             HStack {
-                Text(preview?.size.title ?? "Остров").font(QFont.text(15, weight: .bold))
+                Text(preview.map(Self.title) ?? "Остров").font(QFont.text(15, weight: .bold))
                 Spacer()
                 Text(Format.dayCount(days)).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
             }
@@ -191,7 +216,7 @@ struct ExploreSetupView: View {
                     count(island.npcs.count, "NPC")
                     count(island.chests.count, "сундуков")
                     count(island.campfires.count, "костров")
-                    count(island.weatherBands.count, "недель погоды")
+                    if island.regions.count > 1 { count(island.regions.count, "островов-месяцев") } else { count(island.weatherBands.count, "недель погоды") }
                 }
                 if !model.isCalendarAuthorized && island.cities.isEmpty {
                     Text("Без доступа к календарю на острове не будет городов и NPC. Подключите Apple Calendar во вкладке «Календарь».")
@@ -292,6 +317,7 @@ struct ExploreGameView: View {
                             .transition(.opacity)
                     }
                     Spacer()
+                    shipBar
                     abilityBar
                 }
                 .padding(.horizontal, QSpacing.l)
@@ -363,6 +389,7 @@ struct ExploreGameView: View {
 
     private var goals: some View {
         HStack(spacing: QSpacing.l) {
+            if session.island.regions.count > 1 { Text("Острова \(session.visitedRegions.count)/\(session.island.regions.count)") }
             if !session.island.cities.isEmpty { Text("Города \(session.visitedCities.count)/\(session.island.cities.count)") }
             if !session.island.chests.isEmpty { Text("Сундуки \(session.openedChests.count)/\(session.island.chests.count)") }
         }
@@ -374,7 +401,8 @@ struct ExploreGameView: View {
     private var minimap: some View {
         let side = CGFloat(session.island.side)
         return ZStack(alignment: .topLeading) {
-            if let image = ExploreRenderer.minimap(session.island, opened: session.openedChests, lit: session.litCampfires) {
+            if let image = ExploreRenderer.minimap(session.island, opened: session.openedChests, lit: session.litCampfires,
+                                                    ships: session.ships.indices.filter { $0 != session.sailing }.map { session.ships[$0] }) {
                 Image(decorative: image, scale: 1).resizable().interpolation(.none)
             }
             Rectangle().fill(Color(hex: 0xE2A04A))
@@ -387,6 +415,37 @@ struct ExploreGameView: View {
         .accessibilityLabel("Мини-карта")
     }
 
+    /// «Сесть на корабль» у фрегата, «Сойти на берег» в плавании (12B, макеты ExploreBoarding и ExploreSailing).
+    @ViewBuilder private var shipBar: some View {
+        if session.sailing != nil {
+            let canLand = session.landingTile != nil
+            Button { scene?.disembark() } label: {
+                VStack(spacing: 2) {
+                    Text("Сойти на берег").font(QFont.text(15, weight: .bold))
+                    Text(canLand ? "корабль останется здесь" : "подплывите к берегу").font(QFont.text(11))
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(canLand ? QColor.ink : QColor.inkSecondary)
+                .background(canLand ? Color(hex: 0xE2A04A) : QColor.sheet.opacity(0.94), in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canLand)
+            .padding(.bottom, QSpacing.s)
+        } else if session.boardableShip != nil {
+            Button { scene?.boardShip() } label: {
+                VStack(spacing: 2) {
+                    Text("Сесть на корабль").font(QFont.text(15, weight: .bold))
+                    Text("управление — кораблём").font(QFont.text(11))
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(QColor.ink)
+                .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, QSpacing.s)
+        }
+    }
+
     @ViewBuilder private var abilityBar: some View {
         let skills = session.hero.skills
         if !skills.isEmpty {
@@ -396,7 +455,7 @@ struct ExploreGameView: View {
                     Button { session.useOnMap(skill) } label: {
                         VStack(spacing: 2) {
                             Text(skill.ability.title).font(QFont.text(14, weight: .bold))
-                            Text(onMap ? "\(skill.title) · −\(Int((skill.ability.mpShare * session.hero.maxMP).rounded())) MP" : "только во встрече")
+                            Text(session.sailing != nil ? "на корабле — нет" : onMap ? "\(skill.title) · −\(Int((skill.ability.mpShare * session.hero.maxMP).rounded())) MP" : "только во встрече")
                                 .font(QFont.text(11)).lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, minHeight: 52)
@@ -566,8 +625,8 @@ struct ExploreSummaryView: View {
             VStack(alignment: .leading, spacing: QSpacing.l) {
                 VStack(alignment: .leading, spacing: QSpacing.xs) {
                     Text("Прогулка окончена").font(QFont.text(12, weight: .semibold)).textCase(.uppercase).tracking(0.7).foregroundStyle(QColor.amberDeep)
-                    Text("Остров \(Format.shortDay(session.input.first)) — \(Format.shortDay(session.input.last))").font(QFont.title(26))
-                    Text("\(Format.dayCount(session.input.days)) · \(session.island.size.title.lowercased()) · \(minutes) мин в пути")
+                    Text("\(session.island.regions.count > 1 ? "Архипелаг" : "Остров") \(Format.shortDay(session.input.first)) — \(Format.shortDay(session.input.last))").font(QFont.title(26))
+                    Text("\(Format.dayCount(session.input.days)) · \(ExploreSetupView.title(session.island).lowercased()) · \(minutes) мин в пути")
                         .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                 }
                 HStack(spacing: QSpacing.s) {
@@ -575,6 +634,7 @@ struct ExploreSummaryView: View {
                     goal("Сундуков найдено", session.openedChests.count, session.island.chests.count)
                 }
                 VStack(spacing: 0) {
+                    if session.island.regions.count > 1 { row("Островов посещено", session.visitedRegions.count) }
                     row("Побед", session.wins)
                     row("Уговорено", session.persuaded)
                     row("Убежал", session.escapes)

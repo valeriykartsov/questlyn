@@ -214,7 +214,7 @@ struct SkillDetailView: View {
             }
             .paperScreen()
             .onAppear { title = skill?.title ?? "" }
-            .confirmationDialog("Удалить навык «\(skill?.title ?? "")»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            .alert("Удалить навык «\(skill?.title ?? "")»?", isPresented: $isConfirmingDelete) {
                 Button("Удалить навык", role: .destructive) {
                     Task { if await model.deleteSkill(skillId) { dismiss() } }
                 }
@@ -222,8 +222,7 @@ struct SkillDetailView: View {
             } message: {
                 Text("XP и записи в Летописи останутся. У открытых квестов и привычек навык снимется; выполненные квесты не меняются.")
             }
-            .confirmationDialog(pendingTitle, isPresented: Binding(get: { pendingTemplate != nil }, set: { if !$0 { pendingTemplate = nil } }),
-                                titleVisibility: .visible) {
+            .alert(pendingTitle, isPresented: Binding(get: { pendingTemplate != nil }, set: { if !$0 { pendingTemplate = nil } })) {
                 Button("Перенести") {
                     guard let template = pendingTemplate else { return }
                     Task { await model.linkActivity(templateId: template.id, skillId: skillId) }

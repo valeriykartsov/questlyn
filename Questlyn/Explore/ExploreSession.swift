@@ -46,6 +46,25 @@ final class ExploreSession {
     var ghostCount = 0
     /// Ступень ауры ранга (10.3, 0 — без ауры): в «Побродить» — по решению 12.11.2026.
     var aura = 0
+    /// Корабли архипелага (12B): позиция меняется — корабль остаётся там, где сошёл герой.
+    var ships: [TilePoint]
+    /// Корабль, которым управляет герой; nil — герой на суше.
+    var sailing: Int?
+    /// Острова, на которые ступал герой.
+    var visitedRegions: Set<Int> = []
+
+    /// Корабль в радиусе посадки — показывается «Сесть на корабль».
+    var boardableShip: Int? {
+        guard sailing == nil, encounter == nil else { return nil }
+        return ships.indices.min { ships[$0].distance(to: heroTile) < ships[$1].distance(to: heroTile) }
+            .flatMap { ships[$0].distance(to: heroTile) <= ExploreRules.boardRadius ? $0 : nil }
+    }
+
+    /// Клетка суши рядом с кораблём — «Сойти на берег» доступна.
+    var landingTile: TilePoint? {
+        guard sailing != nil else { return nil }
+        return island.landing(near: heroTile)
+    }
 
     init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32,
          season: Season, precipitation: Bool) {
@@ -61,12 +80,14 @@ final class ExploreSession {
         mp = hero.mp
         heroTile = island.start
         lastCity = island.start
+        ships = island.ships.map(\.position)
+        if let region = island.region(at: island.start) { visitedRegions.insert(region.id) }
     }
 
     static let mapCooldown: TimeInterval = 10
 
     func canUseOnMap(_ skill: ExploreSkill) -> Bool {
-        guard skill.ability == .dash || skill.ability == .scout, encounter == nil else { return false }
+        guard skill.ability == .dash || skill.ability == .scout, encounter == nil, sailing == nil else { return false }
         if let until = mapCooldownUntil[skill.ability], until > .now { return false }
         return mp >= (skill.ability.mpShare * hero.maxMP).rounded()
     }
@@ -83,7 +104,10 @@ final class ExploreSession {
         }
     }
 
-    var speed: Double { hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) }
+    var speed: Double {
+        if sailing != nil { return hero.walkSpeed * ExploreRules.sailSpeedFactor }
+        return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1)
+    }
     var vision: Double { (scoutUntil ?? .distantPast) > .now ? 15 : hero.vision }
 
     func startEncounter(npc: IslandNPC) {

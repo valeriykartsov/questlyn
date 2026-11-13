@@ -107,8 +107,8 @@ struct ActivityFormView: View {
         .toolbar {
             if onDone == nil { ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } } }
         }
-        .confirmationDialog(pendingLink.map { "Перенести «\($0.template.title)» с навыка «\($0.owner.title)»?" } ?? "",
-                            isPresented: Binding(get: { pendingLink != nil }, set: { if !$0 { pendingLink = nil } }), titleVisibility: .visible) {
+        .alert(pendingLink.map { "Перенести «\($0.template.title)» с навыка «\($0.owner.title)»?" } ?? "",
+                            isPresented: Binding(get: { pendingLink != nil }, set: { if !$0 { pendingLink = nil } })) {
             Button("Перенести") {
                 guard let link = pendingLink else { return }
                 Task { await model.linkActivity(templateId: link.template.id, skillId: link.skill.id) }

@@ -256,6 +256,8 @@ struct HealthSettingsView: View {
     @State private var newHabit = ""
     @State private var newHabitPercent = 5
     @State private var correctingNight: LocalDate?
+    /// Своя вредная привычка, которую просят удалить, — ждёт подтверждения.
+    @State private var removingHabit: CustomHarmHabit?
 
     init(model: AppModel) {
         self.model = model
@@ -291,8 +293,18 @@ struct HealthSettingsView: View {
                 ForEach(model.overview?.customHarmHabits ?? []) { habit in
                     LabeledContent(habit.title, value: "−\(habit.damagePercent)% HP")
                         .swipeActions {
-                            Button("Удалить", role: .destructive) { Task { await model.archiveHarmHabit(habit.id) } }
+                            Button("Удалить", role: .destructive) { removingHabit = habit }
                         }
+                }
+                .alert(removingHabit.map { "Удалить привычку «\($0.title)»?" } ?? "",
+                       isPresented: Binding(get: { removingHabit != nil }, set: { if !$0 { removingHabit = nil } })) {
+                    Button("Удалить", role: .destructive) {
+                        guard let habit = removingHabit else { return }
+                        Task { await model.archiveHarmHabit(habit.id) }
+                    }
+                    Button("Отмена", role: .cancel) {}
+                } message: {
+                    Text("Её больше нельзя будет отметить. Прошлые отметки и их урон останутся.")
                 }
                 HStack {
                     TextField("Своя привычка", text: $newHabit, prompt: Text("Своя привычка").foregroundStyle(QColor.placeholder))

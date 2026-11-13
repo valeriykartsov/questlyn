@@ -101,7 +101,7 @@ struct EpicFormView: View {
             }
         }
         .tint(QColor.amber)
-        .confirmationDialog("Удалить Epic «\(title)»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+        .alert("Удалить Epic «\(title)»?", isPresented: $isConfirmingDelete) {
             Button("Удалить Epic и шаги", role: .destructive) {
                 guard let id = editing?.epic.id else { return }
                 Task { if await model.deleteEpic(id) { dismiss() } }

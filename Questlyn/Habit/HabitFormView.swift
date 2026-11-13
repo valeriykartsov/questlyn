@@ -125,7 +125,7 @@ struct HabitFormView: View {
             }
         }
         .tint(QColor.amber)
-        .confirmationDialog("Удалить «\(draft.title)»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+        .alert("Удалить «\(draft.title)»?", isPresented: $isConfirmingDelete) {
             Button("Удалить привычку", role: .destructive) {
                 guard let id = editing?.id else { return }
                 Task { if await model.archiveHabit(id) { dismiss() } }

@@ -16,15 +16,22 @@ struct ExploreTests {
                 let title = "Событие \(random.int(titles * 2))"
                 let count = random.int(4)
                 let keys = (0..<count).map { _ in "p\(random.int(people))" }
-                events.append(ExploreEvent(title: title, start: Date(timeIntervalSince1970: Double(day) * 86400), minutes: 30, attendeeKeys: keys))
+                events.append(ExploreEvent(title: title, start: noon(start.adding(days: day)), minutes: 30, attendeeKeys: keys))
             }
         }
         let priorities: [QuestPriority] = [.low, .medium, .high]
-        let questList = (0..<quests).map { (title: "Квест \($0)", priority: priorities[$0 % 3]) }
+        let questList = (0..<quests).map { (title: "Квест \($0)", priority: priorities[$0 % 3], date: Optional(start.adding(days: $0 * days / max(quests, 1)))) }
         var nights: [LocalDate: Double] = [:]
         for day in 0..<days { nights[start.adding(days: day)] = 0.5 + Double(day % 5) / 10 }
         return ExploreInput(first: start, last: last, events: events, quests: questList, nights: nights,
-                            weekMoods: [start.weekStart: .bad], hasCalendar: true)
+                            weekMoods: [start.weekStart: .bad], hasCalendar: true, timeZone: utc)
+    }
+
+    let utc = TimeZone(identifier: "UTC")!
+    func noon(_ day: LocalDate) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = utc
+        return calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: 12))!
     }
 
     func hero(level: Int = 1, skills: [ExploreSkill] = []) -> ExploreHero {
@@ -60,27 +67,65 @@ struct ExploreTests {
             let data = input()
             let island = IslandGenerator.generate(data, seed: data.seed(attempt: attempt))
             #expect(island.isLand(island.start))
-            for target in island.cities.map(\.center) + island.chests.map(\.position) + island.campfires.map(\.position) {
-                #expect(island.path(from: island.start, to: target) != nil)
+            #expect(island.region(at: island.start)?.id == island.regions.count - 1)
+            // Каждый остров: всё достижимо пешком от места высадки у его корабля; корабли связаны морем.
+            for ship in island.ships {
+                #expect(!island.isLand(ship.position))
+                #expect(island.npcs.allSatisfy { $0.home.distance(to: ship.position) >= ExploreRules.harbourRadius })
+                guard let landing = island.landing(near: ship.position) else { Issue.record("нет берега у корабля"); continue }
+                #expect(island.region(at: landing)?.id == ship.region)
+                let region = island.regions[ship.region]
+                for target in island.cities.map(\.center) + island.chests.map(\.position) + island.campfires.map(\.position) where region.contains(target) {
+                    #expect(island.path(from: landing, to: target) != nil)
+                }
+                #expect(island.seaPath(from: island.ships[0].position, to: ship.position) != nil)
             }
         }
+    }
+
+    @Test func archipelagoHasIslandPerMonth() {
+        let data = input()
+        let island = IslandGenerator.generate(data, seed: data.seed(attempt: 0))
+        // 12.08–10.11: август 20 дней, сентябрь 30, октябрь 31, ноябрь 10.
+        #expect(island.regions.map(\.days) == [20, 30, 31, 10])
+        #expect(island.regions.map(\.size) == [.medium, .medium, .medium, .small])
+        #expect(island.regions.map(\.monthTitle) == ["Август", "Сентябрь", "Октябрь", "Ноябрь"])
+        #expect(island.ships.count == 4)
+        // Острова не пересекаются и разделены водой.
+        for (i, a) in island.regions.enumerated() { for b in island.regions[(i + 1)...] {
+            let apart = a.origin.x + a.side + ExploreRules.islandGap <= b.origin.x || b.origin.x + b.side + ExploreRules.islandGap <= a.origin.x
+                || a.origin.y + a.side + ExploreRules.islandGap <= b.origin.y || b.origin.y + b.side + ExploreRules.islandGap <= a.origin.y
+            #expect(apart)
+        } }
+        // Пешком между островами не дойти.
+        let otherCity = island.cities.first { island.region(at: $0.center)?.id == 0 }
+        if let otherCity { #expect(island.path(from: island.start, to: otherCity.center) == nil) }
+        // Мини-остров из короткого куска месяца — тоже отдельный.
+        let short = input(days: 12)
+        #expect(IslandGenerator.generate(short, seed: 1).regions.map(\.days) == [2, 10])
+        // Один месяц — один остров без кораблей.
+        let one = input(days: 10)
+        let single = IslandGenerator.generate(one, seed: 1)
+        #expect(single.regions.count == 1 && single.ships.isEmpty && single.side == IslandSize.small.tiles)
     }
 
     @Test func objectsFollowRules() {
         let data = input()
         let island = IslandGenerator.generate(data, seed: data.seed(attempt: 0))
-        #expect(island.size == .large)
-        #expect(!island.cities.isEmpty && island.cities.count <= IslandSize.large.cityCap)
+        #expect(island.size == .medium)
+        #expect(!island.cities.isEmpty && island.cities.count <= island.regions.map(\.size.cityCap).reduce(0, +))
         #expect(island.cities.allSatisfy { $0.events >= 2 })
         for (i, a) in island.cities.enumerated() { for b in island.cities[(i + 1)...] {
             #expect(a.center.distance(to: b.center) >= Double(ExploreRules.cityMinDistance))
         } }
-        #expect(island.start == island.cities[0].center)
-        #expect(island.npcs.count <= IslandSize.large.npcCap)
+        #expect(Set(island.cities.map(\.id)) == Set(island.cities.indices))
+        #expect(island.npcs.map(\.id) == Array(island.npcs.indices))
+        #expect(island.region(at: island.start)?.id == 3)
         #expect(island.npcs.allSatisfy { $0.home.distance(to: island.start) >= Double(ExploreRules.npcMinDistanceFromStart) })
         #expect(island.npcs.allSatisfy { island.safeCity(at: $0.home) == nil })
-        #expect(island.chests.count == ExploreRules.chestCap)
-        #expect(island.campfires.count == 14)
+        // Квесты по датам — на острове своего месяца.
+        #expect(island.chests.count == 40)
+        #expect(island.campfires.count >= 13)
         #expect(island.weatherBands.count == 14 && island.weatherBands.first == .rain)
     }
 

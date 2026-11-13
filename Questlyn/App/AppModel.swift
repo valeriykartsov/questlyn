@@ -353,7 +353,7 @@ final class AppModel {
         let quests = (overview?.journal ?? []).filter { item in
             let date = item.completion?.localDate ?? item.quest.dueDate
             return date.map { $0 >= first && $0 <= last } ?? false
-        }.map { (title: $0.quest.title, priority: $0.quest.priority) }
+        }.map { (title: $0.quest.title, priority: $0.quest.priority, date: $0.completion?.localDate ?? $0.quest.dueDate) }
         var nights: [LocalDate: Double] = [:]
         for entry in vitals?.log ?? [] {
             if case let .night(night) = entry.kind, night.wakeDate >= first, night.wakeDate <= last { nights[night.wakeDate] = night.quality }
@@ -363,7 +363,7 @@ final class AppModel {
             weekMoods[mood.localDate.weekStart] = mood.mood
         }
         return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
-                            hasCalendar: calendar.isAuthorized || !events.isEmpty)
+                            hasCalendar: calendar.isAuthorized || !events.isEmpty, timeZone: timeZone)
     }
 
     /// Навыки, которые можно взять в дорогу: способность по виду активности или атрибуту профессии, сила — по XP.
@@ -691,6 +691,14 @@ final class AppModel {
         await run { [self] in
             try await EpicService(store: store).update(epicId: epicId, title: title, details: details, deadline: deadline,
                                                        steps: steps, professionId: professionId, now: .now, timeZone: timeZone)
+            await reload()
+        }
+    }
+
+    /// «Отказаться от квеста» — с подтверждением в карточке квеста.
+    func deleteQuest(_ questId: UUID) async -> Bool {
+        await run { [self] in
+            try await QuestService(store: store).delete(questId: questId, now: .now)
             await reload()
         }
     }

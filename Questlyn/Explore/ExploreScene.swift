@@ -36,6 +36,10 @@ final class ExploreScene: SKScene {
     private var npcNodes: [SKSpriteNode] = []
     private var npcBadges: [SKShapeNode] = []
     private var chestNodes: [Int: SKSpriteNode] = [:]
+    /// Фрегаты архипелага (12B).
+    private var shipNodes: [SKSpriteNode] = []
+    /// Нос корабля на спрайте — слева; плывя вправо по экрану, корабль разворачивается.
+    private var shipFacesRight = false
     private var fireNodes: [Int: SKSpriteNode] = [:]
 
     /// Позиции в клетках (дробные).
@@ -62,7 +66,7 @@ final class ExploreScene: SKScene {
 
     init(session: ExploreSession, size: CGSize) {
         self.session = session
-        heroPosition = (Double(session.island.start.x), Double(session.island.start.y))
+        heroPosition = (Double(session.heroTile.x), Double(session.heroTile.y))
         random = ExploreRandom(session.seed ^ 0x5EED)
         super.init(size: size)
         scaleMode = .resizeFill
@@ -111,6 +115,37 @@ final class ExploreScene: SKScene {
                 ring.zPosition = -9_000
                 addChild(ring)
             }
+        }
+        // Подписи месяцев над островами архипелага — у северной кромки суши.
+        if island.regions.count > 1 {
+            for region in island.regions {
+                var top = region.center, best = Int.max
+                for y in region.origin.y..<(region.origin.y + region.side) {
+                    for x in region.origin.x..<(region.origin.x + region.side) where island.isLand(TilePoint(x, y)) && x + y < best {
+                        best = x + y; top = TilePoint(x, y)
+                    }
+                }
+                let label = SKLabelNode(text: "\(region.monthTitle) · \(Format.dayCount(region.days))")
+                label.fontName = "HelveticaNeue-Bold"
+                label.fontSize = 7
+                label.fontColor = UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 1)
+                label.position = point(Double(top.x), Double(top.y), lift: 16)
+                label.zPosition = 9_200
+                let plate = SKShapeNode(rectOf: CGSize(width: label.frame.width + 8, height: 10), cornerRadius: 3)
+                plate.fillColor = UIColor(red: 1, green: 0.99, blue: 0.96, alpha: 0.94)
+                plate.strokeColor = .clear
+                plate.position = CGPoint(x: 0, y: 2.5)
+                plate.zPosition = -1
+                label.addChild(plate)
+                addChild(label)
+            }
+        }
+        for _ in session.ships {
+            let node = sprite(ExploreRenderer.frigate())
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.12)
+            node.setScale(Self.characterScale * 1.2)
+            shipNodes.append(node)
+            addChild(node)
         }
         for chest in island.chests {
             let node = sprite(ExploreRenderer.chest(opened: false))
@@ -243,6 +278,24 @@ final class ExploreScene: SKScene {
         let location = touch.location(in: self)
         let t = ExploreRenderer.tile(px: Double(location.x), py: Double(-location.y), side: side)
         var target = TilePoint(Int(t.x.rounded()), Int(t.y.rounded()))
+        if session.sailing != nil {
+            // На корабле: касание по воде — плыть туда; по суше — к ближайшей воде у этой точки (12B).
+            let from = TilePoint(Int(heroPosition.x.rounded()), Int(heroPosition.y.rounded()))
+            if session.island.isLand(target) {
+                var best: TilePoint?, bestDistance = Double.infinity
+                for dy in -8...8 { for dx in -8...8 {
+                    let point = TilePoint(target.x + dx, target.y + dy)
+                    guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !session.island.isLand(point) else { continue }
+                    let distance = point.distance(to: target)
+                    if distance < bestDistance { bestDistance = distance; best = point }
+                } }
+                guard let best else { return }
+                target = best
+            }
+            guard let route = session.island.seaPath(from: from, to: target) else { return }
+            path = Array(route.dropFirst())
+            return
+        }
         // Касание рядом с сундуком или костром ведёт прямо к нему (8C.9).
         let goals = session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position)
             + session.island.campfires.filter { !session.litCampfires.contains($0.id) }.map(\.position)
@@ -270,9 +323,11 @@ final class ExploreScene: SKScene {
 
     private func moveHero(_ dt: Double) {
         guard let next = path.first else { bobPhase = 0; return }
+        defer { if session.sailing != nil { bobPhase = 0 } }
         let dx = Double(next.x) - heroPosition.x, dy = Double(next.y) - heroPosition.y
         let distance = hypot(dx, dy)
         let step = session.speed * dt
+        if session.sailing != nil, abs(dx - dy) > 0.01 { shipFacesRight = dx - dy > 0 }
         if distance <= step {
             heroPosition = (Double(next.x), Double(next.y))
             path.removeFirst()
@@ -287,7 +342,8 @@ final class ExploreScene: SKScene {
     private func moveNPCs(_ dt: Double) {
         let island = session.island
         let heroTile = TilePoint(Int(heroPosition.x.rounded()), Int(heroPosition.y.rounded()))
-        let heroSafe = island.safeCity(at: heroTile) != nil
+        // На корабле NPC не догоняют (море без встреч, 12B).
+        let heroSafe = island.safeCity(at: heroTile) != nil || session.sailing != nil
         for index in npcs.indices {
             var state = npcs[index]
             let npc = island.npcs[index]
@@ -358,6 +414,8 @@ final class ExploreScene: SKScene {
     private func interact(_ dt: Double) {
         let island = session.island
         let tile = session.heroTile
+        guard session.sailing == nil else { return }
+        if let region = island.region(at: tile) { session.visitedRegions.insert(region.id) }
         if let city = island.safeCity(at: tile) {
             session.visitedCities.insert(city.id)
             session.lastCity = city.center
@@ -407,8 +465,22 @@ final class ExploreScene: SKScene {
 
     private func layoutDynamic() {
         let bob = path.isEmpty ? 0 : abs(sin(bobPhase)) * 1.5
-        heroNode.position = point(heroPosition.x, heroPosition.y, lift: bob)
-        heroNode.zPosition = depth(heroPosition.x, heroPosition.y) + 0.5
+        // На корабле герой стоит на палубе у кормы, корабль идёт вместе с ним.
+        let sailing = session.sailing
+        heroNode.position = point(heroPosition.x, heroPosition.y, lift: sailing == nil ? bob : 3)
+        if sailing != nil { heroNode.position.x += 4 }
+        heroNode.zPosition = depth(heroPosition.x, heroPosition.y) + (sailing == nil ? 0.5 : 0.7)
+        for (index, node) in shipNodes.enumerated() {
+            if index == sailing {
+                node.xScale = abs(node.xScale) * (shipFacesRight ? -1 : 1)
+                node.position = point(heroPosition.x, heroPosition.y, lift: sin(now * 2) * 0.8)
+                node.zPosition = depth(heroPosition.x, heroPosition.y) + 0.6
+            } else {
+                let tile = session.ships[index]
+                node.position = point(Double(tile.x), Double(tile.y))
+                node.zPosition = depth(Double(tile.x), Double(tile.y)) + 0.3
+            }
+        }
         cameraNode.position = point(heroPosition.x, heroPosition.y, lift: 20)
         for (index, ghost) in ghostStates.enumerated() {
             ghostNodes[index].position = point(ghost.x, ghost.y, lift: 14 + sin(now * 2 + Double(index)) * 3)
@@ -430,6 +502,30 @@ final class ExploreScene: SKScene {
             fogNode.texture = SKTexture(cgImage: image)
             fogNode.size = CGSize(width: 1024, height: 1024)
         }
+    }
+
+    // MARK: Корабль (12B)
+
+    /// «Сесть на корабль»: герой переходит на палубу, дальше управление кораблём.
+    func boardShip() {
+        guard let index = session.boardableShip else { return }
+        let tile = session.ships[index]
+        path = []
+        session.sailing = index
+        heroPosition = (Double(tile.x), Double(tile.y))
+        session.heroTile = tile
+        layoutDynamic()
+    }
+
+    /// «Сойти на берег»: корабль остаётся у этого берега, герой — на соседней суше.
+    func disembark() {
+        guard let index = session.sailing, let landing = session.landingTile else { return }
+        path = []
+        session.ships[index] = session.heroTile
+        session.sailing = nil
+        heroPosition = (Double(landing.x), Double(landing.y))
+        session.heroTile = landing
+        layoutDynamic()
     }
 
     // MARK: После встречи
