@@ -141,7 +141,7 @@ enum ExploreRenderer {
     // MARK: Мини-карта
 
     /// Вид сверху: клетка — пиксель.
-    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = []) -> CGImage? {
+    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = [], ships: [TilePoint] = []) -> CGImage? {
         var canvas = RGBACanvas(width: island.side, height: island.side, fill: 0x3F6E9C)
         for (index, terrain) in island.terrain.enumerated() {
             let color: UInt32? = switch terrain {
@@ -161,6 +161,12 @@ enum ExploreRenderer {
         }
         for fire in island.campfires where !lit.contains(fire.id) {
             for dx in 0...1 { for dy in 0...1 { canvas.set(fire.position.x + dx, fire.position.y + dy, 0xE5482B) } }
+        }
+        // Корабли (12B): коричневый корпус с белым парусом.
+        let mark = max(2, island.side / 60)
+        for ship in ships {
+            for dx in -mark...mark { for dy in 0...mark { canvas.set(ship.x + dx, ship.y + dy, 0x6B3F22) } }
+            for dy in 1...(mark + 1) { canvas.set(ship.x, ship.y - dy, 0xFFFCF6) }
         }
         return canvas.image
     }
@@ -194,6 +200,46 @@ enum ExploreRenderer {
         if opened { for x in 1..<9 { canvas.set(x, 3, 0x2B1A0A); canvas.set(x, 4, 0x2B1A0A) } }
         else { for x in 0..<10 { canvas.set(x, 0, 0x5C3410); canvas.set(x, 1, 0x9A5214) } }
         canvas.set(4, 5, 0xF2D27A); canvas.set(5, 5, 0xF2D27A)
+        return canvas.image
+    }
+
+    /// Фрегат (12B, макет ExploreArchipelago): корпус с полосой портов, корма, бушприт, три мачты с прямыми парусами, флаг.
+    static func frigate() -> CGImage? {
+        let width = 48, height = 40
+        var canvas = RGBACanvas(width: width, height: height, fill: nil)
+        let hull: UInt32 = 0x6B3F22, wood: UInt32 = 0x7A4A2A, line: UInt32 = 0x3B2414
+        let sail: UInt32 = 0xFFFCF6, shade: UInt32 = 0xE3DCCB, port: UInt32 = 0x2A1A0E, stripe: UInt32 = 0xE3CF9A
+        // Мачты: фок, грот, бизань.
+        for (x, top) in [(14, 6), (25, 2), (37, 9)] { for y in top...28 { canvas.set(x, y, line) } }
+        // Прямые паруса — по два на мачту.
+        for (left, right, rows) in [(9, 19, [(8, 14), (16, 22)]), (19, 31, [(4, 11), (13, 21)]), (32, 42, [(11, 16), (18, 22)])] {
+            for (top, bottom) in rows {
+                for y in top...bottom { for x in left...right {
+                    canvas.set(x, y, y == bottom || x == left || x == right ? shade : sail)
+                } }
+            }
+        }
+        // Кливер от бушприта к фок-мачте.
+        for y in 10...26 {
+            let from = 13 - (y - 10) * 11 / 16
+            for x in from...13 { canvas.set(x, y, x == from ? shade : sail) }
+        }
+        // Флаг.
+        for y in 0...2 { for x in 26...30 { canvas.set(x, y, 0xA8432F) } }
+        // Корма.
+        for y in 22...28 { for x in 35...46 { canvas.set(x, y, y == 22 || x == 35 || x == 46 ? line : wood) } }
+        // Корпус: сужается к килю, нос — слева.
+        for y in 28...35 {
+            let left = 3 + (y - 28), right = 46 - (y - 28) / 2
+            for x in left...right { canvas.set(x, y, y == 35 || x == left || x == right ? line : hull) }
+        }
+        for x in 4...45 { canvas.set(x, 28, line) }
+        // Полоса орудийных портов.
+        for x in 8...42 { canvas.set(x, 30, x % 4 == 0 ? port : stripe) }
+        // Бушприт.
+        for k in 0...6 { canvas.set(3 - k / 2, 28 - k, line) }
+        // Пена у борта.
+        for x in stride(from: 5, through: 44, by: 3) { canvas.set(x, 36, 0xDDE8F2); canvas.set(x + 1, 36, 0xDDE8F2) }
         return canvas.image
     }
 

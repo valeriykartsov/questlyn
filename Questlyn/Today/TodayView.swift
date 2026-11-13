@@ -139,9 +139,9 @@ struct TodayView: View {
                     }
                 }
             }
-            .confirmationDialog("Удалить активность?", isPresented: Binding(get: { deletingActivity != nil }, set: { if !$0 { deletingActivity = nil } }),
-                                titleVisibility: .visible, presenting: deletingActivity) { activity in
+            .alert("Удалить активность?", isPresented: Binding(get: { deletingActivity != nil }, set: { if !$0 { deletingActivity = nil } }), presenting: deletingActivity) { activity in
                 Button("Удалить", role: .destructive) { Task { await model.deleteActivity(activity.id) } }
+                Button("Отмена", role: .cancel) {}
             } message: { activity in
                 Text(activity.questCompletionId == nil ? "Начисления этой активности будут сняты."
                                                        : "Активность закрыла квест. Чтобы убрать её вместе с квестом, отмените выполнение квеста.")

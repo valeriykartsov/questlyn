@@ -12,6 +12,7 @@ struct QuestDetailView: View {
     @State private var isEditing = false
     @State private var isRescheduling = false
     @State private var isCompletingWithActivity = false
+    @State private var isConfirmingRefusal = false
     @State private var newDay = Date.now
 
     private var item: TodayItem? { model.questItem(id: questId) }
@@ -121,8 +122,25 @@ struct QuestDetailView: View {
                 }
                 .buttonStyle(SecondaryButtonStyle())
             }
+            Button("Отказаться от квеста", role: .destructive) { isConfirmingRefusal = true }
+                .font(QFont.text(15, weight: .semibold))
+                .foregroundStyle(QColor.hp)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .disabled(isWorking)
         }
         .padding(QSpacing.screen)
+        .alert("Отказаться от квеста «\(quest.title)»?", isPresented: $isConfirmingRefusal) {
+            Button("Отказаться", role: .destructive) {
+                isWorking = true
+                Task {
+                    if await model.deleteQuest(quest.id) { dismiss() }
+                    isWorking = false
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text(refusalMessage(item))
+        }
     }
 
     private var rescheduleSheet: some View {
@@ -153,6 +171,14 @@ struct QuestDetailView: View {
     }
 
     /// Перенос сохраняет время, если новая дата есть; без даты — без времени.
+    /// Что случится при отказе: квест исчезнет отовсюду; полученный XP останется.
+    private func refusalMessage(_ item: TodayItem) -> String {
+        var parts = ["Квест исчезнет из журнала, «Сегодня», карт и календаря. Вернуть его нельзя."]
+        if item.isCompleted { parts.append("Он уже выполнен — полученный XP и запись в Летописи останутся.") }
+        if let epic = model.epic(id: item.quest.epicId) { parts.append("Это шаг Epic «\(epic.epic.title)» — он уйдёт и из Epic.") }
+        return parts.joined(separator: " ")
+    }
+
     private func reschedule(to date: LocalDate?) {
         guard let quest = item?.quest else { return }
         let draft = QuestDraft(title: quest.title, details: quest.details ?? "", priority: quest.priority, skillId: quest.skillId,

@@ -242,6 +242,14 @@ public struct QuestService: Sendable {
         )
     }
 
+    /// «Отказаться от квеста» (12.11.2026): квест скрывается из журнала, «Сегодня», карт и календаря.
+    /// Выполнения и начисления остаются — прогресс не отнимается, запись в Летописи сохраняется (как у удаления Epic).
+    public func delete(questId: UUID, now: Date) async throws {
+        guard var quest = try await store.quest(id: questId), quest.deletedAt == nil else { throw QuestlynError.questNotFound }
+        quest.deletedAt = now
+        try await store.save(quest)
+    }
+
     /// Изменить и перенести квест (BACKLOG 2.7). У выполненного нельзя менять приоритет и навык:
     /// начисления уже посчитаны по ним (рабочая гипотеза, 02).
     @discardableResult

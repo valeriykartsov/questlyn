@@ -39,6 +39,15 @@ public enum ExploreRules {
     public static let villageMinDistance = 3
     public static let npcMinDistanceFromStart = 6
     public static let chestCap = 30
+    /// Архипелаг (12B, 12.11.2026): вода между островами и по краю мира, клеток.
+    public static let islandGap = 8
+    public static let worldMargin = 3
+    /// Сесть на корабль — в этом радиусе от него, клеток.
+    public static let boardRadius = 2.0
+    /// Гавань: NPC не живут ближе к кораблю (бродят ±5 клеток, погоня — до 3,5).
+    public static let harbourRadius = 9.0
+    /// Корабль быстрее шага вдвое; плавание не тратит HP и MP.
+    public static let sailSpeedFactor = 2.0
 
     // Герой (09, раздел 4).
     public static func walkSpeed(endurance: Int) -> Double { min(4.5, 3 + 0.1 * Double(endurance)) }
@@ -222,16 +231,19 @@ public struct ExploreInput: Sendable {
     public var first: LocalDate
     public var last: LocalDate
     public var events: [ExploreEvent]
-    /// Квесты диапазона: название и приоритет.
-    public var quests: [(title: String, priority: QuestPriority)]
+    /// Квесты диапазона: название, приоритет и дата (по ней — остров месяца; без даты — последний месяц).
+    public var quests: [(title: String, priority: QuestPriority, date: LocalDate?)]
     /// Качество ночей диапазона (Q из 08), по дню пробуждения.
     public var nights: [LocalDate: Double]
     /// Последняя отметка настроения недели — по понедельнику недели.
     public var weekMoods: [LocalDate: Mood]
     public var hasCalendar: Bool
+    /// Пояс для дат событий: по нему событие попадает на остров своего месяца.
+    public var timeZone: TimeZone
 
-    public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority)],
-                nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool) {
+    public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
+                nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
+        self.timeZone = timeZone
         self.first = first
         self.last = last
         self.events = events
@@ -246,6 +258,28 @@ public struct ExploreInput: Sendable {
     /// Только прошлые даты, не больше 92 дней (02, 11.11.2026).
     public static func isValidRange(first: LocalDate, last: LocalDate, today: LocalDate) -> Bool {
         first <= last && last < today && first.days(until: last) + 1 <= ExploreRules.maxDays
+    }
+
+    /// Месяцы диапазона (12B): каждый — отдельный остров, края обрезаны диапазоном.
+    public var months: [(first: LocalDate, last: LocalDate)] {
+        var result: [(first: LocalDate, last: LocalDate)] = []
+        var day = first
+        while day <= last {
+            let nextMonth = day.month == 12 ? LocalDate(year: day.year + 1, month: 1, day: 1) : LocalDate(year: day.year, month: day.month + 1, day: 1)
+            let end = min(last, nextMonth.adding(days: -1))
+            result.append((day, end))
+            day = end.adding(days: 1)
+        }
+        return result
+    }
+
+    /// Часть диапазона — данные одного месяца.
+    func slice(first: LocalDate, last: LocalDate, isLastMonth: Bool) -> ExploreInput {
+        ExploreInput(first: first, last: last,
+                     events: events.filter { let day = LocalDate($0.start, timeZone: timeZone); return day >= first && day <= last },
+                     quests: quests.filter { quest in quest.date.map { $0 >= first && $0 <= last } ?? isLastMonth },
+                     nights: nights.filter { $0.key >= first && $0.key <= last },
+                     weekMoods: weekMoods, hasCalendar: hasCalendar, timeZone: timeZone)
     }
 
     /// Зерно из диапазона; «Другой остров» прибавляет номер попытки.
@@ -296,9 +330,38 @@ public struct IslandCampfire: Hashable, Sendable, Identifiable {
     public var position: TilePoint
 }
 
-public struct Island: Sendable {
+/// Остров месяца в архипелаге (12B): квадрат `side`×`side` клеток от `origin`.
+public struct IslandRegion: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var first: LocalDate
+    public var last: LocalDate
     public var size: IslandSize
-    public var side: Int { size.tiles }
+    public var origin: TilePoint
+    public var side: Int
+
+    public var days: Int { first.days(until: last) + 1 }
+    public var center: TilePoint { TilePoint(origin.x + side / 2, origin.y + side / 2) }
+    public func contains(_ point: TilePoint) -> Bool {
+        point.x >= origin.x && point.y >= origin.y && point.x < origin.x + side && point.y < origin.y + side
+    }
+    public var monthTitle: String {
+        ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][first.month - 1]
+    }
+}
+
+/// Корабль (12B): стоит на воде у берега; одна модель — фрегат.
+public struct IslandShip: Hashable, Sendable, Identifiable {
+    public var id: Int
+    /// Остров, у которого корабль стоял в начале прогулки.
+    public var region: Int
+    public var position: TilePoint
+}
+
+public struct Island: Sendable {
+    /// Размер самого большого острова.
+    public var size: IslandSize
+    /// Сторона мира в клетках: остров или весь архипелаг.
+    public var side: Int
     public var terrain: [Terrain]
     public var cities: [IslandCity]
     public var villages: [IslandCity]
@@ -308,6 +371,68 @@ public struct Island: Sendable {
     /// Погода полос с запада на восток — по неделям диапазона.
     public var weatherBands: [Weather]
     public var start: TilePoint
+    /// Острова-месяцы (12B); у одного месяца — один остров на весь мир.
+    public var regions: [IslandRegion] = []
+    /// Корабли — только когда островов больше одного.
+    public var ships: [IslandShip] = []
+
+    init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
+         chests: [IslandChest], campfires: [IslandCampfire], weatherBands: [Weather], start: TilePoint) {
+        self.size = size
+        self.side = side ?? size.tiles
+        self.terrain = terrain
+        self.cities = cities
+        self.villages = villages
+        self.npcs = npcs
+        self.chests = chests
+        self.campfires = campfires
+        self.weatherBands = weatherBands
+        self.start = start
+    }
+
+    /// Остров месяца под клеткой суши.
+    public func region(at point: TilePoint) -> IslandRegion? {
+        guard isLand(point) else { return nil }
+        return regions.first { $0.contains(point) }
+    }
+
+    /// Клетка суши рядом с кораблём — куда сойти на берег (сначала по сторонам, потом по диагонали).
+    public func landing(near point: TilePoint) -> TilePoint? {
+        let around = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        return around.map { TilePoint(point.x + $0.0, point.y + $0.1) }.first { isLand($0) }
+    }
+
+    /// Путь корабля по воде (8 направлений, BFS; углы суши не срезает). nil — недостижимо.
+    public func seaPath(from: TilePoint, to: TilePoint) -> [TilePoint]? {
+        guard !isLand(from), !isLand(to), from.x >= 0, from.y >= 0, to.x >= 0, to.y >= 0,
+              from.x < side, from.y < side, to.x < side, to.y < side else { return nil }
+        if from == to { return [from] }
+        var previous = [Int](repeating: -1, count: side * side)
+        let startIndex = from.y * side + from.x, goalIndex = to.y * side + to.x
+        previous[startIndex] = startIndex
+        var queue = [startIndex], head = 0
+        let steps = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        while head < queue.count {
+            let current = queue[head]; head += 1
+            if current == goalIndex { break }
+            let cx = current % side, cy = current / side
+            for (dx, dy) in steps {
+                let nx = cx + dx, ny = cy + dy
+                guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                if dx != 0, dy != 0, isLand(TilePoint(cx + dx, cy)) || isLand(TilePoint(cx, cy + dy)) { continue }
+                let next = ny * side + nx
+                guard previous[next] == -1, terrain[next] == .water else { continue }
+                previous[next] = current
+                queue.append(next)
+            }
+        }
+        guard previous[goalIndex] != -1 else { return nil }
+        var result: [TilePoint] = []
+        var index = goalIndex
+        while index != startIndex { result.append(TilePoint(index % side, index / side)); index = previous[index] }
+        result.append(from)
+        return result.reversed()
+    }
 
     public func terrain(at point: TilePoint) -> Terrain {
         guard point.x >= 0, point.y >= 0, point.x < side, point.y < side else { return .water }
@@ -359,7 +484,113 @@ public struct Island: Sendable {
 }
 
 public enum IslandGenerator {
+    /// Архипелаг (12B): остров на каждый месяц диапазона, по порядку месяцев сверху вниз со сдвигом; старт — на острове
+    /// последнего месяца. Один месяц — один остров, как раньше, без кораблей.
     public static func generate(_ input: ExploreInput, seed: UInt64) -> Island {
+        let months = input.months
+        let parts = months.enumerated().map { index, month in
+            single(input.slice(first: month.first, last: month.last, isLastMonth: index == months.count - 1),
+                   seed: index == 0 ? seed : seed &+ UInt64(index) &* 0x9E37_79B9_7F4A_7C15)
+        }
+        guard parts.count > 1 else {
+            var island = parts[0]
+            island.weatherBands = weatherBands(input)
+            island.regions = [IslandRegion(id: 0, first: input.first, last: input.last, size: island.size, origin: TilePoint(0, 0), side: island.side)]
+            return island
+        }
+
+        // Раскладка: следующий остров — то вправо-вниз (+x), то влево-вниз (+y) на экране изометрии; квадраты не пересекаются.
+        let gap = ExploreRules.islandGap, margin = ExploreRules.worldMargin
+        var origins = [TilePoint(0, 0)]
+        for index in 1..<parts.count {
+            let previous = origins[index - 1], before = parts[index - 1].side, shift = (before - parts[index].side) / 2
+            origins.append(index % 2 == 1 ? TilePoint(previous.x + before + gap, previous.y + shift)
+                                          : TilePoint(previous.x + shift, previous.y + before + gap))
+        }
+        let minX = origins.map(\.x).min() ?? 0, minY = origins.map(\.y).min() ?? 0
+        origins = origins.map { TilePoint($0.x - minX + margin, $0.y - minY + margin) }
+        let side = zip(origins, parts).map { max($0.x, $0.y) + $1.side }.max()! + margin
+
+        var terrain = [Terrain](repeating: .water, count: side * side)
+        var world = Island(size: parts.map(\.size).max { $0.tiles < $1.tiles } ?? .small, side: side, terrain: [],
+                           cities: [], villages: [], npcs: [], chests: [], campfires: [], weatherBands: weatherBands(input), start: TilePoint(0, 0))
+        func moved(_ point: TilePoint, _ origin: TilePoint) -> TilePoint { TilePoint(point.x + origin.x, point.y + origin.y) }
+        for (index, part) in parts.enumerated() {
+            let origin = origins[index]
+            for y in 0..<part.side { for x in 0..<part.side {
+                terrain[(y + origin.y) * side + x + origin.x] = part.terrain[y * part.side + x]
+            } }
+            for var city in part.cities {
+                city.id = world.cities.count; city.center = moved(city.center, origin); world.cities.append(city)
+            }
+            for var village in part.villages {
+                village.id = 1000 + world.villages.count; village.center = moved(village.center, origin); world.villages.append(village)
+            }
+            for var npc in part.npcs { npc.id = world.npcs.count; npc.home = moved(npc.home, origin); world.npcs.append(npc) }
+            for var chest in part.chests { chest.id = world.chests.count; chest.position = moved(chest.position, origin); world.chests.append(chest) }
+            for var fire in part.campfires { fire.id = world.campfires.count; fire.position = moved(fire.position, origin); world.campfires.append(fire) }
+            world.regions.append(IslandRegion(id: index, first: months[index].first, last: months[index].last,
+                                              size: part.size, origin: origin, side: part.side))
+        }
+        world.terrain = terrain
+        world.start = moved(parts[parts.count - 1].start, origins[parts.count - 1])
+        world.ships = ships(in: world)
+        // У корабля, как у старта, NPC не стоят — высадка не начинается со встречи.
+        world.npcs = world.npcs.filter { npc in
+            world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
+        }
+        for index in world.npcs.indices { world.npcs[index].id = index }
+        return world
+    }
+
+    /// Корабль у каждого острова: вода открытого моря рядом с сушей, ближе всего к соседнему острову.
+    static func ships(in island: Island) -> [IslandShip] {
+        let side = island.side
+        // Открытое море — связная вода от угла мира (озёра внутри островов не годятся).
+        var sea = [Bool](repeating: false, count: side * side)
+        var stack = [0]
+        sea[0] = true
+        while let current = stack.popLast() {
+            let cx = current % side, cy = current / side
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = cx + dx, ny = cy + dy
+                guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                let next = ny * side + nx
+                if !sea[next], island.terrain[next] == .water { sea[next] = true; stack.append(next) }
+            }
+        }
+        return island.regions.map { region in
+            let neighbour = island.regions[region.id == island.regions.count - 1 ? region.id - 1 : region.id + 1].center
+            var best = region.center, bestDistance = Double.infinity
+            for y in max(0, region.origin.y - 2)..<min(side, region.origin.y + region.side + 2) {
+                for x in max(0, region.origin.x - 2)..<min(side, region.origin.x + region.side + 2) where sea[y * side + x] {
+                    let point = TilePoint(x, y)
+                    let touchesLand = [(1, 0), (-1, 0), (0, 1), (0, -1)].contains { dx, dy in
+                        let near = TilePoint(x + dx, y + dy)
+                        return island.isLand(near) && region.contains(near)
+                    }
+                    guard touchesLand else { continue }
+                    let distance = point.distance(to: neighbour)
+                    if distance < bestDistance { bestDistance = distance; best = point }
+                }
+            }
+            return IslandShip(id: region.id, region: region.id, position: best)
+        }
+    }
+
+    /// Погода — полосы по неделям всего диапазона.
+    static func weatherBands(_ input: ExploreInput) -> [Weather] {
+        var bands: [Weather] = []
+        var week = input.first.weekStart
+        while week <= input.last {
+            bands.append(Weather.from(input.weekMoods[week], on: week))
+            week = week.adding(days: 7)
+        }
+        return bands
+    }
+
+    /// Один остров по данным одного месяца (или всего диапазона).
+    static func single(_ input: ExploreInput, seed: UInt64) -> Island {
         var random = ExploreRandom(seed)
         let size = ExploreRules.islandSize(days: input.days)
         let side = size.tiles
@@ -436,12 +667,7 @@ public enum IslandGenerator {
             island.campfires.append(IslandCampfire(id: island.campfires.count, quality: best, position: spot))
         }
 
-        // Погода — полосы по неделям диапазона.
-        var week = input.first.weekStart
-        while week <= input.last {
-            island.weatherBands.append(Weather.from(input.weekMoods[week], on: week))
-            week = week.adding(days: 7)
-        }
+        island.weatherBands = weatherBands(input)
         return island
     }
 

@@ -1,781 +1,812 @@
 {
-  "v": 3,
-  "attachments": {},
-  "boards": {
-    "ActivityNew.dc.html": {
-      "h": 844,
-      "title": "8.1 · Новая активность",
-      "w": 390,
-      "x": 0,
-      "y": 4544
-    },
-    "Brand.dc.html": {
-      "h": 900,
-      "title": "Бренд: логотип, иконка, токены",
-      "w": 1280,
-      "x": 0,
-      "y": 250
-    },
-    "Calendar.dc.html": {
-      "h": 844,
-      "title": "3.6 · Календарь",
-      "w": 390,
-      "x": 940,
-      "y": 3150
-    },
-    "Chronicle.dc.html": {
-      "h": 844,
-      "title": "5.3 · Летопись героя",
-      "w": 390,
-      "x": 940,
-      "y": 7388
-    },
-    "DailyCard.dc.html": {
-      "h": 844,
-      "title": "4.9 · Ежедневный квест",
-      "w": 390,
-      "x": 3760,
-      "y": 3150
-    },
-    "DailyNew.dc.html": {
-      "h": 844,
-      "title": "4.8 · Новый ежедневный",
-      "w": 390,
-      "x": 3290,
-      "y": 3150
-    },
-    "DirA.dc.html": {
-      "h": 940,
-      "title": "A · Полевой журнал (выбрано)",
-      "w": 1280,
-      "x": 1360,
-      "y": 13020
-    },
-    "DirB.dc.html": {
-      "h": 940,
-      "title": "B · Ночная экспедиция (тёмная тема)",
-      "w": 1280,
-      "x": 2720,
-      "y": 13020
-    },
-    "DirC.dc.html": {
-      "h": 940,
-      "title": "C · Пиксельный атлас",
-      "w": 1280,
-      "x": 4080,
-      "y": 13020
-    },
-    "EHero.dc.html": {
-      "h": 900,
-      "title": "8.5 · Вариант E: свой герой в пропорциях LPC",
-      "w": 1280,
-      "x": 6430,
-      "y": 250
-    },
-    "Epic.dc.html": {
-      "h": 844,
-      "title": "4.7 · Epic Quest",
-      "w": 390,
-      "x": 2820,
-      "y": 3150
-    },
-    "EpicNew.dc.html": {
-      "h": 844,
-      "title": "4.6 · Новый Epic",
-      "w": 390,
-      "x": 2350,
-      "y": 3150
-    },
-    "Hero.dc.html": {
-      "h": 844,
-      "title": "Герой — v1 (заменён 5.1)",
-      "w": 390,
-      "x": 8630,
-      "y": 13020
-    },
-    "HeroDark.dc.html": {
-      "h": 844,
-      "title": "6.2 · Герой — тёмная",
-      "w": 390,
-      "x": 470,
-      "y": 10232
-    },
-    "HeroSprites.dc.html": {
-      "h": 900,
-      "title": "8.3 · Финальный герой: варианты A, B, C",
-      "w": 1280,
-      "x": 5440,
-      "y": 13020
-    },
-    "HeroV2.dc.html": {
-      "h": 844,
-      "title": "5.1 · Герой",
-      "w": 390,
-      "x": 0,
-      "y": 7388
-    },
-    "Journal.dc.html": {
-      "h": 844,
-      "title": "4.1 · Журнал квестов",
-      "w": 390,
-      "x": 0,
-      "y": 3150
-    },
-    "JournalAdd.dc.html": {
-      "h": 844,
-      "title": "4.2 · Что добавить?",
-      "w": 390,
-      "x": 470,
-      "y": 3150
-    },
-    "Main.dc.html": {
-      "h": 640,
-      "title": "Обзор: три направления",
-      "w": 1280,
-      "x": 0,
-      "y": 13020
-    },
-    "MapDay.dc.html": {
-      "h": 844,
-      "title": "3.5 · Карта дня — обзор",
-      "w": 390,
-      "x": 0,
-      "y": 5938
-    },
-    "Mood.dc.html": {
-      "h": 844,
-      "title": "Настроение — v1 (заменён 3.4)",
-      "w": 390,
-      "x": 9570,
-      "y": 13020
-    },
-    "MoodV2.dc.html": {
-      "h": 844,
-      "title": "3.4 · Настроение и здоровье",
-      "w": 390,
-      "x": 1410,
-      "y": 4544
-    },
-    "Morning.dc.html": {
-      "h": 844,
-      "title": "3.2 · Утро: итог сна (Apple Health)",
-      "w": 390,
-      "x": 0,
-      "y": 1700
-    },
-    "MorningManual.dc.html": {
-      "h": 844,
-      "title": "3.3 · Утро: ручной ввод сна",
-      "w": 390,
-      "x": 470,
-      "y": 1700
-    },
-    "NinjaHero.dc.html": {
-      "h": 900,
-      "title": "8.4 · Вариант D: герой из Ninja Adventure (CC0)",
-      "w": 1280,
-      "x": 6800,
-      "y": 13020
-    },
-    "OnbAttrs.dc.html": {
-      "h": 844,
-      "title": "2.3 · Атрибуты профессий",
-      "w": 390,
-      "x": 2300,
-      "y": 250
-    },
-    "OnbClass.dc.html": {
-      "h": 844,
-      "title": "2.4 · Класс",
-      "w": 390,
-      "x": 2770,
-      "y": 250
-    },
-    "OnbHero.dc.html": {
-      "h": 844,
-      "title": "2.1 · Герой: имя, волосы, кожа",
-      "w": 390,
-      "x": 1360,
-      "y": 250
-    },
-    "Onboarding.dc.html": {
-      "h": 844,
-      "title": "2.2 · Профессии",
-      "w": 390,
-      "x": 1830,
-      "y": 250
-    },
-    "Prototype.dc.html": {
-      "h": 844,
-      "is_interactive": true,
-      "title": "Интерактивный прототип",
-      "w": 390,
-      "x": 0,
-      "y": 11626
-    },
-    "QuestDetail.dc.html": {
-      "h": 844,
-      "title": "4.4 · Карточка квеста",
-      "w": 390,
-      "x": 1880,
-      "y": 3150
-    },
-    "QuestDoneActivity.dc.html": {
-      "h": 844,
-      "title": "8.2 · Выполнить с активностью",
-      "w": 390,
-      "x": 470,
-      "y": 4544
-    },
-    "QuestNew.dc.html": {
-      "h": 844,
-      "title": "4.3 · Новый квест",
-      "w": 390,
-      "x": 1410,
-      "y": 3150
-    },
-    "Reward.dc.html": {
-      "h": 844,
-      "title": "Квест выполнен — v1 (заменён 4.5)",
-      "w": 390,
-      "x": 9100,
-      "y": 13020
-    },
-    "RewardV2.dc.html": {
-      "h": 844,
-      "title": "4.5 · Квест выполнен",
-      "w": 390,
-      "x": 940,
-      "y": 4544
-    },
-    "Settings.dc.html": {
-      "h": 844,
-      "title": "5.4 · Настройки",
-      "w": 390,
-      "x": 0,
-      "y": 8838
-    },
-    "SettingsHealth.dc.html": {
-      "h": 844,
-      "title": "5.5 · Настройки: здоровье героя",
-      "w": 390,
-      "x": 470,
-      "y": 8838
-    },
-    "SkillNew.dc.html": {
-      "h": 844,
-      "title": "5.2 · Новый навык",
-      "w": 390,
-      "x": 470,
-      "y": 7388
-    },
-    "Today.dc.html": {
-      "h": 844,
-      "title": "Сегодня — v1 (заменён 3.1)",
-      "w": 390,
-      "x": 8160,
-      "y": 13020
-    },
-    "TodayDark.dc.html": {
-      "h": 844,
-      "title": "6.1 · Сегодня — тёмная",
-      "w": 390,
-      "x": 0,
-      "y": 10232
-    },
-    "TodayV2.dc.html": {
-      "h": 844,
-      "title": "3.1 · Сегодня",
-      "w": 390,
-      "x": 940,
-      "y": 1700
-    },
-    "VitalsScheme.dc.html": {
-      "h": 900,
-      "title": "5.6 · Схема HP и MP",
-      "w": 1280,
-      "x": 1410,
-      "y": 7388
-    },
-    "WeeklyCard.dc.html": {
-      "h": 844,
-      "title": "4.11 · Недельный квест",
-      "w": 390,
-      "x": 4700,
-      "y": 3150
-    },
-    "WeeklyNew.dc.html": {
-      "h": 844,
-      "title": "4.10 · Новый недельный",
-      "w": 390,
-      "x": 4230,
-      "y": 3150
-    },
-    "HeroOutfits.dc.html": {
-      "h": 900,
-      "title": "8.6 · Образы героя: маг, воин, лучник, ассасин, баскетболист, программист",
-      "w": 1280,
-      "x": 3710,
-      "y": 250
-    },
-    "OnbClassLook.dc.html": {
-      "h": 844,
-      "title": "8.7 · Шаг «Класс»: выбор образа",
-      "w": 390,
-      "x": 3240,
-      "y": 250
-    },
-    "MapStates.dc.html": {
-      "h": 900,
-      "title": "8.8 · D-4: состояния карты дня",
-      "w": 1280,
-      "x": 470,
-      "y": 5938
-    },
-    "MapStrip.dc.html": {
-      "h": 900,
-      "title": "8.9 · Миниатюра дня в 2D на «Сегодня»",
-      "w": 1280,
-      "x": 1410,
-      "y": 1700
-    },
-    "HeroOutfits2.dc.html": {
-      "h": 900,
-      "title": "8.10 · Новые образы: Мудрец, Иллюзионист, Мастер",
-      "w": 1280,
-      "x": 5070,
-      "y": 250
-    },
-    "TodaySleep.dc.html": {
-      "h": 844,
-      "title": "8.11 · «Сегодня»: общая шапка и блок сна (9, 11)",
-      "w": 390,
-      "x": 0,
-      "y": 14510
-    },
-    "JournalHeader.dc.html": {
-      "h": 844,
-      "title": "8.12 · Журнал: общая шапка без поиска (11)",
-      "w": 390,
-      "x": 470,
-      "y": 14510
-    },
-    "CalendarWeek.dc.html": {
-      "h": 844,
-      "title": "8.13 · Календарь: неделя (10)",
-      "w": 390,
-      "x": 940,
-      "y": 14510
-    },
-    "CalendarMonth.dc.html": {
-      "h": 844,
-      "title": "8.14 · Календарь: месяц (10)",
-      "w": 390,
-      "x": 1410,
-      "y": 14510
-    },
-    "SettingsCalendars.dc.html": {
-      "h": 844,
-      "title": "8.15 · Настройки: календари и отправка квестов (10)",
-      "w": 390,
-      "x": 1880,
-      "y": 14510
-    },
-    "MapFull.dc.html": {
-      "h": 844,
-      "title": "8.16 · Карта на весь экран с текстурами (12)",
-      "w": 390,
-      "x": 2350,
-      "y": 14510
-    },
-    "SleepEdit.dc.html": {
-      "h": 844,
-      "title": "8.17 · Исправление сна: точный интервал (8.1)",
-      "w": 390,
-      "x": 0,
-      "y": 15724
-    },
-    "SleepEntry.dc.html": {
-      "h": 844,
-      "title": "8.18 · «Сегодня» и Летопись: вход в исправление и пометка (8.1)",
-      "w": 390,
-      "x": 470,
-      "y": 15724
-    },
-    "MapCallout.dc.html": {
-      "h": 844,
-      "title": "8.19 · Подсказка по касанию на большой карте (8.3)",
-      "w": 390,
-      "x": 940,
-      "y": 15724
-    },
-    "EpicProfession.dc.html": {
-      "h": 844,
-      "title": "8.20 · Новый Epic: профессия (8.4)",
-      "w": 390,
-      "x": 1410,
-      "y": 15724
-    },
-    "JournalEpicColor.dc.html": {
-      "h": 844,
-      "title": "8.21 · Журнал: Epic с профессией выше (8.4)",
-      "w": 390,
-      "x": 1880,
-      "y": 15724
-    },
-    "WeeklyUnmark.dc.html": {
-      "h": 844,
-      "title": "8.22 · Недельный квест: снятие отметок недели (8.5)",
-      "w": 390,
-      "x": 2350,
-      "y": 15724
-    },
-    "SkillActivity.dc.html": {
-      "h": 844,
-      "title": "8.23 · Навык: привязка к виду активности (8.6)",
-      "w": 390,
-      "x": 2820,
-      "y": 15724
-    },
-    "ActivitySkillAuto.dc.html": {
-      "h": 844,
-      "title": "8.24 · Новая активность: навык из привязки (8.6)",
-      "w": 390,
-      "x": 3290,
-      "y": 15724
-    },
-    "Splash.dc.html": {
-      "h": 900,
-      "title": "8.25 · Экран загрузки: два варианта искры (8.2)",
-      "w": 1280,
-      "x": 3760,
-      "y": 15724
-    },
-    "ExploreSetup.dc.html": {
-      "h": 844,
-      "title": "8B.1 · «Побродить»: диапазон и навыки",
-      "w": 390,
-      "x": 0,
-      "y": 16994
-    },
-    "ExploreIsland.dc.html": {
-      "h": 844,
-      "title": "8B.2 · Остров: города, NPC, сундуки, костры",
-      "w": 390,
-      "x": 470,
-      "y": 16994
-    },
-    "ExploreEncounter.dc.html": {
-      "h": 844,
-      "title": "8B.3 · Встреча: сражаться, навык, бежать",
-      "w": 390,
-      "x": 940,
-      "y": 16994
-    },
-    "ExploreSummary.dc.html": {
-      "h": 844,
-      "title": "8B.4 · Итог прогулки",
-      "w": 390,
-      "x": 1410,
-      "y": 16994
-    },
-    "QuestDuration.dc.html": {
-      "h": 844,
-      "title": "9.1 · Новый квест: длительность",
-      "w": 390,
-      "x": 0,
-      "y": 18208
-    },
-    "MapCamps.dc.html": {
-      "h": 844,
-      "title": "9.2 · Большая карта: лагеря монстров",
-      "w": 390,
-      "x": 470,
-      "y": 18208
-    },
-    "SettingsWork.dc.html": {
-      "h": 844,
-      "title": "9.3 · Настройки: «Фарм» — рабочее время",
-      "w": 390,
-      "x": 940,
-      "y": 18208
-    },
-    "MapMovement.dc.html": {
-      "h": 844,
-      "title": "9.4 · Вид движения на картах: Фарм · Привал · Приключение",
-      "w": 390,
-      "x": 1410,
-      "y": 18208
-    },
-    "GanttDay.dc.html": {
-      "h": 844,
-      "title": "9.5 · Календарь «Путь»: Гант дня",
-      "w": 390,
-      "x": 1880,
-      "y": 18208
-    },
-    "GanttLandscape.dc.html": {
-      "h": 390,
-      "title": "9.6 · «Путь» повёрнут: низом к левой грани",
-      "w": 844,
-      "x": 2350,
-      "y": 18208
-    },
-    "HeroParts.dc.html": {
-      "h": 900,
-      "title": "10.1 · Герой из деталей: слои и готовые наборы",
-      "w": 1280,
-      "x": 0,
-      "y": 19422
-    },
-    "HeroEditor.dc.html": {
-      "h": 844,
-      "title": "10.2 · Редактор героя",
-      "w": 390,
-      "x": 1360,
-      "y": 19422
-    },
-    "AuraTiers.dc.html": {
-      "h": 900,
-      "title": "10.3 · Аура ранга: 5 ступеней, на картах",
-      "w": 1280,
-      "x": 1830,
-      "y": 19422
-    },
-    "GraphA.dc.html": {
-      "h": 844,
-      "title": "11 · Вариант А «Созвездие»",
-      "w": 390,
-      "x": 0,
-      "y": 20692
-    },
-    "GraphV.dc.html": {
-      "h": 844,
-      "title": "11 · Вариант В «Кольца»",
-      "w": 390,
-      "x": 470,
-      "y": 20692
-    },
-    "GraphG.dc.html": {
-      "h": 844,
-      "title": "11 · Вариант Г «Дерево-список»",
-      "w": 390,
-      "x": 940,
-      "y": 20692
-    },
-    "Widgets.dc.html": {
-      "h": 900,
-      "title": "12 · Виджеты «Домой» и экрана блокировки",
-      "w": 1280,
-      "x": 1410,
-      "y": 20692
-    }
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "ActivityNew.dc.html": {
+   "h": 844,
+   "title": "8.1 · Новая активность",
+   "w": 390,
+   "x": 0,
+   "y": 4544
   },
-  "createdOnFiles": {
-    "at": "2026-11-10T02:10:00Z",
-    "v": 1
+  "Brand.dc.html": {
+   "h": 900,
+   "title": "Бренд: логотип, иконка, токены",
+   "w": 1280,
+   "x": 0,
+   "y": 250
   },
-  "designSystems": [],
-  "launch": {
-    "view": "canvas"
+  "Calendar.dc.html": {
+   "h": 844,
+   "title": "3.6 · Календарь",
+   "w": 390,
+   "x": 940,
+   "y": 3150
   },
-  "notes": {
-    "r0": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "1. Знакомство: бренд и первый запуск — онбординг, класс и образ героя",
-      "x": 0,
-      "y": 0
-    },
-    "r1": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "2. Утро: пробуждение, итог сна, «Сегодня» с миниатюрой дня",
-      "x": 0,
-      "y": 1450
-    },
-    "r2": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "3. План дня: журнал, календарь, создание квестов, Epic, привычек",
-      "x": 0,
-      "y": 2900
-    },
-    "r3": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "4. Действие: выполнение, активность, награда, самочувствие",
-      "x": 0,
-      "y": 4294
-    },
-    "r4": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "5. Мир: карта дня и её состояния",
-      "x": 0,
-      "y": 5688
-    },
-    "r5": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "6. Итоги и рост: герой, навыки, Летопись, HP и MP",
-      "x": 0,
-      "y": 7138
-    },
-    "r6": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "7. Настройки: здоровье героя",
-      "x": 0,
-      "y": 8588
-    },
-    "r7": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "8. Тёмная тема",
-      "x": 0,
-      "y": 9982
-    },
-    "r8": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "9. Интерактивный прототип — Rule Set v1.1 (без HP/MP)",
-      "x": 0,
-      "y": 11376
-    },
-    "r9": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "Архив: исходные направления, варианты героя и заменённые версии экранов",
-      "x": 0,
-      "y": 12770
-    },
-    "r10": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (11.11.2026): общая шапка, блок сна, календарь, карта на весь экран — пункты 9–12",
-      "x": 0,
-      "y": 14260
-    },
-    "r11": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (11.11.2026): этап 8 — исправление сна, экран загрузки, подсказки на карте, Epic с профессией, отметки недели, навык и активность",
-      "x": 0,
-      "y": 15474
-    },
-    "r12": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (11.11.2026): этап 8B «Побродить» — мини-игра на острове из событий",
-      "x": 0,
-      "y": 16744
-    },
-    "r13": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (12.11.2026): этап 9 — длительность квестов, лагеря монстров, «Фарм», Гант «Путь героя»",
-      "x": 0,
-      "y": 17958
-    },
-    "r14": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (12.11.2026): этап 10 — настраиваемый герой и аура",
-      "x": 0,
-      "y": 19172
-    },
-    "r15": {
-      "kind": "title1",
-      "maxW": 12000,
-      "text": "На review (12.11.2026): этап 11 — граф персонажа (выбрать А, В или Г) и этап 12 — виджеты",
-      "x": 0,
-      "y": 20442
-    }
+  "Chronicle.dc.html": {
+   "h": 844,
+   "title": "5.3 · Летопись героя",
+   "w": 390,
+   "x": 940,
+   "y": 7388
   },
-  "order": [
-    "Brand.dc.html",
-    "OnbHero.dc.html",
-    "Onboarding.dc.html",
-    "OnbAttrs.dc.html",
-    "OnbClass.dc.html",
-    "OnbClassLook.dc.html",
-    "HeroOutfits.dc.html",
-    "HeroOutfits2.dc.html",
-    "EHero.dc.html",
-    "Morning.dc.html",
-    "MorningManual.dc.html",
-    "TodayV2.dc.html",
-    "MapStrip.dc.html",
-    "Journal.dc.html",
-    "JournalAdd.dc.html",
-    "Calendar.dc.html",
-    "QuestNew.dc.html",
-    "QuestDetail.dc.html",
-    "EpicNew.dc.html",
-    "Epic.dc.html",
-    "DailyNew.dc.html",
-    "DailyCard.dc.html",
-    "WeeklyNew.dc.html",
-    "WeeklyCard.dc.html",
-    "ActivityNew.dc.html",
-    "QuestDoneActivity.dc.html",
-    "RewardV2.dc.html",
-    "MoodV2.dc.html",
-    "MapDay.dc.html",
-    "MapStates.dc.html",
-    "HeroV2.dc.html",
-    "SkillNew.dc.html",
-    "Chronicle.dc.html",
-    "VitalsScheme.dc.html",
-    "Settings.dc.html",
-    "SettingsHealth.dc.html",
-    "TodayDark.dc.html",
-    "HeroDark.dc.html",
-    "Prototype.dc.html",
-    "Main.dc.html",
-    "DirA.dc.html",
-    "DirB.dc.html",
-    "DirC.dc.html",
-    "HeroSprites.dc.html",
-    "NinjaHero.dc.html",
-    "Today.dc.html",
-    "Hero.dc.html",
-    "Reward.dc.html",
-    "Mood.dc.html",
-    "TodaySleep.dc.html",
-    "JournalHeader.dc.html",
-    "CalendarWeek.dc.html",
-    "CalendarMonth.dc.html",
-    "SettingsCalendars.dc.html",
-    "MapFull.dc.html",
-    "SleepEdit.dc.html",
-    "SleepEntry.dc.html",
-    "MapCallout.dc.html",
-    "EpicProfession.dc.html",
-    "JournalEpicColor.dc.html",
-    "WeeklyUnmark.dc.html",
-    "SkillActivity.dc.html",
-    "ActivitySkillAuto.dc.html",
-    "Splash.dc.html",
-    "ExploreSetup.dc.html",
-    "ExploreIsland.dc.html",
-    "ExploreEncounter.dc.html",
-    "ExploreSummary.dc.html",
-    "QuestDuration.dc.html",
-    "MapCamps.dc.html",
-    "SettingsWork.dc.html",
-    "MapMovement.dc.html",
-    "GanttDay.dc.html",
-    "GanttLandscape.dc.html",
-    "HeroParts.dc.html",
-    "HeroEditor.dc.html",
-    "AuraTiers.dc.html",
-    "GraphA.dc.html",
-    "GraphV.dc.html",
-    "GraphG.dc.html",
-    "Widgets.dc.html"
-  ],
-  "pages": [],
-  "title": "Questlyn — дизайн"
+  "DailyCard.dc.html": {
+   "h": 844,
+   "title": "4.9 · Ежедневный квест",
+   "w": 390,
+   "x": 3760,
+   "y": 3150
+  },
+  "DailyNew.dc.html": {
+   "h": 844,
+   "title": "4.8 · Новый ежедневный",
+   "w": 390,
+   "x": 3290,
+   "y": 3150
+  },
+  "DirA.dc.html": {
+   "h": 940,
+   "title": "A · Полевой журнал (выбрано)",
+   "w": 1280,
+   "x": 1360,
+   "y": 13020
+  },
+  "DirB.dc.html": {
+   "h": 940,
+   "title": "B · Ночная экспедиция (тёмная тема)",
+   "w": 1280,
+   "x": 2720,
+   "y": 13020
+  },
+  "DirC.dc.html": {
+   "h": 940,
+   "title": "C · Пиксельный атлас",
+   "w": 1280,
+   "x": 4080,
+   "y": 13020
+  },
+  "EHero.dc.html": {
+   "h": 900,
+   "title": "8.5 · Вариант E: свой герой в пропорциях LPC",
+   "w": 1280,
+   "x": 6430,
+   "y": 250
+  },
+  "Epic.dc.html": {
+   "h": 844,
+   "title": "4.7 · Epic Quest",
+   "w": 390,
+   "x": 2820,
+   "y": 3150
+  },
+  "EpicNew.dc.html": {
+   "h": 844,
+   "title": "4.6 · Новый Epic",
+   "w": 390,
+   "x": 2350,
+   "y": 3150
+  },
+  "Hero.dc.html": {
+   "h": 844,
+   "title": "Герой — v1 (заменён 5.1)",
+   "w": 390,
+   "x": 8630,
+   "y": 13020
+  },
+  "HeroDark.dc.html": {
+   "h": 844,
+   "title": "6.2 · Герой — тёмная",
+   "w": 390,
+   "x": 470,
+   "y": 10232
+  },
+  "HeroSprites.dc.html": {
+   "h": 900,
+   "title": "8.3 · Финальный герой: варианты A, B, C",
+   "w": 1280,
+   "x": 5440,
+   "y": 13020
+  },
+  "HeroV2.dc.html": {
+   "h": 844,
+   "title": "5.1 · Герой",
+   "w": 390,
+   "x": 0,
+   "y": 7388
+  },
+  "Journal.dc.html": {
+   "h": 844,
+   "title": "4.1 · Журнал квестов",
+   "w": 390,
+   "x": 0,
+   "y": 3150
+  },
+  "JournalAdd.dc.html": {
+   "h": 844,
+   "title": "4.2 · Что добавить?",
+   "w": 390,
+   "x": 470,
+   "y": 3150
+  },
+  "Main.dc.html": {
+   "h": 640,
+   "title": "Обзор: три направления",
+   "w": 1280,
+   "x": 0,
+   "y": 13020
+  },
+  "MapDay.dc.html": {
+   "h": 844,
+   "title": "3.5 · Карта дня — обзор",
+   "w": 390,
+   "x": 0,
+   "y": 5938
+  },
+  "Mood.dc.html": {
+   "h": 844,
+   "title": "Настроение — v1 (заменён 3.4)",
+   "w": 390,
+   "x": 9570,
+   "y": 13020
+  },
+  "MoodV2.dc.html": {
+   "h": 844,
+   "title": "3.4 · Настроение и здоровье",
+   "w": 390,
+   "x": 1410,
+   "y": 4544
+  },
+  "Morning.dc.html": {
+   "h": 844,
+   "title": "3.2 · Утро: итог сна (Apple Health)",
+   "w": 390,
+   "x": 0,
+   "y": 1700
+  },
+  "MorningManual.dc.html": {
+   "h": 844,
+   "title": "3.3 · Утро: ручной ввод сна",
+   "w": 390,
+   "x": 470,
+   "y": 1700
+  },
+  "NinjaHero.dc.html": {
+   "h": 900,
+   "title": "8.4 · Вариант D: герой из Ninja Adventure (CC0)",
+   "w": 1280,
+   "x": 6800,
+   "y": 13020
+  },
+  "OnbAttrs.dc.html": {
+   "h": 844,
+   "title": "2.3 · Атрибуты профессий",
+   "w": 390,
+   "x": 2300,
+   "y": 250
+  },
+  "OnbClass.dc.html": {
+   "h": 844,
+   "title": "2.4 · Класс",
+   "w": 390,
+   "x": 2770,
+   "y": 250
+  },
+  "OnbHero.dc.html": {
+   "h": 844,
+   "title": "2.1 · Герой: имя, волосы, кожа",
+   "w": 390,
+   "x": 1360,
+   "y": 250
+  },
+  "Onboarding.dc.html": {
+   "h": 844,
+   "title": "2.2 · Профессии",
+   "w": 390,
+   "x": 1830,
+   "y": 250
+  },
+  "Prototype.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "Интерактивный прототип",
+   "w": 390,
+   "x": 0,
+   "y": 11626
+  },
+  "QuestDetail.dc.html": {
+   "h": 844,
+   "title": "4.4 · Карточка квеста",
+   "w": 390,
+   "x": 1880,
+   "y": 3150
+  },
+  "QuestDoneActivity.dc.html": {
+   "h": 844,
+   "title": "8.2 · Выполнить с активностью",
+   "w": 390,
+   "x": 470,
+   "y": 4544
+  },
+  "QuestNew.dc.html": {
+   "h": 844,
+   "title": "4.3 · Новый квест",
+   "w": 390,
+   "x": 1410,
+   "y": 3150
+  },
+  "Reward.dc.html": {
+   "h": 844,
+   "title": "Квест выполнен — v1 (заменён 4.5)",
+   "w": 390,
+   "x": 9100,
+   "y": 13020
+  },
+  "RewardV2.dc.html": {
+   "h": 844,
+   "title": "4.5 · Квест выполнен",
+   "w": 390,
+   "x": 940,
+   "y": 4544
+  },
+  "Settings.dc.html": {
+   "h": 844,
+   "title": "5.4 · Настройки",
+   "w": 390,
+   "x": 0,
+   "y": 8838
+  },
+  "SettingsHealth.dc.html": {
+   "h": 844,
+   "title": "5.5 · Настройки: здоровье героя",
+   "w": 390,
+   "x": 470,
+   "y": 8838
+  },
+  "SkillNew.dc.html": {
+   "h": 844,
+   "title": "5.2 · Новый навык",
+   "w": 390,
+   "x": 470,
+   "y": 7388
+  },
+  "Today.dc.html": {
+   "h": 844,
+   "title": "Сегодня — v1 (заменён 3.1)",
+   "w": 390,
+   "x": 8160,
+   "y": 13020
+  },
+  "TodayDark.dc.html": {
+   "h": 844,
+   "title": "6.1 · Сегодня — тёмная",
+   "w": 390,
+   "x": 0,
+   "y": 10232
+  },
+  "TodayV2.dc.html": {
+   "h": 844,
+   "title": "3.1 · Сегодня",
+   "w": 390,
+   "x": 940,
+   "y": 1700
+  },
+  "VitalsScheme.dc.html": {
+   "h": 900,
+   "title": "5.6 · Схема HP и MP",
+   "w": 1280,
+   "x": 1410,
+   "y": 7388
+  },
+  "WeeklyCard.dc.html": {
+   "h": 844,
+   "title": "4.11 · Недельный квест",
+   "w": 390,
+   "x": 4700,
+   "y": 3150
+  },
+  "WeeklyNew.dc.html": {
+   "h": 844,
+   "title": "4.10 · Новый недельный",
+   "w": 390,
+   "x": 4230,
+   "y": 3150
+  },
+  "HeroOutfits.dc.html": {
+   "h": 900,
+   "title": "8.6 · Образы героя: маг, воин, лучник, ассасин, баскетболист, программист",
+   "w": 1280,
+   "x": 3710,
+   "y": 250
+  },
+  "OnbClassLook.dc.html": {
+   "h": 844,
+   "title": "8.7 · Шаг «Класс»: выбор образа",
+   "w": 390,
+   "x": 3240,
+   "y": 250
+  },
+  "MapStates.dc.html": {
+   "h": 900,
+   "title": "8.8 · D-4: состояния карты дня",
+   "w": 1280,
+   "x": 470,
+   "y": 5938
+  },
+  "MapStrip.dc.html": {
+   "h": 900,
+   "title": "8.9 · Миниатюра дня в 2D на «Сегодня»",
+   "w": 1280,
+   "x": 1410,
+   "y": 1700
+  },
+  "HeroOutfits2.dc.html": {
+   "h": 900,
+   "title": "8.10 · Новые образы: Мудрец, Иллюзионист, Мастер",
+   "w": 1280,
+   "x": 5070,
+   "y": 250
+  },
+  "TodaySleep.dc.html": {
+   "h": 844,
+   "title": "8.11 · «Сегодня»: общая шапка и блок сна (9, 11)",
+   "w": 390,
+   "x": 0,
+   "y": 14510
+  },
+  "JournalHeader.dc.html": {
+   "h": 844,
+   "title": "8.12 · Журнал: общая шапка без поиска (11)",
+   "w": 390,
+   "x": 470,
+   "y": 14510
+  },
+  "CalendarWeek.dc.html": {
+   "h": 844,
+   "title": "8.13 · Календарь: неделя (10)",
+   "w": 390,
+   "x": 940,
+   "y": 14510
+  },
+  "CalendarMonth.dc.html": {
+   "h": 844,
+   "title": "8.14 · Календарь: месяц (10)",
+   "w": 390,
+   "x": 1410,
+   "y": 14510
+  },
+  "SettingsCalendars.dc.html": {
+   "h": 844,
+   "title": "8.15 · Настройки: календари и отправка квестов (10)",
+   "w": 390,
+   "x": 1880,
+   "y": 14510
+  },
+  "MapFull.dc.html": {
+   "h": 844,
+   "title": "8.16 · Карта на весь экран с текстурами (12)",
+   "w": 390,
+   "x": 2350,
+   "y": 14510
+  },
+  "SleepEdit.dc.html": {
+   "h": 844,
+   "title": "8.17 · Исправление сна: точный интервал (8.1)",
+   "w": 390,
+   "x": 0,
+   "y": 15724
+  },
+  "SleepEntry.dc.html": {
+   "h": 844,
+   "title": "8.18 · «Сегодня» и Летопись: вход в исправление и пометка (8.1)",
+   "w": 390,
+   "x": 470,
+   "y": 15724
+  },
+  "MapCallout.dc.html": {
+   "h": 844,
+   "title": "8.19 · Подсказка по касанию на большой карте (8.3)",
+   "w": 390,
+   "x": 940,
+   "y": 15724
+  },
+  "EpicProfession.dc.html": {
+   "h": 844,
+   "title": "8.20 · Новый Epic: профессия (8.4)",
+   "w": 390,
+   "x": 1410,
+   "y": 15724
+  },
+  "JournalEpicColor.dc.html": {
+   "h": 844,
+   "title": "8.21 · Журнал: Epic с профессией выше (8.4)",
+   "w": 390,
+   "x": 1880,
+   "y": 15724
+  },
+  "WeeklyUnmark.dc.html": {
+   "h": 844,
+   "title": "8.22 · Недельный квест: снятие отметок недели (8.5)",
+   "w": 390,
+   "x": 2350,
+   "y": 15724
+  },
+  "SkillActivity.dc.html": {
+   "h": 844,
+   "title": "8.23 · Навык: привязка к виду активности (8.6)",
+   "w": 390,
+   "x": 2820,
+   "y": 15724
+  },
+  "ActivitySkillAuto.dc.html": {
+   "h": 844,
+   "title": "8.24 · Новая активность: навык из привязки (8.6)",
+   "w": 390,
+   "x": 3290,
+   "y": 15724
+  },
+  "Splash.dc.html": {
+   "h": 900,
+   "title": "8.25 · Экран загрузки: два варианта искры (8.2)",
+   "w": 1280,
+   "x": 3760,
+   "y": 15724
+  },
+  "ExploreSetup.dc.html": {
+   "h": 844,
+   "title": "8B.1 · «Побродить»: диапазон и навыки",
+   "w": 390,
+   "x": 0,
+   "y": 16994
+  },
+  "ExploreIsland.dc.html": {
+   "h": 844,
+   "title": "8B.2 · Остров: города, NPC, сундуки, костры",
+   "w": 390,
+   "x": 470,
+   "y": 16994
+  },
+  "ExploreEncounter.dc.html": {
+   "h": 844,
+   "title": "8B.3 · Встреча: сражаться, навык, бежать",
+   "w": 390,
+   "x": 940,
+   "y": 16994
+  },
+  "ExploreSummary.dc.html": {
+   "h": 844,
+   "title": "8B.4 · Итог прогулки",
+   "w": 390,
+   "x": 1410,
+   "y": 16994
+  },
+  "QuestDuration.dc.html": {
+   "h": 844,
+   "title": "9.1 · Новый квест: длительность",
+   "w": 390,
+   "x": 0,
+   "y": 18208
+  },
+  "MapCamps.dc.html": {
+   "h": 844,
+   "title": "9.2 · Большая карта: лагеря монстров",
+   "w": 390,
+   "x": 470,
+   "y": 18208
+  },
+  "SettingsWork.dc.html": {
+   "h": 844,
+   "title": "9.3 · Настройки: «Фарм» — рабочее время",
+   "w": 390,
+   "x": 940,
+   "y": 18208
+  },
+  "MapMovement.dc.html": {
+   "h": 844,
+   "title": "9.4 · Вид движения на картах: Фарм · Привал · Приключение",
+   "w": 390,
+   "x": 1410,
+   "y": 18208
+  },
+  "GanttDay.dc.html": {
+   "h": 844,
+   "title": "9.5 · Календарь «Путь»: Гант дня",
+   "w": 390,
+   "x": 1880,
+   "y": 18208
+  },
+  "GanttLandscape.dc.html": {
+   "h": 390,
+   "title": "9.6 · «Путь» повёрнут: низом к левой грани",
+   "w": 844,
+   "x": 2350,
+   "y": 18208
+  },
+  "HeroParts.dc.html": {
+   "h": 900,
+   "title": "10.1 · Герой из деталей: слои и готовые наборы",
+   "w": 1280,
+   "x": 0,
+   "y": 19422
+  },
+  "HeroEditor.dc.html": {
+   "h": 844,
+   "title": "10.2 · Редактор героя",
+   "w": 390,
+   "x": 1360,
+   "y": 19422
+  },
+  "AuraTiers.dc.html": {
+   "h": 900,
+   "title": "10.3 · Аура ранга: 5 ступеней, на картах",
+   "w": 1280,
+   "x": 1830,
+   "y": 19422
+  },
+  "GraphA.dc.html": {
+   "h": 844,
+   "title": "11 · Вариант А «Созвездие»",
+   "w": 390,
+   "x": 0,
+   "y": 20692
+  },
+  "GraphV.dc.html": {
+   "h": 844,
+   "title": "11 · Вариант В «Кольца»",
+   "w": 390,
+   "x": 470,
+   "y": 20692
+  },
+  "GraphG.dc.html": {
+   "h": 844,
+   "title": "11 · Вариант Г «Дерево-список»",
+   "w": 390,
+   "x": 940,
+   "y": 20692
+  },
+  "Widgets.dc.html": {
+   "h": 900,
+   "title": "12 · Виджеты «Домой» и экрана блокировки",
+   "w": 1280,
+   "x": 1410,
+   "y": 20692
+  },
+  "ExploreArchipelago.dc.html": {
+   "x": 0,
+   "y": 22212,
+   "w": 390,
+   "h": 844,
+   "title": "Д1 · Архипелаг: остров на месяц"
+  },
+  "ExploreBoarding.dc.html": {
+   "x": 470,
+   "y": 22212,
+   "w": 390,
+   "h": 844,
+   "title": "Д1 · У корабля: «Сесть на корабль»"
+  },
+  "ExploreSailing.dc.html": {
+   "x": 940,
+   "y": 22212,
+   "w": 390,
+   "h": 844,
+   "title": "Д1 · Плавание: «Сойти на берег»"
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-11-10T02:10:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "r0": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "1. Знакомство: бренд и первый запуск — онбординг, класс и образ героя",
+   "x": 0,
+   "y": 0
+  },
+  "r1": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "2. Утро: пробуждение, итог сна, «Сегодня» с миниатюрой дня",
+   "x": 0,
+   "y": 1450
+  },
+  "r2": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "3. План дня: журнал, календарь, создание квестов, Epic, привычек",
+   "x": 0,
+   "y": 2900
+  },
+  "r3": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "4. Действие: выполнение, активность, награда, самочувствие",
+   "x": 0,
+   "y": 4294
+  },
+  "r4": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "5. Мир: карта дня и её состояния",
+   "x": 0,
+   "y": 5688
+  },
+  "r5": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "6. Итоги и рост: герой, навыки, Летопись, HP и MP",
+   "x": 0,
+   "y": 7138
+  },
+  "r6": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "7. Настройки: здоровье героя",
+   "x": 0,
+   "y": 8588
+  },
+  "r7": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "8. Тёмная тема",
+   "x": 0,
+   "y": 9982
+  },
+  "r8": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "9. Интерактивный прототип — Rule Set v1.1 (без HP/MP)",
+   "x": 0,
+   "y": 11376
+  },
+  "r9": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "Архив: исходные направления, варианты героя и заменённые версии экранов",
+   "x": 0,
+   "y": 12770
+  },
+  "r10": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (11.11.2026): общая шапка, блок сна, календарь, карта на весь экран — пункты 9–12",
+   "x": 0,
+   "y": 14260
+  },
+  "r11": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (11.11.2026): этап 8 — исправление сна, экран загрузки, подсказки на карте, Epic с профессией, отметки недели, навык и активность",
+   "x": 0,
+   "y": 15474
+  },
+  "r12": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (11.11.2026): этап 8B «Побродить» — мини-игра на острове из событий",
+   "x": 0,
+   "y": 16744
+  },
+  "r13": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (12.11.2026): этап 9 — длительность квестов, лагеря монстров, «Фарм», Гант «Путь героя»",
+   "x": 0,
+   "y": 17958
+  },
+  "r14": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (12.11.2026): этап 10 — настраиваемый герой и аура",
+   "x": 0,
+   "y": 19172
+  },
+  "r15": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (12.11.2026): этап 11 — граф персонажа (выбрать А, В или Г) и этап 12 — виджеты",
+   "x": 0,
+   "y": 20442
+  },
+  "r16": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (12.11.2026): «Побродить» — архипелаг по месяцам и корабли",
+   "x": 0,
+   "y": 21962
+  }
+ },
+ "order": [
+  "Brand.dc.html",
+  "OnbHero.dc.html",
+  "Onboarding.dc.html",
+  "OnbAttrs.dc.html",
+  "OnbClass.dc.html",
+  "OnbClassLook.dc.html",
+  "HeroOutfits.dc.html",
+  "HeroOutfits2.dc.html",
+  "EHero.dc.html",
+  "Morning.dc.html",
+  "MorningManual.dc.html",
+  "TodayV2.dc.html",
+  "MapStrip.dc.html",
+  "Journal.dc.html",
+  "JournalAdd.dc.html",
+  "Calendar.dc.html",
+  "QuestNew.dc.html",
+  "QuestDetail.dc.html",
+  "EpicNew.dc.html",
+  "Epic.dc.html",
+  "DailyNew.dc.html",
+  "DailyCard.dc.html",
+  "WeeklyNew.dc.html",
+  "WeeklyCard.dc.html",
+  "ActivityNew.dc.html",
+  "QuestDoneActivity.dc.html",
+  "RewardV2.dc.html",
+  "MoodV2.dc.html",
+  "MapDay.dc.html",
+  "MapStates.dc.html",
+  "HeroV2.dc.html",
+  "SkillNew.dc.html",
+  "Chronicle.dc.html",
+  "VitalsScheme.dc.html",
+  "Settings.dc.html",
+  "SettingsHealth.dc.html",
+  "TodayDark.dc.html",
+  "HeroDark.dc.html",
+  "Prototype.dc.html",
+  "Main.dc.html",
+  "DirA.dc.html",
+  "DirB.dc.html",
+  "DirC.dc.html",
+  "HeroSprites.dc.html",
+  "NinjaHero.dc.html",
+  "Today.dc.html",
+  "Hero.dc.html",
+  "Reward.dc.html",
+  "Mood.dc.html",
+  "TodaySleep.dc.html",
+  "JournalHeader.dc.html",
+  "CalendarWeek.dc.html",
+  "CalendarMonth.dc.html",
+  "SettingsCalendars.dc.html",
+  "MapFull.dc.html",
+  "SleepEdit.dc.html",
+  "SleepEntry.dc.html",
+  "MapCallout.dc.html",
+  "EpicProfession.dc.html",
+  "JournalEpicColor.dc.html",
+  "WeeklyUnmark.dc.html",
+  "SkillActivity.dc.html",
+  "ActivitySkillAuto.dc.html",
+  "Splash.dc.html",
+  "ExploreSetup.dc.html",
+  "ExploreIsland.dc.html",
+  "ExploreEncounter.dc.html",
+  "ExploreSummary.dc.html",
+  "QuestDuration.dc.html",
+  "MapCamps.dc.html",
+  "SettingsWork.dc.html",
+  "MapMovement.dc.html",
+  "GanttDay.dc.html",
+  "GanttLandscape.dc.html",
+  "HeroParts.dc.html",
+  "HeroEditor.dc.html",
+  "AuraTiers.dc.html",
+  "GraphA.dc.html",
+  "GraphV.dc.html",
+  "GraphG.dc.html",
+  "Widgets.dc.html",
+  "ExploreArchipelago.dc.html",
+  "ExploreBoarding.dc.html",
+  "ExploreSailing.dc.html"
+ ],
+ "pages": [],
+ "title": "Questlyn — дизайн"
 }

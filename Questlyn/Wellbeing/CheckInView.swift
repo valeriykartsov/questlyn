@@ -8,6 +8,8 @@ struct CheckInView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft = CheckInDraft()
     @State private var isSaving = false
+    /// Отметка, которую просят удалить, — ждёт подтверждения.
+    @State private var pendingRemoval: (id: UUID, title: String, isBenefit: Bool)?
 
     private var vitals: VitalsState? { model.vitals }
 
@@ -292,7 +294,7 @@ struct CheckInView: View {
                         Text(harm.title).font(QFont.text(14))
                         Spacer()
                         Button(role: .destructive) {
-                            Task { await model.deleteHarm(harm.id) }
+                            pendingRemoval = (harm.id, harm.title, false)
                         } label: {
                             Image(systemName: "trash").font(.system(size: 14)).frame(width: 36, height: 36)
                         }
@@ -310,7 +312,7 @@ struct CheckInView: View {
                         Text("+HP").font(QFont.text(12, weight: .bold)).foregroundStyle(QColor.forest)
                         Spacer()
                         Button(role: .destructive) {
-                            Task { await model.deleteBenefit(benefit.id) }
+                            pendingRemoval = (benefit.id, benefit.title, true)
                         } label: {
                             Image(systemName: "trash").font(.system(size: 14)).frame(width: 36, height: 36)
                         }
@@ -323,6 +325,16 @@ struct CheckInView: View {
             }
             .padding(.horizontal, QSpacing.xl)
             .sheetCard()
+            .alert(pendingRemoval.map { "Удалить отметку «\($0.title)»?" } ?? "",
+                   isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } })) {
+                Button("Удалить", role: .destructive) {
+                    guard let removal = pendingRemoval else { return }
+                    Task { removal.isBenefit ? await model.deleteBenefit(removal.id) : await model.deleteHarm(removal.id) }
+                }
+                Button("Отмена", role: .cancel) {}
+            } message: {
+                Text(pendingRemoval?.isBenefit == true ? "Восстановленные этой отметкой HP будут сняты." : "Урон от этой отметки будет снят.")
+            }
         }
     }
 
