@@ -204,6 +204,15 @@ final class ExploreScene: SKScene {
         heroNode.setScale(Self.characterScale)
         addChild(heroNode)
         addAura(tier: session.aura)
+        // 💧 или ✨ напротив лица (12D.5): в координатах спрайта героя 16×28.
+        if let badge = session.badge, let image = badge.image {
+            let icon = SKSpriteNode(texture: SKTexture(cgImage: image))
+            icon.texture?.filteringMode = .nearest
+            icon.anchorPoint = CGPoint(x: 0, y: 1)
+            icon.position = CGPoint(x: 7, y: 30)
+            icon.zPosition = 0.02
+            heroNode.addChild(icon)
+        }
         heroLabel.text = "\(session.hero.rankLetter) · Герой"
         heroLabel.fontName = "HelveticaNeue-Bold"
         heroLabel.fontSize = 6

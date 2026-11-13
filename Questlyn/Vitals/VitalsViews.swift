@@ -12,13 +12,19 @@ struct VitalsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: QSpacing.l) {
             HStack(alignment: .top, spacing: QSpacing.xl) {
-                meter("HP", title: "здоровье", value: vitals.hp, max: vitals.maxHP, color: QColor.hp, source: "STR + END · сон")
+                meter("HP", title: "здоровье", value: vitals.hp, max: vitals.maxHP, color: QColor.hp, source: "STR + END · сон",
+                      nominal: vitals.nominalMaxHP)
                 meter("MP", title: "мана", value: vitals.mp, max: vitals.maxMP, color: QColor.mp, source: "INT + MNT + CHR · сон")
             }
             if let hangover = vitals.hangover, vitals.intelligenceRemoved > 0 {
                 Text("Похмелье: INT \(vitals.intelligenceLevel) → \(vitals.effectiveIntelligence) · MaxMP −\(vitals.intelligenceRemoved * 5) · до \(hangover.until.formatted(date: .omitted, time: .shortened))")
                     .font(QFont.text(12, weight: .semibold))
                     .foregroundStyle(QColor.debuffINT)
+            }
+            if let intoxication = vitals.intoxication {
+                Text("Интоксикация: STR −\(vitals.strengthRemoved), END −\(vitals.enduranceRemoved) · MaxHP −\(Vitals.whole(vitals.nominalMaxHP - vitals.maxHP)) · до \(intoxication.until.formatted(date: .omitted, time: .shortened))")
+                    .font(QFont.text(12, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x2E7D4F))
             }
             if let status = statusText {
                 Text(status)
@@ -48,7 +54,7 @@ struct VitalsCard: View {
         }
     }
 
-    private func meter(_ code: String, title: String, value: Double, max: Double, color: Color, source: String) -> some View {
+    private func meter(_ code: String, title: String, value: Double, max: Double, color: Color, source: String, nominal: Double? = nil) -> some View {
         VStack(alignment: .leading, spacing: QSpacing.xs) {
             HStack(alignment: .firstTextBaseline, spacing: QSpacing.xs) {
                 Text(showsSources ? "\(code) · \(title)" : code)
@@ -59,7 +65,22 @@ struct VitalsCard: View {
                     .font(QFont.text(13, weight: .semibold))
                     .monospacedDigit()
             }
-            ProgressBar(fraction: max > 0 ? value / max : 0, color: color)
+            if let nominal, nominal > max, nominal > 0 {
+                // Интоксикация (12D.5): шкала прежней длины, потерянная часть MaxHP заштрихована.
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(QColor.track)
+                        Capsule().fill(color).frame(width: proxy.size.width * value / nominal)
+                        HatchShape().fill(QColor.lineStrong)
+                            .frame(width: proxy.size.width * (nominal - max) / nominal)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .clipShape(Capsule())
+                }
+                .frame(height: 8)
+            } else {
+                ProgressBar(fraction: max > 0 ? value / max : 0, color: color)
+            }
             if showsSources {
                 Text(source).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
             }
@@ -67,6 +88,23 @@ struct VitalsCard: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title): \(Vitals.whole(value)) из \(Vitals.whole(max))")
+    }
+}
+
+/// Косая штриховка: потерянная из-за интоксикации часть MaxHP.
+nonisolated struct HatchShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        var x = rect.minX - rect.height
+        while x < rect.maxX {
+            path.move(to: CGPoint(x: x, y: rect.maxY))
+            path.addLine(to: CGPoint(x: x + rect.height, y: rect.minY))
+            path.addLine(to: CGPoint(x: x + rect.height + 1.5, y: rect.minY))
+            path.addLine(to: CGPoint(x: x + 1.5, y: rect.maxY))
+            path.closeSubpath()
+            x += 4
+        }
+        return path.intersection(Path(rect))
     }
 }
 

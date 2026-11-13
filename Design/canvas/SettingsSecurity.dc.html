@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Настройки: защита</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 14px; overflow: hidden;">
+<div style="display:flex;align-items:center;justify-content:space-between;height:44px;"><a href="Settings.dc.html" style="font-size:15px;text-decoration:none;">‹ Настройки</a><div style="font-size:16px;font-weight:600;">Защита</div><div style="width:80px;"></div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Вход в Questlyn</span><div style="background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;overflow:hidden;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:6px 14px;border-bottom:1px solid #E3D9C6;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;">Пароль из 4 цифр</span><span style="font-size:12px;color:#4A5368;">спрашивается при входе</span></span><input type="checkbox" checked aria-label="Пароль" style="width:51px;height:31px;accent-color:#2F6B4F;flex-shrink:0;"></div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:6px 14px;border-bottom:1px solid #E3D9C6;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;">Сменить пароль</span></span><span style="color:#9A5214;font-weight:600;">›</span></div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:6px 14px;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;">Face ID</span><span style="font-size:12px;color:#4A5368;">вместо пароля</span></span><input type="checkbox" checked aria-label="Face ID" style="width:51px;height:31px;accent-color:#2F6B4F;flex-shrink:0;"></div></div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Когда спрашивать</span><div style="background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;overflow:hidden;"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:6px 14px;border-bottom:1px solid #E3D9C6;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;">После выхода из приложения</span></span><span style="padding:6px 12px;border-radius:8px;background:#E9E1D0;font-weight:600;">через 1 мин</span></div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:6px 14px;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;">Скрывать экран в переключателе</span><span style="font-size:12px;color:#4A5368;">размытие при сворачивании</span></span><input type="checkbox" checked aria-label="Скрывать экран" style="width:51px;height:31px;accent-color:#2F6B4F;flex-shrink:0;"></div></div><span style="font-size:12px;color:#4A5368;line-height:1.4;">Варианты: сразу · через 1 мин · через 5 мин · через 15 мин. При запуске пароль спрашивается всегда.</span></div>
+<div style="display:flex;gap:12px;padding:12px 14px;border-radius:14px;background:#E6E8EE;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F2A44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><div style="font-size:13px;line-height:1.45;">Пароль хранится только на iPhone (в связке ключей). Забыли пароль — войдите по Face ID или коду iPhone и задайте новый. Виджеты показывают данные и при включённой защите.</div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

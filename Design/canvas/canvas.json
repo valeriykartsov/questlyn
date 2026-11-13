@@ -590,6 +590,62 @@
    "w": 390,
    "h": 844,
    "title": "Д1 · Плавание: «Сойти на берег»"
+  },
+  "SettingsNotify.dc.html": {
+   "x": 0,
+   "y": 23426,
+   "w": 390,
+   "h": 844,
+   "title": "12D.1 · Настройки: уведомления"
+  },
+  "HabitNotifyTime.dc.html": {
+   "x": 470,
+   "y": 23426,
+   "w": 390,
+   "h": 844,
+   "title": "12D.2 · Ежедневный: время уведомления"
+  },
+  "CheckInNote.dc.html": {
+   "x": 940,
+   "y": 23426,
+   "w": 390,
+   "h": 844,
+   "title": "12D.3 · Настроение: заметка"
+  },
+  "Diary.dc.html": {
+   "x": 1410,
+   "y": 23426,
+   "w": 390,
+   "h": 844,
+   "title": "12D.4 · Дневник"
+  },
+  "HeroStatus.dc.html": {
+   "x": 1880,
+   "y": 23426,
+   "w": 1280,
+   "h": 640,
+   "title": "12D.5 · 💧 Интоксикация и ✨ Perfect"
+  },
+  "SettingsSecurity.dc.html": {
+   "x": 0,
+   "y": 24640,
+   "w": 390,
+   "h": 844,
+   "title": "12E.1 · Настройки: защита"
+  },
+  "PinSetup.dc.html": {
+   "x": 470,
+   "y": 24640,
+   "w": 390,
+   "h": 844,
+   "title": "12E.2 · Задать пароль: повтор и ошибка"
+  },
+  "LockScreen.dc.html": {
+   "x": 940,
+   "y": 24640,
+   "w": 390,
+   "h": 844,
+   "title": "12E.3 · Вход: пароль и Face ID"
   }
  },
  "createdOnFiles": {
@@ -719,6 +775,20 @@
    "text": "На review (12.11.2026): «Побродить» — архипелаг по месяцам и корабли",
    "x": 0,
    "y": 21962
+  },
+  "r17": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (13.11.2026): этап 12D — уведомления, Дневник, интоксикация и Perfect",
+   "x": 0,
+   "y": 23176
+  },
+  "r18": {
+   "kind": "title1",
+   "maxW": 12000,
+   "text": "На review (13.11.2026): этап 12E — вход по паролю и Face ID",
+   "x": 0,
+   "y": 24390
   }
  },
  "order": [
@@ -805,7 +875,15 @@
   "Widgets.dc.html",
   "ExploreArchipelago.dc.html",
   "ExploreBoarding.dc.html",
-  "ExploreSailing.dc.html"
+  "ExploreSailing.dc.html",
+  "SettingsNotify.dc.html",
+  "HabitNotifyTime.dc.html",
+  "CheckInNote.dc.html",
+  "Diary.dc.html",
+  "HeroStatus.dc.html",
+  "SettingsSecurity.dc.html",
+  "PinSetup.dc.html",
+  "LockScreen.dc.html"
  ],
  "pages": [],
  "title": "Questlyn — дизайн"

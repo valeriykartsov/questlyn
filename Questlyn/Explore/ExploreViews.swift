@@ -57,6 +57,7 @@ struct ExploreFlowView: View {
                                  season: season, precipitation: precipitation)
         session?.ghostCount = model.ghosts.count
         session?.aura = model.auraTier
+        session?.badge = model.heroBadge
         phase = .game
     }
 

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Дневник</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#9A5214}a:hover{color:#7A3F0E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 54px 16px 24px; background: #F5F0E6; color: #1F2A44; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+<div style="display:flex;align-items:center;justify-content:space-between;height:44px;"><span style="font-size:15px;color:#9A5214;">‹ Журнал</span><div style="font-size:16px;font-weight:600;">Дневник</div><div style="width:60px;"></div></div>
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Сегодня, 13 ноября</span>
+<div style="display:flex;gap:12px;padding:14px;background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;">
+  <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#F5F0E6;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B8651B" stroke-width="2" stroke-linecap="round" aria-label="Ясно" role="img"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:700;">Хорошее</span><span style="font-size:12px;color:#4A5368;">21:05</span><span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9A5214;">Итог дня</span></div>
+    <div style="font-size:14px;line-height:1.45;">Сдал отчёт, вечером прогулка с Петей — день получился.</div>
+  </div>
+  <div style="display:flex;gap:4px;flex-shrink:0;" aria-label="Отмечено: Прогулка, Курение"><span title="Прогулка" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#DCEBE2;color:#2F6B4F;">П</span><span title="Курение" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#F3D9D2;color:#A8432F;">К</span></div>
+</div>
+<div style="display:flex;gap:12px;padding:14px;background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;">
+  <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#F5F0E6;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4A5368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Облачно" role="img"><path d="M17.5 19H8a5 5 0 1 1 1.4-9.8A6 6 0 0 1 21 12.5 3.5 3.5 0 0 1 17.5 19z"></path></svg></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:700;">Ровное</span><span style="font-size:12px;color:#4A5368;">13:40</span></div>
+    <div style="font-size:14px;font-style:italic;color:#4A5368;">без заметки</div>
+  </div>
+  
+</div>
+<span style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4A5368;">Вчера, 12 ноября</span>
+<div style="display:flex;gap:12px;padding:14px;background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;">
+  <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#F5F0E6;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3E5C8A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Дождь" role="img"><path d="M17.5 15H8a5 5 0 1 1 1.4-9.8A6 6 0 0 1 21 8.5 3.5 3.5 0 0 1 17.5 15z"></path><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"></path></svg></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:700;">Плохое</span><span style="font-size:12px;color:#4A5368;">22:10</span><span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9A5214;">Итог дня</span></div>
+    <div style="font-size:14px;line-height:1.45;">Не выспался, созвоны до вечера. Завтра — раньше спать.</div>
+  </div>
+  <div style="display:flex;gap:4px;flex-shrink:0;" aria-label="Отмечено: Алкоголь, Курение, Фастфуд"><span title="Алкоголь" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#F3D9D2;color:#A8432F;">А</span><span title="Курение" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#F3D9D2;color:#A8432F;">К</span><span title="Фастфуд" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#F3D9D2;color:#A8432F;">Ф</span></div>
+</div>
+<div style="display:flex;gap:12px;padding:14px;background:#FFFCF6;border:1px solid #E3D9C6;border-radius:14px;">
+  <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#F5F0E6;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B8651B" stroke-width="2" stroke-linecap="round" aria-label="Ясно" role="img"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;">
+    <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:700;">Хорошее</span><span style="font-size:12px;color:#4A5368;">09:15</span></div>
+    <div style="font-size:14px;line-height:1.45;">Утренняя пробежка, бодро.</div>
+  </div>
+  <div style="display:flex;gap:4px;flex-shrink:0;" aria-label="Отмечено: Пробежка"><span title="Пробежка" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#DCEBE2;color:#2F6B4F;">П</span></div>
+</div>
+<div style="font-size:12px;color:#4A5368;line-height:1.4;">Последняя отметка — сверху. Значки справа — отмеченные в этом же чек-ине: зелёные — полезное, красные — вредное (касание — название). Кнопка «Дневник» — слева от «Летописи» в шапке «Журнала» и «Героя».</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

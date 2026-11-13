@@ -190,7 +190,8 @@ enum PixelMapRenderer {
 
     static let stripSize = (width: 180, height: 50)
 
-    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32, farm: ClosedRange<Double>? = nil, aura: Int = 0) -> CGImage? {
+    static func strip(_ map: DayMap, appearance: HeroAppearance?, accent: UInt32, farm: ClosedRange<Double>? = nil, aura: Int = 0,
+                      badge: HeroBadge? = nil) -> CGImage? {
         let (w, h) = stripSize
         let groundY = 36, roadTop = 39, roadBottom = 42
         let light = map.light
@@ -265,6 +266,8 @@ enum PixelMapRenderer {
         if let hour = map.heroHour, let appearance {
             AuraArt.draw(&buffer, tier: aura, centerX: x(hour), feetY: roadBottom, rx: 6, ry: 1.4)
             drawHero(&buffer, appearance: appearance, accent: accent, centerX: x(hour), feetY: roadBottom)
+            // Значок напротив лица (12D.5).
+            badge?.draw(&buffer, x: x(hour) + 7, y: roadBottom - 30)
         }
         finish(&buffer, map: map, light: light, seed: UInt64(map.date.day), cloudsY: [6, 4, 8])
         return buffer.image

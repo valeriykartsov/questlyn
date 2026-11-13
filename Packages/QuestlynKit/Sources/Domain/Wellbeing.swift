@@ -78,7 +78,8 @@ public enum HarmKind: String, CaseIterable, Codable, Sendable {
     /// Урон в процентах MaxHP за одну отметку (08, раздел 2). Своя привычка — по силе, алкоголь — не HP.
     public var damagePercent: Int? {
         switch self {
-        case .smoking: 3
+        // −1% с 13.11.2026 (было −3%); прошлые отметки пересчитаны миграцией v14.
+        case .smoking: 1
         case .fastFood, .lateCaffeine: 5
         case .custom, .alcohol: nil
         }
@@ -187,6 +188,51 @@ public struct Hangover: Hashable, Sendable {
     }
 
     public func removedLevels(intelligence level: Int) -> Int { degree.removedLevels(of: level) }
+}
+
+/// Интоксикация (13.11.2026): в одной отметке «Много» алкоголя и курение больше 10 —
+/// STR −1 и END −1 на 12 часов; MaxHP снижается на снятые уровни.
+public struct Intoxication: Hashable, Sendable {
+    public var startedAt: Date
+    public var until: Date
+
+    public init(startedAt: Date, until: Date) {
+        self.startedAt = startedAt
+        self.until = until
+    }
+
+    public static let duration: TimeInterval = 12 * 3600
+    /// Курение — больше этого числа в той же отметке.
+    public static let smokingThreshold = 10
+    /// Отметки одного сохранения различаются на миллисекунды.
+    static let sameCheckIn: TimeInterval = 1
+
+    /// Повтор за время дебафа не складывается — отсчёт начинается заново.
+    public static func timeline(_ entries: [HarmEntry]) -> [Intoxication] {
+        let active = entries.filter(\.isActive)
+        let smoking = active.filter { $0.kind == .smoking }
+        var result: [Intoxication] = []
+        for drink in active.filter({ $0.kind == .alcohol && $0.alcohol == .lots }).sorted(by: { $0.at < $1.at }) {
+            let count = smoking.filter { abs($0.at.timeIntervalSince(drink.at)) < sameCheckIn }.count
+            guard count > smokingThreshold else { continue }
+            if var current = result.last, drink.at < current.until {
+                current.until = drink.at + duration
+                result[result.count - 1] = current
+            } else {
+                result.append(Intoxication(startedAt: drink.at, until: drink.at + duration))
+            }
+        }
+        return result
+    }
+
+    public static func active(at date: Date, in timeline: [Intoxication]) -> Intoxication? {
+        timeline.last { $0.startedAt <= date && date < $0.until }
+    }
+
+    /// Снимаемые уровни: по одному у STR и END, если они есть.
+    public static func removed(_ levels: [Attribute: Int]) -> (strength: Int, endurance: Int) {
+        (min(1, levels[.strength] ?? 0), min(1, levels[.endurance] ?? 0))
+    }
 }
 
 // MARK: - Полезные действия (08, раздел 2.3)

@@ -273,6 +273,12 @@ public struct VitalsState: Hashable, Sendable {
     public var hangover: Hangover?
     public var intelligenceLevel = 0
     public var intelligenceRemoved = 0
+    /// Интоксикация (13.11.2026): действует сейчас и сколько уровней STR и END она снимает.
+    public var intoxication: Intoxication?
+    public var strengthRemoved = 0
+    public var enduranceRemoved = 0
+    /// MaxHP без интоксикации — длина шкалы; разница с `maxHP` заштрихована.
+    public var nominalMaxHP: Double { maxHP + VitalsCalculator.perLevel * Double(strengthRemoved + enduranceRemoved) }
 
     public init(hp: Double, maxHP: Double, mp: Double, maxMP: Double, lastNight: NightSummary? = nil, log: [VitalsLogEntry] = [],
                 hangover: Hangover? = nil, intelligenceLevel: Int = 0, intelligenceRemoved: Int = 0) {
@@ -291,6 +297,10 @@ public struct VitalsState: Hashable, Sendable {
     public var effectiveIntelligence: Int { max(0, intelligenceLevel - intelligenceRemoved) }
 
     public static let woundedShare = 0.3
+    public static let perfectShare = 0.9
+
+    /// «Perfect» — HP выше 90% MaxHP и нет интоксикации (13.11.2026: интоксикация важнее).
+    public var isPerfect: Bool { intoxication == nil && maxHP > 0 && hp > maxHP * Self.perfectShare }
 
     /// «Ранен» — HP ниже 30% максимума (02, 11.11.2026).
     public var isWounded: Bool { hp < maxHP * Self.woundedShare }
@@ -326,6 +336,13 @@ public enum VitalsCalculator {
         benefits: [BenefitEntry] = []
     ) -> VitalsState {
         let hangovers = Hangover.timeline(harms)
+        let intoxications = Intoxication.timeline(harms)
+        /// MaxHP с учётом интоксикации: −5 HP за каждый снятый уровень STR и END.
+        func topHealth(_ levels: [Attribute: Int], at moment: Date) -> Double {
+            guard Intoxication.active(at: moment, in: intoxications) != nil else { return maxHP(levels: levels) }
+            let removed = Intoxication.removed(levels)
+            return maxHP(levels: levels) - perLevel * Double(removed.strength + removed.endurance)
+        }
         let firstDay = LocalDate(heroCreatedAt, timeZone: timeZone)
         let today = LocalDate(now, timeZone: timeZone)
         var levelCache: [LocalDate: [Attribute: Int]] = [:]
@@ -377,7 +394,7 @@ public enum VitalsCalculator {
         var log: [VitalsLogEntry] = []
         for (at, event) in events {
             let current = levels(on: LocalDate(at, timeZone: timeZone))
-            let topHP = maxHP(levels: current), topMP = topMana(current, at: at)
+            let topHP = topHealth(current, at: at), topMP = topMana(current, at: at)
             hp = min(hp, topHP)
             let manaBefore = mp
             mp = min(mp, topMP)
@@ -413,12 +430,19 @@ public enum VitalsCalculator {
             }
         }
         let todayLevels = levels(on: today)
-        let topHP = maxHP(levels: todayLevels), topMP = topMana(todayLevels, at: now)
+        let topHP = topHealth(todayLevels, at: now), topMP = topMana(todayLevels, at: now)
         let hangover = Hangover.active(at: now, in: hangovers)
         let intelligence = todayLevels[.intelligence] ?? 0
-        return VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight, log: log,
-                           hangover: hangover, intelligenceLevel: intelligence,
-                           intelligenceRemoved: hangover?.removedLevels(intelligence: intelligence) ?? 0)
+        var state = VitalsState(hp: min(hp, topHP), maxHP: topHP, mp: min(mp, topMP), maxMP: topMP, lastNight: lastNight, log: log,
+                                hangover: hangover, intelligenceLevel: intelligence,
+                                intelligenceRemoved: hangover?.removedLevels(intelligence: intelligence) ?? 0)
+        if let intoxication = Intoxication.active(at: now, in: intoxications) {
+            let removed = Intoxication.removed(todayLevels)
+            state.intoxication = intoxication
+            state.strengthRemoved = removed.strength
+            state.enduranceRemoved = removed.endurance
+        }
+        return state
     }
 
     /// Момент «дата + локальное время» в часовом поясе пользователя.

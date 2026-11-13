@@ -49,6 +49,8 @@ struct RootView: View {
                 switch preview {
                 case "appearance": NavigationStack { AppearanceEditorView(model: model) }
                 case "graph": HeroGraphView(model: model)
+                case "notifications": NavigationStack { NotificationSettingsView(model: model) }
+                case "diary": DiarySheet(model: model)
                 case "health": NavigationStack { HealthSettingsView(model: model) }
                 case "checkin": CheckInView(model: model)
                 case "map": MapOverviewView(model: model)

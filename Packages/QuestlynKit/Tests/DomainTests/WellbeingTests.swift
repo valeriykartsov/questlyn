@@ -69,4 +69,44 @@ struct WellbeingTests {
                                            now: at(21, on: day.adding(days: 1)), timeZone: tz, harms: harms)
         #expect(after.maxMP == 110 && after.hangover == nil)
     }
+
+    // MARK: Этап 12D: интоксикация, Perfect, курение −1%
+
+    func checkIn(lots: Bool, smoking: Int, at moment: Date) -> [HarmEntry] {
+        (0..<smoking).map { harm(.smoking, percent: 1, at: moment + Double($0) / 1000) } + [harm(.alcohol, alcohol: lots ? .lots : .little, at: moment)]
+    }
+
+    @Test func intoxicationNeedsLotsAndMoreThanTenSmokingInOneCheckIn() {
+        #expect(HarmKind.smoking.damagePercent == 1)
+        #expect(Intoxication.timeline(checkIn(lots: true, smoking: 11, at: at(20))).count == 1)
+        #expect(Intoxication.timeline(checkIn(lots: true, smoking: 10, at: at(20))).isEmpty)
+        #expect(Intoxication.timeline(checkIn(lots: false, smoking: 15, at: at(20))).isEmpty)
+        // Разные отметки не складываются.
+        let apart = (0..<11).map { harm(.smoking, percent: 1, at: at(18) + Double($0) / 1000) } + [harm(.alcohol, alcohol: .lots, at: at(20))]
+        #expect(Intoxication.timeline(apart).isEmpty)
+        let timeline = Intoxication.timeline(checkIn(lots: true, smoking: 11, at: at(20)))
+        #expect(Intoxication.active(at: at(7, 59, on: day.adding(days: 1)), in: timeline) != nil)
+        #expect(Intoxication.active(at: at(8, 1, on: day.adding(days: 1)), in: timeline) == nil)
+    }
+
+    @Test func intoxicationLowersMaxHPAndBlocksPerfect() {
+        let start = at(9)
+        // STR 1 и END 1 (по 20 XP) → MaxHP 110; интоксикация снимает по уровню → 100.
+        let grants = [Attribute.strength, .endurance].map {
+            ProgressGrant(sourceType: .questCompletion, sourceId: UUID(), ruleVersion: .v1_1, target: .attribute($0),
+                          amount: .xp(20), reason: "", createdAt: start, effectiveDate: day)
+        }
+        let calm = VitalsCalculator.state(heroCreatedAt: start, grants: grants, spends: [], sleeps: [], steps: [], settings: .default,
+                                          now: at(19), timeZone: tz, harms: [])
+        #expect(calm.maxHP == 110 && calm.isPerfect && calm.nominalMaxHP == 110)
+        let harms = checkIn(lots: true, smoking: 11, at: at(20))
+        let during = VitalsCalculator.state(heroCreatedAt: start, grants: grants, spends: [], sleeps: [], steps: [], settings: .default,
+                                            now: at(21), timeZone: tz, harms: harms)
+        #expect(during.intoxication != nil && during.strengthRemoved == 1 && during.enduranceRemoved == 1)
+        #expect(during.maxHP == 100 && during.nominalMaxHP == 110)
+        #expect(!during.isPerfect)
+        let after = VitalsCalculator.state(heroCreatedAt: start, grants: grants, spends: [], sleeps: [], steps: [], settings: .default,
+                                           now: at(9, on: day.adding(days: 1)), timeZone: tz, harms: harms)
+        #expect(after.intoxication == nil && after.maxHP == 110)
+    }
 }

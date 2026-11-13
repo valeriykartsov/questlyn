@@ -62,9 +62,11 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
     public var ghosts: [String]
     public var habits: [Habit]
     public var sleep: Sleep?
+    /// 12D.5: «intoxicated» или «perfect»; nil — без значка.
+    public var badge: String?
 
     public init(generatedAt: Date, day: String, heroName: String, rankLetter: String, hp: Int, maxHP: Int, mp: Int, maxMP: Int,
-                mode: String, quests: [Quest], ghosts: [String], habits: [Habit], sleep: Sleep?) {
+                mode: String, quests: [Quest], ghosts: [String], habits: [Habit], sleep: Sleep?, badge: String? = nil) {
         self.generatedAt = generatedAt
         self.day = day
         self.heroName = heroName
@@ -78,6 +80,7 @@ public struct WidgetSnapshot: Codable, Hashable, Sendable {
         self.ghosts = ghosts
         self.habits = habits
         self.sleep = sleep
+        self.badge = badge
     }
 
     public static let appGroup = "group.valeravalera.Questlyn"
