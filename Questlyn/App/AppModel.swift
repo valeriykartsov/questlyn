@@ -429,6 +429,11 @@ final class AppModel {
             // Погода прогулки — случайная отметка настроения месяца (15A).
             .with(moods: (overview?.moods ?? []).filter { $0.localDate >= first && $0.localDate <= last }
                 .map { ExploreMood(date: $0.localDate, mood: $0.mood) })
+            // 15C.1: выполненные квесты диапазона — кандидаты в клад.
+            .with(doneQuests: (overview?.journal ?? []).compactMap { item in
+                guard let done = item.completion?.localDate, done >= first, done <= last else { return nil }
+                return ExploreDoneQuest(title: item.quest.title, priority: item.quest.priority, minutes: item.quest.durationMinutes ?? 0)
+            })
             // 15B и 15G.4: рост навыков, закрытые Epic, вредное и полезное.
             .with(skillGains: exploreSkillGains, closedEpics: exploreClosedEpics,
                   harmDays: sampleHarms(first, last) ?? exploreHarmDays.filter { $0 >= first && $0 <= last },

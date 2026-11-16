@@ -85,6 +85,19 @@ struct ExploreFlowView: View {
                let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(shrine.position.x + $0.0, shrine.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
                 session.heroTile = spot
             }
+            // `cave` — у входа в пещеру; `treasure` — все обрывки найдены, герой у клада; `lookout` — у площадки (15C).
+            if demo.contains("cave"), let cave = session.island.caves.first { session.heroTile = cave.entrance }
+            if demo.contains("lookout"), let lookout = session.island.lookouts.first,
+               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(lookout.position.x + $0.0, lookout.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
+                session.heroTile = spot
+            }
+            if demo.contains("treasure"), let chest = session.island.chests.first(where: { $0.fragment != nil }) {
+                for fragment in session.island.chests.compactMap(\.fragment) { session.findFragment(fragment, in: chest) }
+                if let spot = session.treasureSpot,
+                   let near = [(3, 0), (0, 3), (-3, 0), (0, -3)].map({ TilePoint(spot.x + $0.0, spot.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
+                    session.heroTile = near
+                }
+            }
             if demo.contains("swamp"), let index = session.island.swamp.firstIndex(of: true) {
                 session.heroTile = TilePoint(index % session.island.side, index / session.island.side)
             }
@@ -322,13 +335,18 @@ struct ExploreGameView: View {
     @Bindable var session: ExploreSession
     let exit: () -> Void
     @State private var scene: ExploreScene?
+    @State private var caveScene: CaveScene?
     @State private var showsTasks = false
 
     var body: some View {
         GeometryReader { proxy in
             let wide = proxy.size.width > proxy.size.height
             ZStack(alignment: .top) {
-                if let scene {
+                if let caveScene {
+                    SpriteView(scene: caveScene, preferredFramesPerSecond: 60)
+                        .ignoresSafeArea()
+                        .accessibilityLabel("Пещера: найдите выход")
+                } else if let scene {
                     SpriteView(scene: scene, preferredFramesPerSecond: 60)
                         .ignoresSafeArea()
                         .accessibilityLabel("Остров: касание — идти туда")
@@ -376,6 +394,10 @@ struct ExploreGameView: View {
                     if session.mode == .active { activeControls(wide: wide) }
                 }
                 .padding(.horizontal, QSpacing.l)
+                if session.showsAtlas {
+                    AtlasView(session: session) { session.showsAtlas = false }
+                        .transition(.opacity)
+                }
                 if session.isPaused {
                     PauseCard(session: session, exit: exit)
                         .transition(.opacity)
@@ -585,7 +607,33 @@ struct ExploreGameView: View {
     }
 
     /// «Сесть на корабль» у фрегата, «Сойти на берег» в плавании (12B, макеты ExploreBoarding и ExploreSailing).
+    /// Войти в пещеру (15C.2) — у входа или выхода.
+    private func enterCave(size: CGSize) {
+        session.enterCave()
+        guard let id = session.inCave, let cave = session.island.caves.first(where: { $0.id == id }) else { return }
+        let cave_ = CaveScene(session: session, cave: cave, size: size)
+        cave_.onLeave = { [session] in
+            if let tile = session.leaveCave() { scene?.placeHero(at: tile) }
+            session.toast = "Выход из пещеры"
+            caveScene = nil
+        }
+        caveScene = cave_
+    }
+
     @ViewBuilder private var shipBar: some View {
+        if session.enterableCave != nil {
+            Button { enterCave(size: scene?.size ?? CGSize(width: 390, height: 844)) } label: {
+                VStack(spacing: 2) {
+                    Text("Войти в пещеру").font(QFont.text(15, weight: .bold))
+                    Text("темно — пригодится факел").font(QFont.text(11))
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(QColor.sheet)
+                .background(QColor.ink, in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, QSpacing.s)
+        }
         if session.sailing != nil {
             let canLand = session.landingTile != nil
             Button { scene?.disembark() } label: {
@@ -836,6 +884,13 @@ struct ExploreSummaryView: View {
                         .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
                     }
                     if !session.buffs.isEmpty { row("Монументов полезного", session.buffs.count) }
+                    // 15C.
+                    if let treasure = session.island.treasure {
+                        textRow(session.treasureFound ? "Клад «\(treasure.title)»" : "Клад", session.treasureFound ? "найден" : "обрывков \(session.fragmentsFound.count)/\(session.fragmentsTotal)")
+                    }
+                    if !session.island.caves.isEmpty { row("Пещер пройдено", session.visitedCaves.count) }
+                    if !session.island.lookouts.isEmpty { row("Смотровых площадок", session.usedLookouts.count) }
+                    textRow("Атлас", "\(Int((session.exploredShare * 100).rounded()))% мира")
                     if !session.island.lighthouses.isEmpty { row("Маяков зажжено", session.litLighthouses.count) }
                     if !session.island.tasks.isEmpty { row("Заданий выполнено", session.doneTasks.count) }
                     row("Побед", session.wins)
@@ -872,6 +927,16 @@ struct ExploreSummaryView: View {
     }
 
     private var minutes: Int { max(1, Int(Date.now.timeIntervalSince(session.startedAt) / 60)) }
+
+    private func textRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title).font(QFont.text(15)).lineLimit(1)
+            Spacer()
+            Text(value).font(QFont.text(15, weight: .bold))
+        }
+        .padding(.horizontal, QSpacing.xl).frame(minHeight: 44)
+        .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
+    }
 
     private func goal(_ title: String, _ value: Int, _ total: Int) -> some View {
         VStack(alignment: .leading, spacing: QSpacing.s) {
@@ -1176,6 +1241,10 @@ struct WorldMapView: View {
                 }
             }
         }
+        if let spot = session.treasureSpot, !session.treasureFound {
+            Text("✕").font(QFont.text(16, weight: .heavy)).foregroundStyle(Color(hex: 0xA8281E)).position(place(spot))
+                .accessibilityLabel("Клад")
+        }
         ZStack {
             Circle().fill(QColor.amber.opacity(0.3)).frame(width: 22, height: 22)
             Circle().fill(QColor.amber).frame(width: 10, height: 10).overlay(Circle().strokeBorder(QColor.sheet, lineWidth: 2))
@@ -1226,6 +1295,8 @@ struct PauseCard: View {
                     .multilineTextAlignment(.center)
                 Button("Продолжить") { withAnimation { session.isPaused = false } }.buttonStyle(PrimaryButtonStyle())
                 Button("Карта мира") { session.isPaused = false; withAnimation { session.isWorldMapOpen = true } }
+                    .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.ink).frame(minHeight: 44)
+                Button("Атлас") { withAnimation { session.showsAtlas = true } }
                     .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.ink).frame(minHeight: 44)
                 Button("Выйти с острова", action: exit)
                     .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.hp).frame(minHeight: 44)
@@ -1347,6 +1418,85 @@ struct MonumentCard: View {
                 Text("Начат \(Format.shortDay(monument.epic.started)) · \(monument.epic.steps) шагов · закрыт \(Format.shortDay(monument.epic.closed))")
                     .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                 Button("Дальше", action: close).buttonStyle(PrimaryButtonStyle())
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(QSpacing.xl)
+            .frame(maxWidth: 420)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.xl)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+}
+
+// MARK: - Атлас (15C.4, макет ExploreAtlas)
+
+/// По каждому острову-месяцу: открыто %, города, сундуки, костры, пещера, площадка, обрывки. Без сравнения с прошлыми прогулками.
+struct AtlasView: View {
+    let session: ExploreSession
+    let close: () -> Void
+
+    private struct Line: Identifiable {
+        let id: Int
+        let title: String
+        let share: Double
+        let details: String
+    }
+
+    private var lines: [Line] {
+        let island = session.island, side = island.side
+        return island.regions.map { region in
+            var land = 0, open = 0
+            for y in region.origin.y..<min(side, region.origin.y + region.side) {
+                for x in region.origin.x..<min(side, region.origin.x + region.side) where island.terrain[y * side + x] != .water {
+                    land += 1
+                    if session.explored[y * side + x] { open += 1 }
+                }
+            }
+            func count<T>(_ items: [T], _ position: (T) -> TilePoint, _ done: (T) -> Bool) -> String {
+                let mine = items.filter { region.contains(position($0)) }
+                return "\(mine.filter(done).count)/\(mine.count)"
+            }
+            var parts = ["Города \(count(island.cities, \.center) { session.visitedCities.contains($0.id) })",
+                         "Сундуки \(count(island.chests, \.position) { session.openedChests.contains($0.id) })",
+                         "Костры \(count(island.campfires, \.position) { session.litCampfires.contains($0.id) })"]
+            if let cave = island.caves.first(where: { $0.region == region.id }) { parts.append("Пещера \(session.visitedCaves.contains(cave.id) ? "✓" : "—")") }
+            if let lookout = island.lookouts.first(where: { $0.region == region.id }) { parts.append("Площадка \(session.usedLookouts.contains(lookout.id) ? "✓" : "—")") }
+            let fragments = island.chests.filter { $0.fragment != nil && region.contains($0.position) }
+            if !fragments.isEmpty { parts.append("Обрывки \(fragments.filter { session.fragmentsFound.contains($0.fragment!) }.count)/\(fragments.count)") }
+            return Line(id: region.id, title: island.regions.count > 1 ? region.monthTitle : "Остров",
+                        share: land == 0 ? 0 : Double(open) / Double(land), details: parts.joined(separator: " · "))
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Атлас").font(QFont.title(20))
+                    Spacer()
+                    Text("открыто \(Int((session.exploredShare * 100).rounded()))% мира").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(lines) { line in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(line.title).font(QFont.text(14, weight: .bold))
+                                    Spacer()
+                                    Text("\(Int((line.share * 100).rounded()))%").font(QFont.text(13, weight: .bold)).foregroundStyle(QColor.forest)
+                                }
+                                ProgressBar(fraction: line.share, color: QColor.forest)
+                                Text(line.details).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                            }
+                            .padding(.vertical, QSpacing.s)
+                            .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
+                        }
+                    }
+                }
+                .frame(maxHeight: 360)
+                Button("Закрыть", action: close).buttonStyle(PrimaryButtonStyle())
             }
             .foregroundStyle(QColor.ink)
             .padding(QSpacing.xl)

@@ -90,6 +90,78 @@ final class ExploreSession {
     let landCount: Int
     /// Карта мира открыта — игра на паузе.
     var isWorldMapOpen = false
+    // MARK: 15C (17.11.2026)
+
+    var fragmentsFound: Set<Int> = []
+    var fragmentsTotal: Int { island.chests.filter { $0.fragment != nil }.count }
+    /// Место клада — после того как собраны все обрывки.
+    var treasureSpot: TilePoint?
+    var treasureFound = false
+    var usedLookouts: Set<Int> = []
+    var visitedCaves: Set<Int> = []
+    /// Сколько тайников открыто в каждой пещере: «id-номер».
+    var openedCaveChests: Set<String> = []
+    /// Герой в пещере: её номер и откуда вошёл (через выход — идёт в обратную сторону).
+    var inCave: Int?
+    var enteredFromExit = false
+    var showsAtlas = false
+
+    func findFragment(_ fragment: Int, in chest: IslandChest) {
+        fragmentsFound.insert(fragment)
+        guard let treasure = island.treasure else { return }
+        if fragmentsFound.count >= fragmentsTotal {
+            let region = island.region(at: chest.position)?.id ?? 0
+            treasureSpot = treasure.spots[region] ?? treasure.spots.values.first
+            toast = "Карта собрана: клад «\(treasure.title)» отмечен крестиком"
+        } else {
+            toast = (toast.map { $0 + " · " } ?? "") + "обрывок карты \(fragmentsFound.count)/\(fragmentsTotal)"
+        }
+    }
+
+    func openTreasure() {
+        guard let treasure = island.treasure, !treasureFound else { return }
+        treasureFound = true
+        var found: [String] = []
+        for k in 0..<ExploreRules.treasureItems {
+            let item = ExploreItem.allCases[(k * 3 + steps) % ExploreItem.allCases.count]
+            if addItem(item) { found.append(item.title) }
+        }
+        hp = min(hero.maxHP, hp + hero.maxHP * ExploreRules.treasureRestoreShare)
+        mp = min(hero.maxMP, mp + hero.maxMP * ExploreRules.treasureRestoreShare)
+        toast = "Клад «\(treasure.title)»: \(found.isEmpty ? "сумка полна" : found.joined(separator: ", ")) · +50% HP и MP"
+    }
+
+    func useLookout(_ lookout: IslandLookout) {
+        guard !usedLookouts.contains(lookout.id) else { return }
+        usedLookouts.insert(lookout.id)
+        explore(around: lookout.position, radius: ExploreRules.lookoutRadius)
+        scoutUntil = .now + 10
+        toast = "Подзорная труба: открыто \(Int(ExploreRules.lookoutRadius)) клеток вокруг"
+    }
+
+    /// Пещера, у входа или выхода которой стоит герой.
+    var enterableCave: IslandCave? {
+        guard sailing == nil, !inFight, inCave == nil else { return nil }
+        return island.caves.first { $0.entrance.distance(to: heroTile) <= 1.5 || $0.exit.distance(to: heroTile) <= 1.5 }
+    }
+
+    func enterCave() {
+        guard let cave = enterableCave else { return }
+        enteredFromExit = cave.exit.distance(to: heroTile) < cave.entrance.distance(to: heroTile)
+        visitedCaves.insert(cave.id)
+        inCave = cave.id
+        toast = "Пещера: темно — обзор \(Int(ExploreRules.caveVision)) клетки, с факелом \(Int(ExploreRules.caveTorchVision))"
+    }
+
+    /// Выйти из пещеры: на другом конце.
+    func leaveCave() -> TilePoint? {
+        guard let id = inCave, let cave = island.caves.first(where: { $0.id == id }) else { return nil }
+        inCave = nil
+        let target = enteredFromExit ? cave.entrance : cave.exit
+        heroTile = target
+        return target
+    }
+
     // MARK: 15B и 15G (17.11.2026)
 
     /// Баффы монументов полезного: вид → сила 0…1, до конца прогулки.
@@ -223,9 +295,9 @@ final class ExploreSession {
     @ObservationIgnored private var minimapCache: (key: String, image: CGImage?)?
     var minimapImage: CGImage? {
         let ships = ships.indices.filter { $0 != sailing }.map { self.ships[$0] }
-        let key = "\(openedChests.count)-\(litCampfires.count)-\(ships.map { "\($0.x),\($0.y)" })"
+        let key = "\(openedChests.count)-\(litCampfires.count)-\(ships.map { "\($0.x),\($0.y)" })-\(treasureSpot.map { "\($0.x),\($0.y)" } ?? "")-\(treasureFound)"
         if let minimapCache, minimapCache.key == key { return minimapCache.image }
-        let image = ExploreRenderer.minimap(island, opened: openedChests, lit: litCampfires, ships: ships)
+        let image = ExploreRenderer.minimap(island, opened: openedChests, lit: litCampfires, ships: ships, treasure: treasureFound ? nil : treasureSpot)
         minimapCache = (key, image)
         return image
     }

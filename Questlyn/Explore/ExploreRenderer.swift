@@ -33,7 +33,7 @@ enum ExploreRenderer {
     // MARK: Мини-карта
 
     /// Вид сверху: клетка — пиксель; цвета зон, горы, дороги (15A).
-    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = [], ships: [TilePoint] = []) -> CGImage? {
+    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = [], ships: [TilePoint] = [], treasure: TilePoint? = nil) -> CGImage? {
         var canvas = RGBACanvas(width: island.side, height: island.side, fill: 0x3F6E9C)
         for index in island.terrain.indices {
             let point = TilePoint(index % island.side, index / island.side)
@@ -51,6 +51,10 @@ enum ExploreRenderer {
         }
         // Корабли (12B): коричневый корпус с белым парусом.
         let mark = max(2, island.side / 60)
+        // Клад (15C.1): красный крестик.
+        if let treasure {
+            for k in -(mark + 1)...(mark + 1) { canvas.set(treasure.x + k, treasure.y + k, 0xA8281E); canvas.set(treasure.x + k, treasure.y - k, 0xA8281E) }
+        }
         for ship in ships {
             for dx in -mark...mark { for dy in 0...mark { canvas.set(ship.x + dx, ship.y + dy, 0x6B3F22) } }
             for dy in 1...(mark + 1) { canvas.set(ship.x, ship.y - dy, 0xFFFCF6) }

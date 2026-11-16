@@ -377,6 +377,52 @@ nonisolated enum ExploreSprites {
         return c
     }
 
+    // MARK: 15C: клад, вход в пещеру, смотровая площадка
+
+    static func treasureChest(opened: Bool) -> RGBACanvas {
+        var c = RGBACanvas(width: 22, height: 18, fill: nil)
+        for y in 7...16 { for x in 2...19 { c.set(x, y, 0x7A4A2A) } }
+        for y in 7...9 { for x in 2...19 { c.set(x, y, 0xD9A441) } }
+        for y in 9...13 { for x in 9...12 { c.set(x, y, 0xF2D27A) } }
+        if opened {
+            c.polygon([(2, 7), (6, 0), (21, 0), (19, 7)], 0x966038)
+            for i in 0..<10 { c.set(5 + i, 6 - i % 3, 0xFFE278) }
+        } else {
+            for y in 3...7 { for x in 2...19 { c.set(x, y, 0x966038) } }
+            for x in 2...19 { c.set(x, 3, 0xD9A441); c.set(x, 4, 0xD9A441) }
+        }
+        return c
+    }
+
+    /// Крестик клада на земле.
+    static func treasureMark() -> RGBACanvas {
+        var c = RGBACanvas(width: 12, height: 8, fill: nil)
+        for k in 0..<8 {
+            for w in 0..<2 { c.set(2 + k + w, k, 0xA8281E); c.set(9 - k + w, k, 0xA8281E) }
+        }
+        return c
+    }
+
+    static func caveEntrance() -> RGBACanvas {
+        var c = RGBACanvas(width: 30, height: 26, fill: nil)
+        c.polygon([(0, 25), (6, 6), (15, 0), (24, 6), (29, 25)], 0x7A7368)
+        c.polygon([(15, 0), (24, 6), (29, 25), (15, 25)], 0x625C53)
+        for y in 10...25 { for x in 8...22 where pow(Double(x) - 15, 2) / 49 + pow(Double(y) - 20, 2) / 100 <= 1 { c.set(x, y, 0x0E0C10) } }
+        for y in 21...25 { for x in 7...9 { c.set(x, y, 0x5C3A1E) } }
+        c.set(8, 20, 0xF2B35B)
+        return c
+    }
+
+    static func lookout(used: Bool) -> RGBACanvas {
+        var c = RGBACanvas(width: 24, height: 30, fill: nil)
+        for y in 14...29 { for x in [3, 4, 5, 18, 19, 20] { c.set(x, y, 0x5C3A1E) } }
+        c.polygon([(0, 14), (12, 9), (23, 14), (12, 19)], used ? 0xB89A70 : 0x9A7450)
+        for x in 4...19 { c.set(x, 22, 0x6E5234) }
+        for k in 0..<6 { c.set(12 - k / 2, 9 - k, 0x3C3C46); c.set(12 + k / 2, 9 - k, 0x3C3C46) }
+        for k in 0..<11 { c.set(8 + k, 3 - k / 4, 0xD9A441); c.set(8 + k, 4 - k / 4, 0xD9A441) }
+        return c
+    }
+
     // MARK: Корабль
 
     /// Изометрический корабль, идущий вправо-вниз; влево — зеркало. frame 0…3 — парус «дышит», флаг вьётся.
