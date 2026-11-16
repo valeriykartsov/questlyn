@@ -9,6 +9,8 @@ struct SettingsView: View {
     @State private var isConfirmingReset = false
     @State private var confirmation = ""
     @AppStorage("appTheme") private var theme: AppTheme = .system
+    /// Режим игры «Побродить» (16.11.2026): бой и перемещение одной настройкой.
+    @AppStorage(ExploreModeSetting.key) private var exploreMode: String = ExploreMode.turnBased.rawValue
     @State private var exportURL: URL?
     @State private var isExporting = false
 
@@ -86,6 +88,30 @@ struct SettingsView: View {
                             Label("Календари", systemImage: "calendar")
                         }
                     }
+                }
+                .listRowBackground(QColor.sheet)
+
+                Section {
+                    ForEach(ExploreMode.allCases, id: \.self) { mode in
+                        Button { exploreMode = mode.rawValue } label: {
+                            HStack(alignment: .top, spacing: QSpacing.l) {
+                                Image(systemName: exploreMode == mode.rawValue ? "largecircle.fill.circle" : "circle")
+                                    .font(.system(size: 20)).foregroundStyle(exploreMode == mode.rawValue ? QColor.ink : QColor.lineStrong)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mode.title).font(QFont.text(15, weight: .bold)).foregroundStyle(QColor.ink)
+                                    Text(mode.summary).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(exploreMode == mode.rawValue ? .isSelected : [])
+                    }
+                } header: {
+                    Text("Побродить · режим игры")
+                } footer: {
+                    Text("Режим действует со следующей прогулки. Песочница: XP и HP героя не меняются.")
                 }
                 .listRowBackground(QColor.sheet)
 

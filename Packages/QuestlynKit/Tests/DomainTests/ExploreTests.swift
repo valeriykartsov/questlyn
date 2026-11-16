@@ -126,7 +126,8 @@ struct ExploreTests {
         // Квесты по датам — на острове своего месяца.
         #expect(island.chests.count == 40)
         #expect(island.campfires.count >= 13)
-        #expect(island.weatherBands.count == 14 && island.weatherBands.first == .rain)
+        // Погода острова-месяца — из отметок настроения месяца (15A): в августе плохое — дождь, без отметок — ясно.
+        #expect(island.regionWeather == [.rain, .clear, .clear, .clear])
     }
 
     @Test func withoutCalendarThereAreNoCitiesOrNPC() {

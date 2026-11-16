@@ -73,6 +73,14 @@ public enum ExploreRules {
     public static let nightVisionFactor = 0.7
     public static func isNight(hour: Double) -> Bool { hour >= 21 || hour < 6 }
 
+    // Этап 15A (16.11.2026, 09 раздел 1.3, Рабочая гипотеза).
+    /// Горы — не ближе 4 клеток к морю, там, где шум высоты выше порога.
+    public static let mountainCoastDistance = 4
+    public static let mountainThreshold = 0.70
+    /// Высота гор в пикселях изометрии: ступени по 2 px, вершины от 14 px — под снегом.
+    public static let mountainMaxHeight = 24
+    public static let snowLineHeight = 14
+
     // Герой (09, раздел 4).
     public static func walkSpeed(endurance: Int) -> Double { min(4.5, 3 + 0.1 * Double(endurance)) }
     public static func strike(strength: Int) -> Double { 8 + 2 * Double(strength) }
@@ -106,7 +114,8 @@ public enum ExploreRules {
 public enum IslandSize: String, Sendable, CaseIterable {
     case small, medium, large
 
-    public var tiles: Int { switch self { case .small: 48; case .medium: 72; case .large: 96 } }
+    /// Сторона острова: с 15A площадь ×3 при прежнем числе объектов (было 48 / 72 / 96).
+    public var tiles: Int { switch self { case .small: 83; case .medium: 125; case .large: 166 } }
     public var npcCap: Int { switch self { case .small: 15; case .medium: 25; case .large: 40 } }
     public var cityCap: Int { switch self { case .small: 6; case .medium: 10; case .large: 14 } }
     public var villageCap: Int { switch self { case .small: 10; case .medium: 20; case .large: 30 } }
@@ -267,11 +276,35 @@ public struct ExploreEpic: Hashable, Sendable {
     public init(title: String, steps: Int, dates: [LocalDate]) { self.title = title; self.steps = steps; self.dates = dates }
 }
 
+/// Отметка настроения (15A): погода прогулки — случайная отметка месяца.
+public struct ExploreMood: Hashable, Sendable {
+    public var date: LocalDate
+    public var mood: Mood
+    public init(date: LocalDate, mood: Mood) { self.date = date; self.mood = mood }
+}
+
 /// Ежедневная привычка и дни её отметок — маяк при серии (14.5).
 public struct ExploreHabitDays: Hashable, Sendable {
     public var title: String
     public var days: Set<LocalDate>
-    public init(title: String, days: Set<LocalDate>) { self.title = title; self.days = days }
+    /// Запланированные дни (15A, износ дорог); nil — каждый день.
+    public var planned: Set<LocalDate>?
+    public init(title: String, days: Set<LocalDate>, planned: Set<LocalDate>? = nil) {
+        self.title = title; self.days = days; self.planned = planned
+    }
+
+    /// Выполнение за отрезок, % (15A): отмеченные запланированные дни / запланированные. nil — дней не было.
+    public func percent(from first: LocalDate, through last: LocalDate) -> Int? {
+        var planned = 0, done = 0, day = first
+        while day <= last {
+            if self.planned?.contains(day) ?? true {
+                planned += 1
+                if days.contains(day) { done += 1 }
+            }
+            day = day.adding(days: 1)
+        }
+        return planned == 0 ? nil : Int((Double(done) / Double(planned) * 100).rounded())
+    }
 
     /// Самая длинная серия подряд внутри диапазона.
     public func longestStreak(from first: LocalDate, through last: LocalDate) -> Int {
@@ -300,6 +333,7 @@ public struct ExploreInput: Sendable {
     public var diary: [ExploreDiaryNote] = []
     public var epics: [ExploreEpic] = []
     public var habits: [ExploreHabitDays] = []
+    public var moods: [ExploreMood] = []
 
     public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
                 nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
@@ -343,6 +377,13 @@ public struct ExploreInput: Sendable {
             .with(diary: diary.filter { $0.date >= first && $0.date <= last },
                   epics: epics.filter { epic in epic.dates.contains { $0 >= first && $0 <= last } },
                   habits: habits)
+            .with(moods: moods.filter { $0.date >= first && $0.date <= last })
+    }
+
+    public func with(moods: [ExploreMood]) -> ExploreInput {
+        var copy = self
+        copy.moods = moods
+        return copy
     }
 
     public func with(diary: [ExploreDiaryNote], epics: [ExploreEpic], habits: [ExploreHabitDays]) -> ExploreInput {
@@ -370,7 +411,71 @@ public struct TilePoint: Hashable, Sendable {
     public func distance(to other: TilePoint) -> Double { hypot(Double(x - other.x), Double(y - other.y)) }
 }
 
-public enum Terrain: UInt8, Sendable { case water, sand, grass, forest }
+public enum Terrain: UInt8, Sendable { case water, sand, grass, forest, mountain }
+
+/// Климатическая зона (15A): с севера (верх экрана) на юг.
+public enum ClimateZone: Int, Sendable, CaseIterable {
+    case tundra, taiga, temperate, steppe, desert
+
+    public var title: String {
+        switch self {
+        case .tundra: "Тундра"
+        case .taiga: "Тайга"
+        case .temperate: "Умеренная"
+        case .steppe: "Степь"
+        case .desert: "Пустыня"
+        }
+    }
+    /// Осадки здесь — снег.
+    public var isCold: Bool { self == .tundra || self == .taiga }
+}
+
+/// Износ дороги (15A) — по выполнению привязанной привычки за месяц.
+public enum RoadWear: Int, Sendable, CaseIterable {
+    case paved, dirt, overgrown, faint
+
+    public static func of(percent: Int) -> RoadWear {
+        switch percent {
+        case 80...: .paved
+        case 50..<80: .dirt
+        case 20..<50: .overgrown
+        default: .faint
+        }
+    }
+    public var title: String {
+        switch self {
+        case .paved: "мощёная"
+        case .dirt: "грунтовая"
+        case .overgrown: "зарастает"
+        case .faint: "едва видна"
+        }
+    }
+    /// Скорость шага по дороге.
+    public var speedFactor: Double {
+        switch self {
+        case .paved: 1.3
+        case .dirt: 1.15
+        case .overgrown, .faint: 1
+        }
+    }
+}
+
+/// Дорога между соседними городами острова (15A).
+public struct IslandRoad: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var from: Int
+    public var to: Int
+    /// Привычка месяца и её выполнение; nil — привычек не было, дорога грунтовая.
+    public var habit: String?
+    public var percent: Int?
+    public var wear: RoadWear
+    public var tiles: [TilePoint]
+
+    public var caption: String {
+        guard let habit, let percent else { return "Дорога · \(wear.title)" }
+        return "Дорога «\(habit)» · \(percent)% · \(wear.title)"
+    }
+}
 
 public struct IslandCity: Hashable, Sendable, Identifiable {
     public var id: Int
@@ -499,8 +604,6 @@ public struct Island: Sendable {
     public var npcs: [IslandNPC]
     public var chests: [IslandChest]
     public var campfires: [IslandCampfire]
-    /// Погода полос с запада на восток — по неделям диапазона.
-    public var weatherBands: [Weather]
     public var start: TilePoint
     /// Острова-месяцы (12B); у одного месяца — один остров на весь мир.
     public var regions: [IslandRegion] = []
@@ -510,9 +613,19 @@ public struct Island: Sendable {
     public var towers: [IslandTower] = []
     public var lighthouses: [IslandLighthouse] = []
     public var tasks: [CityTask] = []
+    // Этап 15A.
+    /// Высота гор в пикселях изометрии (0 — равнина).
+    public var elevation: [UInt8] = []
+    /// Климатическая зона клетки (ClimateZone.rawValue).
+    public var zones: [UInt8] = []
+    public var roads: [IslandRoad] = []
+    /// Номер дороги на клетке, −1 — дороги нет.
+    public var roadAt: [Int32] = []
+    /// Погода острова-месяца — случайная отметка настроения месяца.
+    public var regionWeather: [Weather] = []
 
     init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
-         chests: [IslandChest], campfires: [IslandCampfire], weatherBands: [Weather], start: TilePoint) {
+         chests: [IslandChest], campfires: [IslandCampfire], start: TilePoint) {
         self.size = size
         self.side = side ?? size.tiles
         self.terrain = terrain
@@ -521,8 +634,36 @@ public struct Island: Sendable {
         self.npcs = npcs
         self.chests = chests
         self.campfires = campfires
-        self.weatherBands = weatherBands
         self.start = start
+    }
+
+    public func zone(at point: TilePoint) -> ClimateZone {
+        guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !zones.isEmpty else { return .temperate }
+        return ClimateZone(rawValue: Int(zones[point.y * side + point.x])) ?? .temperate
+    }
+
+    public func height(at point: TilePoint) -> Int {
+        guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !elevation.isEmpty else { return 0 }
+        return Int(elevation[point.y * side + point.x])
+    }
+
+    public func road(at point: TilePoint) -> IslandRoad? {
+        guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !roadAt.isEmpty else { return nil }
+        let index = Int(roadAt[point.y * side + point.x])
+        return index >= 0 ? roads[index] : nil
+    }
+
+    /// Погода острова-месяца под клеткой (в том числе над водой у острова).
+    public func weather(at point: TilePoint) -> Weather {
+        guard let region = regions.min(by: { $0.center.distance(to: point) < $1.center.distance(to: point) }),
+              regionWeather.indices.contains(region.id) else { return .clear }
+        return regionWeather[region.id]
+    }
+
+    /// Можно идти: суша, кроме гор.
+    public func isWalkable(_ point: TilePoint) -> Bool {
+        let kind = terrain(at: point)
+        return kind != .water && kind != .mountain
     }
 
     /// Остров месяца под клеткой суши.
@@ -534,7 +675,7 @@ public struct Island: Sendable {
     /// Клетка суши рядом с кораблём — куда сойти на берег (сначала по сторонам, потом по диагонали).
     public func landing(near point: TilePoint) -> TilePoint? {
         let around = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
-        return around.map { TilePoint(point.x + $0.0, point.y + $0.1) }.first { isLand($0) }
+        return around.map { TilePoint(point.x + $0.0, point.y + $0.1) }.first { isWalkable($0) }
     }
 
     /// Путь корабля по воде (8 направлений, BFS; углы суши не срезает). nil — недостижимо.
@@ -580,14 +721,9 @@ public struct Island: Sendable {
         cities.first { $0.center.distance(to: point) <= Double(ExploreRules.citySafeRadius) }
     }
 
-    public func weather(atX x: Int) -> Weather {
-        guard !weatherBands.isEmpty else { return .clear }
-        return weatherBands[min(weatherBands.count - 1, max(0, x * weatherBands.count / side))]
-    }
-
     /// Путь по суше (8 направлений, BFS). nil — недостижимо.
     public func path(from: TilePoint, to: TilePoint) -> [TilePoint]? {
-        guard isLand(from), isLand(to) else { return nil }
+        guard isWalkable(from), isWalkable(to) else { return nil }
         if from == to { return [from] }
         var previous = [Int](repeating: -1, count: side * side)
         let startIndex = from.y * side + from.x, goalIndex = to.y * side + to.x
@@ -602,9 +738,9 @@ public struct Island: Sendable {
                 let nx = cx + dx, ny = cy + dy
                 guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
                 // По диагонали — только если обе соседние клетки — суша (не срезаем углы через воду).
-                if dx != 0, dy != 0, !(isLand(TilePoint(cx + dx, cy)) && isLand(TilePoint(cx, cy + dy))) { continue }
+                if dx != 0, dy != 0, !(isWalkable(TilePoint(cx + dx, cy)) && isWalkable(TilePoint(cx, cy + dy))) { continue }
                 let next = ny * side + nx
-                guard previous[next] == -1, terrain[next] != .water else { continue }
+                guard previous[next] == -1, terrain[next] != .water, terrain[next] != .mountain else { continue }
                 previous[next] = current
                 queue.append(next)
             }
@@ -629,8 +765,8 @@ public enum IslandGenerator {
         }
         guard parts.count > 1 else {
             var island = parts[0]
-            island.weatherBands = weatherBands(input)
             island.regions = [IslandRegion(id: 0, first: input.first, last: input.last, size: island.size, origin: TilePoint(0, 0), side: island.side)]
+            finish(&island, seed: seed)
             return island
         }
 
@@ -648,12 +784,14 @@ public enum IslandGenerator {
 
         var terrain = [Terrain](repeating: .water, count: side * side)
         var world = Island(size: parts.map(\.size).max { $0.tiles < $1.tiles } ?? .small, side: side, terrain: [],
-                           cities: [], villages: [], npcs: [], chests: [], campfires: [], weatherBands: weatherBands(input), start: TilePoint(0, 0))
+                           cities: [], villages: [], npcs: [], chests: [], campfires: [], start: TilePoint(0, 0))
+        var elevation = [UInt8](repeating: 0, count: side * side)
         func moved(_ point: TilePoint, _ origin: TilePoint) -> TilePoint { TilePoint(point.x + origin.x, point.y + origin.y) }
         for (index, part) in parts.enumerated() {
             let origin = origins[index]
             for y in 0..<part.side { for x in 0..<part.side {
                 terrain[(y + origin.y) * side + x + origin.x] = part.terrain[y * part.side + x]
+                elevation[(y + origin.y) * side + x + origin.x] = part.elevation[y * part.side + x]
             } }
             for var city in part.cities {
                 city.id = world.cities.count; city.center = moved(city.center, origin); world.cities.append(city)
@@ -674,10 +812,19 @@ public enum IslandGenerator {
                 if case let .reachVillage(village) = task.kind { task.kind = .reachVillage(1000 + village - 1000 + villageBase) }
                 world.tasks.append(task)
             }
+            for var road in part.roads {
+                road.id = world.roads.count
+                road.from += cityBase
+                road.to += cityBase
+                road.tiles = road.tiles.map { moved($0, origin) }
+                world.roads.append(road)
+            }
+            world.regionWeather.append(part.regionWeather.first ?? .clear)
             world.regions.append(IslandRegion(id: index, first: months[index].first, last: months[index].last,
                                               size: part.size, origin: origin, side: part.side))
         }
         world.terrain = terrain
+        world.elevation = elevation
         world.start = moved(parts[parts.count - 1].start, origins[parts.count - 1])
         world.ships = ships(in: world)
         // У корабля, как у старта, NPC не стоят — высадка не начинается со встречи.
@@ -685,7 +832,38 @@ public enum IslandGenerator {
             world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
         }
         for index in world.npcs.indices { world.npcs[index].id = index }
+        finish(&world, seed: seed)
         return world
+    }
+
+    /// Общее для острова и архипелага (15A): зоны климата по всему миру и клетки дорог.
+    static func finish(_ island: inout Island, seed: UInt64) {
+        island.zones = climate(side: island.side, seed: seed)
+        island.roadAt = [Int32](repeating: -1, count: island.side * island.side)
+        for road in island.roads {
+            for tile in road.tiles where tile.x >= 0 && tile.y >= 0 && tile.x < island.side && tile.y < island.side {
+                let index = tile.y * island.side + tile.x
+                // На пересечении — лучшая дорога.
+                if island.roadAt[index] < 0 || island.roads[Int(island.roadAt[index])].wear.rawValue > road.wear.rawValue {
+                    island.roadAt[index] = Int32(road.id)
+                }
+            }
+        }
+    }
+
+    /// Климат (15A): зона — по «широте» на экране изометрии (x + y), граница волнистая, у самой границы клетки перемешаны.
+    static func climate(side: Int, seed: UInt64) -> [UInt8] {
+        var random = ExploreRandom(seed ^ 0xC11A_7E00)
+        let noise = valueNoise(side: side, cell: max(8, side / 14), random: &random)
+        let span = Double(max(1, 2 * (side - 1)))
+        return (0..<(side * side)).map { index in
+            let x = index % side, y = index / side
+            var hash = UInt64(truncatingIfNeeded: x &* 374_761_393 &+ y &* 668_265_263) ^ seed
+            hash = (hash ^ (hash >> 13)) &* 1_274_126_177
+            let jitter = Double(hash % 1000) / 1000
+            let t = Double(x + y) / span + (noise[index] - 0.5) * 0.16 + (jitter - 0.5) * 0.025
+            return UInt8(max(0, min(4, Int(t * 5))))
+        }
     }
 
     /// Корабль у каждого острова: вода открытого моря рядом с сушей, ближе всего к соседнему острову.
@@ -723,15 +901,19 @@ public enum IslandGenerator {
         }
     }
 
-    /// Погода — полосы по неделям всего диапазона.
-    static func weatherBands(_ input: ExploreInput) -> [Weather] {
-        var bands: [Weather] = []
-        var week = input.first.weekStart
-        while week <= input.last {
-            bands.append(Weather.from(input.weekMoods[week], on: week))
-            week = week.adding(days: 7)
+    /// Погода острова-месяца (15A): случайная отметка настроения месяца; плохо — осадки (в холодных зонах — снег),
+    /// нормально — облачно, хорошо и без отметок — ясно.
+    static func weather(_ input: ExploreInput, random: inout ExploreRandom) -> Weather {
+        var pool = input.moods.map(\.mood)
+        if pool.isEmpty {
+            pool = input.weekMoods.filter { $0.key >= input.first.weekStart && $0.key <= input.last }.sorted { $0.key < $1.key }.map(\.value)
         }
-        return bands
+        guard !pool.isEmpty else { return .clear }
+        switch pool[random.int(pool.count)] {
+        case .good: return .clear
+        case .neutral: return .cloudy
+        case .bad: return .rain
+        }
     }
 
     /// Один остров по данным одного месяца (или всего диапазона).
@@ -740,10 +922,11 @@ public enum IslandGenerator {
         let size = ExploreRules.islandSize(days: input.days)
         let side = size.tiles
         var terrain = landMask(side: side, random: &random)
+        let elevation = mountains(&terrain, side: side, random: &random)
 
         // Пляж — суша у воды, лес — пятна шума.
         let forestNoise = valueNoise(side: side, cell: 6, random: &random)
-        for y in 0..<side { for x in 0..<side where terrain[y * side + x] != .water {
+        for y in 0..<side { for x in 0..<side where terrain[y * side + x] != .water && terrain[y * side + x] != .mountain {
             let nearWater = [(1, 0), (-1, 0), (0, 1), (0, -1)].contains { dx, dy in
                 let nx = x + dx, ny = y + dy
                 return nx < 0 || ny < 0 || nx >= side || ny >= side || terrain[ny * side + nx] == .water
@@ -751,7 +934,8 @@ public enum IslandGenerator {
             terrain[y * side + x] = nearWater ? .sand : (forestNoise[y * side + x] > 0.62 ? .forest : .grass)
         } }
         var island = Island(size: size, terrain: terrain, cities: [], villages: [], npcs: [], chests: [], campfires: [],
-                            weatherBands: [], start: TilePoint(side / 2, side / 2))
+                            start: TilePoint(side / 2, side / 2))
+        island.elevation = elevation
         var occupied: [TilePoint] = []
 
         func freeSpot(minDistance: Double, from others: [TilePoint], avoid: [(TilePoint, Double)] = [], attempts: Int = 400) -> TilePoint? {
@@ -783,6 +967,7 @@ public enum IslandGenerator {
             island.villages.append(IslandCity(id: 1000 + island.villages.count, name: group.name, center: spot, events: 1, houses: 1, isCity: false))
         }
         island.start = island.cities.first?.center ?? nearestLand(to: TilePoint(side / 2, side / 2), in: island)
+        roads(&island, input: input)
 
         // NPC: уникальные участники, потолок по размеру — самые частые остаются.
         var meetings: [String: Int] = [:]
@@ -855,8 +1040,177 @@ public enum IslandGenerator {
             }
             island.tasks.append(CityTask(id: island.tasks.count, cityId: city.id, kind: kind))
         }
-        island.weatherBands = weatherBands(input)
+        island.regionWeather = [weather(input, random: &random)]
         return island
+    }
+
+    /// Горы (15A): массивы там, где шум высоты выше порога, не ближе 4 клеток к морю; высота растёт к центру массива.
+    /// К суше, отрезанной горами, прорубается перевал — все объекты достижимы пешком.
+    static func mountains(_ terrain: inout [Terrain], side: Int, random: inout ExploreRandom) -> [UInt8] {
+        let coast = distance(side: side) { terrain[$0] == .water }
+        let height = valueNoise(side: side, cell: max(8, side / 10), random: &random)
+        let detail = valueNoise(side: side, cell: 4, random: &random)
+        var value = [Double](repeating: 0, count: side * side)
+        for index in terrain.indices where terrain[index] != .water && coast[index] >= ExploreRules.mountainCoastDistance {
+            let h = height[index] + (detail[index] - 0.5) * 0.12
+            if h > ExploreRules.mountainThreshold { terrain[index] = .mountain; value[index] = h }
+        }
+        // Карманы суши за горами: к каждому прорубается перевал — кратчайший путь сквозь горы к главной части.
+        func components() -> (ids: [Int], main: Int) {
+            var component = [Int](repeating: -1, count: side * side)
+            var best = (id: -1, count: 0), id = 0
+            for start in terrain.indices where terrain[start] != .water && terrain[start] != .mountain && component[start] == -1 {
+                var stack = [start], count = 0
+                component[start] = id
+                while let current = stack.popLast() {
+                    count += 1
+                    let cx = current % side, cy = current / side
+                    for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                        let nx = cx + dx, ny = cy + dy
+                        guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                        let next = ny * side + nx
+                        if terrain[next] != .water, terrain[next] != .mountain, component[next] == -1 { component[next] = id; stack.append(next) }
+                    }
+                }
+                if count > best.count { best = (id, count) }
+                id += 1
+            }
+            return (component, best.id)
+        }
+        for _ in 0..<32 {
+            let (component, main) = components()
+            guard let pocket = terrain.indices.first(where: { component[$0] >= 0 && component[$0] != main }) else { break }
+            let pocketId = component[pocket]
+            var previous = [Int](repeating: -2, count: side * side)
+            var queue = terrain.indices.filter { component[$0] == pocketId }, head = 0
+            for index in queue { previous[index] = -1 }
+            var reached: Int?
+            search: while head < queue.count {
+                let current = queue[head]; head += 1
+                let cx = current % side, cy = current / side
+                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let nx = cx + dx, ny = cy + dy
+                    guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                    let next = ny * side + nx
+                    guard previous[next] == -2, terrain[next] != .water else { continue }
+                    previous[next] = current
+                    if component[next] == main { reached = next; break search }
+                    if terrain[next] == .mountain { queue.append(next) }
+                }
+            }
+            guard var index = reached else {
+                for i in terrain.indices where component[i] == pocketId { terrain[i] = .mountain }
+                continue
+            }
+            while index >= 0 { if terrain[index] == .mountain { terrain[index] = .grass; value[index] = 0 }; index = previous[index] }
+        }
+        let inner = distance(side: side) { terrain[$0] != .mountain }
+        return terrain.indices.map { index in
+            guard terrain[index] == .mountain else { return 0 }
+            let raw = max(0, value[index] - ExploreRules.mountainThreshold) / 0.12 * Double(ExploreRules.mountainMaxHeight) * min(1, Double(inner[index]) / 3)
+            return UInt8(max(2, min(ExploreRules.mountainMaxHeight, Int(raw / 2) * 2 + 2)))
+        }
+    }
+
+    /// Расстояние (шагами по сторонам) до ближайшей клетки, где `isSource`.
+    static func distance(side: Int, isSource: (Int) -> Bool) -> [Int] {
+        var result = [Int](repeating: Int.max, count: side * side)
+        var queue: [Int] = [], head = 0
+        for index in 0..<(side * side) where isSource(index) { result[index] = 0; queue.append(index) }
+        while head < queue.count {
+            let current = queue[head]; head += 1
+            let cx = current % side, cy = current / side
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = cx + dx, ny = cy + dy
+                guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                let next = ny * side + nx
+                if result[next] > result[current] + 1 { result[next] = result[current] + 1; queue.append(next) }
+            }
+        }
+        return result.map { $0 == Int.max ? side : $0 }
+    }
+
+    /// Дороги (15A): сеть кратчайших связей всех городов острова плюс одна петля; путь — по суше, через горы — перевалом.
+    /// Каждой дороге — ежедневная привычка месяца по кругу; износ — по её выполнению.
+    static func roads(_ island: inout Island, input: ExploreInput) {
+        let cities = island.cities
+        guard cities.count >= 2 else { return }
+        var edges: [(Int, Int)] = []
+        var inTree: Set<Int> = [0]
+        while inTree.count < cities.count {
+            var best: (Int, Int, Double)?
+            for a in inTree { for b in cities.indices where !inTree.contains(b) {
+                let d = cities[a].center.distance(to: cities[b].center)
+                if best == nil || d < best!.2 { best = (a, b, d) }
+            } }
+            guard let edge = best else { break }
+            edges.append((edge.0, edge.1))
+            inTree.insert(edge.1)
+        }
+        if cities.count >= 3 {
+            let extra = cities.indices.flatMap { a in cities.indices.filter { $0 > a }.map { (a, $0) } }
+                .filter { pair in !edges.contains { ($0.0 == pair.0 && $0.1 == pair.1) || ($0.0 == pair.1 && $0.1 == pair.0) } }
+                .min { cities[$0.0].center.distance(to: cities[$0.1].center) < cities[$1.0].center.distance(to: cities[$1.1].center) }
+            if let extra { edges.append(extra) }
+        }
+        let habits = input.habits.compactMap { habit -> (String, Int)? in
+            habit.percent(from: input.first, through: input.last).map { (habit.title, $0) }
+        }
+        var onRoad = Set<Int>()
+        for (k, edge) in edges.enumerated() {
+            guard let tiles = roadPath(island, from: cities[edge.0].center, to: cities[edge.1].center, roads: onRoad) else { continue }
+            for tile in tiles {
+                let index = tile.y * island.side + tile.x
+                onRoad.insert(index)
+                // Перевал: дорога прорубает гору.
+                if island.terrain[index] == .mountain { island.terrain[index] = .grass; island.elevation[index] = 0 }
+            }
+            let habit = habits.isEmpty ? nil : habits[k % habits.count]
+            island.roads.append(IslandRoad(id: island.roads.count, from: cities[edge.0].id, to: cities[edge.1].id, habit: habit?.0,
+                                           percent: habit?.1, wear: habit.map { RoadWear.of(percent: $0.1) } ?? .dirt, tiles: tiles))
+        }
+    }
+
+    /// Путь дороги: Дейкстра по суше; горы дороги, готовая дорога дешевле.
+    static func roadPath(_ island: Island, from: TilePoint, to: TilePoint, roads: Set<Int>) -> [TilePoint]? {
+        let side = island.side
+        var cost = [Int](repeating: Int.max, count: side * side)
+        var previous = [Int](repeating: -1, count: side * side)
+        let start = from.y * side + from.x, goal = to.y * side + to.x
+        cost[start] = 0
+        var heap = MinHeap()
+        heap.push(0, start)
+        while let (current, value) = heap.pop() {
+            if current == goal { break }
+            guard value == cost[current] else { continue }
+            let cx = current % side, cy = current / side
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = cx + dx, ny = cy + dy
+                guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                let next = ny * side + nx
+                let step: Int
+                if roads.contains(next) { step = 6 } else {
+                    switch island.terrain[next] {
+                    case .water: continue
+                    case .grass: step = 10
+                    case .forest: step = 14
+                    case .sand: step = 18
+                    case .mountain: step = 80
+                    }
+                }
+                if cost[current] + step < cost[next] {
+                    cost[next] = cost[current] + step
+                    previous[next] = current
+                    heap.push(cost[next], next)
+                }
+            }
+        }
+        guard previous[goal] != -1 || goal == start else { return nil }
+        var result: [TilePoint] = []
+        var index = goal
+        while index != start { result.append(TilePoint(index % side, index / side)); index = previous[index] }
+        result.append(from)
+        return result.reversed()
     }
 
     /// Суша — «капля»: расстояние до центра плюс шум; остаётся самая большая связная часть.
@@ -907,11 +1261,44 @@ public enum IslandGenerator {
 
     static func nearestLand(to point: TilePoint, in island: Island) -> TilePoint {
         var best = point, bestDistance = Double.infinity
-        for y in 0..<island.side { for x in 0..<island.side where island.terrain[y * island.side + x] != .water {
+        for y in 0..<island.side { for x in 0..<island.side where island.isWalkable(TilePoint(x, y)) {
             let distance = TilePoint(x, y).distance(to: point)
             if distance < bestDistance { bestDistance = distance; best = TilePoint(x, y) }
         } }
         return best
+    }
+}
+
+/// Двоичная куча по стоимости (для путей дорог).
+struct MinHeap {
+    private var items: [(Int, Int)] = []
+    mutating func push(_ cost: Int, _ value: Int) {
+        items.append((cost, value))
+        var child = items.count - 1
+        while child > 0 {
+            let parent = (child - 1) / 2
+            guard items[child].0 < items[parent].0 else { break }
+            items.swapAt(child, parent)
+            child = parent
+        }
+    }
+    mutating func pop() -> (Int, Int)? {
+        guard let first = items.first else { return nil }
+        let last = items.removeLast()
+        if !items.isEmpty {
+            items[0] = last
+            var parent = 0
+            while true {
+                let left = parent * 2 + 1, right = left + 1
+                var smallest = parent
+                if left < items.count, items[left].0 < items[smallest].0 { smallest = left }
+                if right < items.count, items[right].0 < items[smallest].0 { smallest = right }
+                if smallest == parent { break }
+                items.swapAt(parent, smallest)
+                parent = smallest
+            }
+        }
+        return (first.1, first.0)
     }
 }
 

@@ -4,153 +4,40 @@ import Domain
 
 /// Рисование острова «Побродить» (8B): изометрия клеток 16×8 в стиле большой карты, спрайты с прозрачностью.
 enum ExploreRenderer {
-    static let tileW = 16
-    static let tileH = 8
-    static let padding = 40
+    nonisolated static let tileW = 16
+    nonisolated static let tileH = 8
+    nonisolated static let padding = 40
 
     /// Размер картинки острова в пикселях.
-    static func imageSize(side: Int) -> (width: Int, height: Int) {
+    nonisolated static func imageSize(side: Int) -> (width: Int, height: Int) {
         (side * tileW + padding * 2, side * tileH + padding * 2)
     }
 
     /// Центр клетки в пикселях картинки (y вниз).
-    static func pixel(x: Double, y: Double, side: Int) -> (x: Double, y: Double) {
+    nonisolated static func pixel(x: Double, y: Double, side: Int) -> (x: Double, y: Double) {
         let originX = Double(side * tileW / 2 + padding)
         let originY = Double(padding)
         return (originX + (x - y) * Double(tileW / 2), originY + (x + y) * Double(tileH / 2) + Double(tileH / 2))
     }
 
     /// Обратное преобразование: пиксель картинки → клетка (дробная).
-    static func tile(px: Double, py: Double, side: Int) -> (x: Double, y: Double) {
+    nonisolated static func tile(px: Double, py: Double, side: Int) -> (x: Double, y: Double) {
         let originX = Double(side * tileW / 2 + padding)
         let u = (px - originX) / Double(tileW / 2)
         let v = (py - Double(padding) - Double(tileH / 2)) / Double(tileH / 2)
         return ((u + v) / 2, (v - u) / 2)
     }
 
-    // MARK: Остров
-
-    /// Цвета суши по времени года (кроме моря и берега).
-    struct LandPalette {
-        let grass: (UInt32, UInt32)
-        let detail: UInt32
-        let forest: UInt32
-        let leaves: (UInt32, UInt32)
-        let snowCap: Bool
-
-        static func of(_ season: Season) -> LandPalette {
-            switch season {
-            case .winter: LandPalette(grass: (0xE6ECF0, 0xDCE3E8), detail: 0xC5CFD6, forest: 0xCBD5DC, leaves: (0x3F5E4A, 0x355241), snowCap: true)
-            case .spring: LandPalette(grass: (0xA9C46C, 0x9EBB62), detail: 0xE7B8C8, forest: 0x86A85A, leaves: (0x6E9E48, 0x5E8C3E), snowCap: false)
-            case .summer: LandPalette(grass: (0x7FA552, 0x76994B), detail: 0x5E8540, forest: 0x5F8A43, leaves: (0x3E6B2E, 0x335C26), snowCap: false)
-            case .autumn: LandPalette(grass: (0x9DB06A, 0x93A762), detail: 0x6E8A4A, forest: 0x7E9656, leaves: (0xC9772E, 0xA8582A), snowCap: false)
-            }
-        }
-    }
-
-    static func islandImage(_ island: Island, seed: UInt64, season: Season = .autumn) -> CGImage? {
-        let palette = LandPalette.of(season)
-        let side = island.side
-        let size = imageSize(side: side)
-        var canvas = RGBACanvas(width: size.width, height: size.height, fill: 0x3F6E9C)
-        var random = ExploreRandom(seed ^ 0xA5A5)
-        // Вода с рябью.
-        for _ in 0..<(size.width * size.height / 60) {
-            canvas.set(random.int(size.width), random.int(size.height), random.unit() < 0.5 ? 0x4A7BAA : 0x36628D)
-        }
-        // Клетки — по глубине.
-        for depth in 0..<(side * 2 - 1) {
-            for x in 0...depth where x < side {
-                let y = depth - x
-                guard y < side else { continue }
-                let terrain = island.terrain[y * side + x]
-                guard terrain != .water else { continue }
-                let center = pixel(x: Double(x), y: Double(y), side: side)
-                let base: UInt32 = switch terrain {
-                case .sand: 0xE3CF9A
-                case .forest: palette.forest
-                default: random.unit() < 0.5 ? palette.grass.0 : palette.grass.1
-                }
-                diamond(&canvas, cx: Int(center.x), cy: Int(center.y), color: base)
-                if terrain == .sand, island.terrain(at: TilePoint(x, y + 1)) == .water || island.terrain(at: TilePoint(x + 1, y)) == .water {
-                    // Кромка берега.
-                    for dx in -3...3 { canvas.set(Int(center.x) + dx, Int(center.y) + 4, 0xC9B27A) }
-                }
-                if terrain == .grass, random.unit() < 0.15 {
-                    canvas.set(Int(center.x) + random.int(6) - 3, Int(center.y) + random.int(3) - 1, palette.detail)
-                }
-            }
-        }
-        // Деревья и дома — по глубине, чтобы ближние перекрывали дальние.
-        var items: [(depth: Double, draw: (inout RGBACanvas) -> Void)] = []
-        for y in 0..<side { for x in 0..<side where island.terrain[y * side + x] == .forest && random.unit() < 0.55 {
-            let c = pixel(x: Double(x), y: Double(y), side: side)
-            let shade = random.unit() < 0.5
-            items.append((Double(x + y), { tree(&$0, x: Int(c.x), y: Int(c.y), dark: shade, palette: palette) }))
-        } }
-        let roofs: [UInt32] = [0xB8651B, 0x8A4B3A, 0x3E5C8A, 0x2F6B4F, 0x6B4FA3]
-        for (index, place) in (island.cities + island.villages).enumerated() {
-            for (k, offset) in houseOffsets.prefix(place.houses).enumerated() {
-                let hx = Double(place.center.x + offset.0), hy = Double(place.center.y + offset.1)
-                let c = pixel(x: hx, y: hy, side: side)
-                let roof = roofs[(index + k) % roofs.count]
-                let tall = place.isCity ? 9 + (k % 3) * 2 : 7
-                items.append((hx + hy + 0.5, { house(&$0, x: Int(c.x), y: Int(c.y), height: tall, roof: roof) }))
-            }
-        }
-        for item in items.sorted(by: { $0.depth < $1.depth }) { item.draw(&canvas) }
-        return canvas.image
-    }
-
-    /// Клетки домов вокруг центра города.
-    static let houseOffsets: [(Int, Int)] = [(0, 0), (1, -1), (-1, 1), (1, 1), (-1, -1), (2, 0), (0, 2), (-2, 0), (0, -2), (2, 2)]
-
-    static func diamond(_ canvas: inout RGBACanvas, cx: Int, cy: Int, color: UInt32) {
-        for dy in 0..<tileH {
-            let half = dy < tileH / 2 ? (dy + 1) * 2 : (tileH - dy) * 2
-            for dx in -half..<half { canvas.set(cx + dx, cy - tileH / 2 + dy, color) }
-        }
-    }
-
-    static func tree(_ canvas: inout RGBACanvas, x: Int, y: Int, dark: Bool, palette: LandPalette = .of(.autumn)) {
-        for k in 0..<3 { canvas.set(x, y - k, 0x5C3A1E) }
-        let leaf: UInt32 = dark ? palette.leaves.1 : palette.leaves.0
-        for dy in 0..<5 {
-            let half = dy < 3 ? dy + 1 : 5 - dy
-            for dx in -half...half { canvas.set(x + dx, y - 3 - (4 - dy), leaf) }
-        }
-        if palette.snowCap {
-            for dx in -1...1 { canvas.set(x + dx, y - 7, 0xF4F7F9) }
-            canvas.set(x, y - 8, 0xF4F7F9)
-        } else {
-            canvas.set(x - 1, y - 6, PixelColor.mix(leaf, 0xFFFFFF, 0.25))
-        }
-    }
-
-    static func house(_ canvas: inout RGBACanvas, x: Int, y: Int, height: Int, roof: UInt32) {
-        for dy in 0..<height { for dx in -5...5 {
-            canvas.set(x + dx, y - dy, dx < 0 ? 0xE9DCC0 : 0xCDBE9E)
-        } }
-        canvas.set(x - 2, y, 0x5C3A1E); canvas.set(x - 2, y - 1, 0x5C3A1E); canvas.set(x - 2, y - 2, 0x5C3A1E)
-        for dy in 0..<5 {
-            let half = 6 - dy
-            for dx in -half...half { canvas.set(x + dx, y - height - dy, PixelShade.darken(roof, dx > 0 ? 0.15 : 0)) }
-        }
-    }
+    // MARK: Остров — с 15A рисуется кусками (ExploreGround), постройки и деревья — ExploreSprites.
 
     // MARK: Мини-карта
 
-    /// Вид сверху: клетка — пиксель.
+    /// Вид сверху: клетка — пиксель; цвета зон, горы, дороги (15A).
     static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = [], ships: [TilePoint] = []) -> CGImage? {
         var canvas = RGBACanvas(width: island.side, height: island.side, fill: 0x3F6E9C)
-        for (index, terrain) in island.terrain.enumerated() {
-            let color: UInt32? = switch terrain {
-            case .water: nil
-            case .sand: 0xE3CF9A
-            case .grass: 0x9DB06A
-            case .forest: 0x6E8A4A
-            }
-            if let color { canvas.set(index % island.side, index / island.side, color) }
+        for index in island.terrain.indices {
+            let point = TilePoint(index % island.side, index / island.side)
+            if let color = mapColor(island, point) { canvas.set(point.x, point.y, color) }
         }
         for city in island.cities {
             for dx in -1...1 { for dy in -1...1 { canvas.set(city.center.x + dx, city.center.y + dy, 0x1F2A44) } }
@@ -169,6 +56,44 @@ enum ExploreRenderer {
             for dy in 1...(mark + 1) { canvas.set(ship.x, ship.y - dy, 0xFFFCF6) }
         }
         return canvas.image
+    }
+
+    /// Цвет клетки на картах: nil — вода (фон).
+    static func mapColor(_ island: Island, _ point: TilePoint) -> UInt32? {
+        let zone = island.zone(at: point)
+        let grass: [ClimateZone: (UInt32, UInt32)] = [.tundra: (0xE6ECF0, 0x3F5E4A), .taiga: (0x7E9A6A, 0x2E5A3E), .temperate: (0x9DB06A, 0x5F8A43),
+                                                       .steppe: (0xC2B56E, 0x8E8A4E), .desert: (0xE8CF8E, 0xB89E62)]
+        if island.road(at: point) != nil { return 0x9A7A4E }
+        switch island.terrain(at: point) {
+        case .water: return nil
+        case .sand: return 0xE3CF9A
+        case .grass: return grass[zone]!.0
+        case .forest: return grass[zone]!.1
+        case .mountain: return island.height(at: point) >= ExploreRules.snowLineHeight ? 0xF2F4F6 : (zone == .desert ? 0xA8865E : 0x7A7368)
+        }
+    }
+
+    /// Карта мира (15A.3) в изометрии, как на экране: клетка — 2 px по ширине; неоткрытая суша — под туманом.
+    static func worldMap(_ island: Island, explored: [Bool]) -> CGImage? {
+        let side = island.side
+        var canvas = RGBACanvas(width: side * 2, height: side + 1, fill: 0x3F6E9C)
+        for index in island.terrain.indices {
+            let x = index % side, y = index / side
+            let px = x - y + side - 1, py = (x + y) / 2
+            var color = mapColor(island, TilePoint(x, y)) ?? (index % 7 == 0 ? 0x4A7BAA : 0x3F6E9C)
+            // Море известно всегда; под туманом — неоткрытая суша.
+            if island.terrain[index] != .water, !(explored.indices.contains(index) && explored[index]) {
+                color = (px + py) % 6 == 0 ? 0xD8CDB6 : PixelColor.mix(color, 0xE9E1D0, 0.86)
+            }
+            canvas.set(px, py, color)
+            canvas.set(px + 1, py, color)
+        }
+        return canvas.image
+    }
+
+    /// Точка клетки на карте мира: доли ширины и высоты картинки.
+    static func worldMapPoint(_ point: TilePoint, side: Int) -> (x: Double, y: Double) {
+        (Double(point.x - point.y + side) / Double(side * 2), Double(point.x + point.y) / 2 / Double(side + 1))
     }
 
     // MARK: Спрайты
@@ -308,10 +233,10 @@ enum PixelShade {
 }
 
 /// RGBA-холст: прозрачный фон для спрайтов.
-struct RGBACanvas {
+nonisolated struct RGBACanvas: Sendable {
     let width: Int
     let height: Int
-    private var bytes: [UInt8]
+    private(set) var bytes: [UInt8]
 
     init(width: Int, height: Int, fill: UInt32?) {
         self.width = width

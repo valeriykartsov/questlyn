@@ -3,6 +3,7 @@ import Domain
 
 @main
 struct QuestlynApp: App {
+    @UIApplicationDelegateAdaptor(QuestlynAppDelegate.self) private var appDelegate
     @State private var environment: Result<AppModel, Error>
 
     init() {
