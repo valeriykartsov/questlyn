@@ -107,7 +107,8 @@ struct Stage8Tests {
         }
     }
 
-    @Test func dailyHabitIsNotUnmarkedAsWeekly() async throws {
+    /// С 14.4 (16.11.2026) ежедневную отметку текущей недели тоже можно снять; прошлую неделю — нет.
+    @Test func dailyHabitUnmarksOnlyWithinCurrentWeek() async throws {
         let monday = ISO8601DateFormatter().date(from: "2026-11-09T08:00:00Z")!
         _ = try await onboard(at: monday)
         let habits = HabitService(store: store)
@@ -115,8 +116,9 @@ struct Stage8Tests {
         _ = try await HabitMarkService(store: store).mark(habitId: habit.id, on: LocalDate(monday, timeZone: utc), now: monday + 60, timeZone: utc)
         let mark = try #require(try await store.occurrences(from: LocalDate(monday, timeZone: utc), through: LocalDate(monday, timeZone: utc)).first)
         await #expect(throws: QuestlynError.cannotMarkDate) {
-            try await HabitMarkService(store: store).unmarkWeekly(occurrenceId: mark.id, now: now + 86400, timeZone: utc)
+            try await HabitMarkService(store: store).unmarkWeekly(occurrenceId: mark.id, now: monday + 7 * 86400, timeZone: utc)
         }
+        try await HabitMarkService(store: store).unmarkWeekly(occurrenceId: mark.id, now: monday + 2 * 86400, timeZone: utc)
     }
 
     // MARK: 8.4 профессия у Epic

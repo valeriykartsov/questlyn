@@ -35,18 +35,19 @@ struct Stage2Tests {
         await #expect(throws: QuestlynError.alreadyMarked) {
             try await marks.mark(habitId: habit.id, on: day("2026-11-11"), now: now, timeZone: utc)
         }
-        // Вчера — можно, позавчера — нет (и это день до создания).
+        // Вчера — можно; позавчера — тоже (14.4: любой день текущей недели, даже до создания); прошлая неделя — нет.
         try await marks.mark(habitId: habit.id, on: day("2026-11-10"), now: now, timeZone: utc)
+        try await marks.mark(habitId: habit.id, on: day("2026-11-09"), now: now, timeZone: utc)
         await #expect(throws: QuestlynError.cannotMarkDate) {
-            try await marks.mark(habitId: habit.id, on: day("2026-11-09"), now: now, timeZone: utc)
+            try await marks.mark(habitId: habit.id, on: day("2026-11-08"), now: now, timeZone: utc)
         }
         // Суббота не запланирована.
         await #expect(throws: QuestlynError.notScheduled) {
             try await marks.mark(habitId: habit.id, on: day("2026-11-14"), now: at("2026-11-14"), timeZone: utc)
         }
         try await marks.unmark(habitId: habit.id, on: day("2026-11-11"), now: now, timeZone: utc)
-        #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.count == 4)
-        #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.allSatisfy { $0.effectiveDate == day("2026-11-10") })
+        #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.count == 8)
+        #expect(try await store.allGrants().filter { $0.sourceType == .habitOccurrence }.allSatisfy { $0.effectiveDate <= day("2026-11-10") })
     }
 
     @Test func weeklyAllowsSeveralMarksAndCountsInStatus() async throws {

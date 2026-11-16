@@ -93,6 +93,18 @@ public struct WellbeingService: Sendable {
         return CheckInReport(mood: mood, harms: harms, benefits: benefits)
     }
 
+    /// Запись «Дневника» за прошлый момент (14.3): только настроение и заметка — вредное и полезное задним числом
+    /// не вносятся, чтобы не пересчитывать HP прошлого. Погода этого дня на картах — по ней.
+    @discardableResult
+    public func recordPastMood(_ mood: Mood, note: String, isDaySummary: Bool, at moment: Date, now: Date, timeZone: TimeZone) async throws -> MoodEntry {
+        guard let hero = try await store.currentHero() else { throw QuestlynError.heroNotFound }
+        let firstDay = LocalDate(hero.createdAt, timeZone: timeZone)
+        guard moment <= now, LocalDate(moment, timeZone: timeZone) >= firstDay else { throw QuestlynError.invalidDiaryDate }
+        let draft = CheckInDraft(mood: mood, note: note, isDaySummary: isDaySummary)
+        guard let entry = try await checkIn(draft, now: moment, timeZone: timeZone).mood else { throw QuestlynError.emptyCheckIn }
+        return entry
+    }
+
     public func deleteBenefit(id: UUID, now: Date) async throws { try await store.deleteBenefit(id: id, at: now) }
 
     public func deleteHarm(id: UUID, now: Date) async throws { try await store.deleteHarm(id: id, at: now) }

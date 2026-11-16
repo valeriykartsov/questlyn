@@ -16,6 +16,8 @@ public enum QuestlynError: Error, Equatable, Sendable {
     case timeWithoutDate
     case lockedWhileCompleted
     case cannotMarkDate
+    /// Прошлая запись «Дневника» — не раньше создания героя и не в будущем (14.3).
+    case invalidDiaryDate
     case notScheduled
     case alreadyMarked
     case noWeekdays
@@ -35,6 +37,7 @@ extension QuestlynError: CustomStringConvertible {
     public var description: String {
         switch self {
         case .emptyName: "Название не может быть пустым."
+        case .invalidDiaryDate: "Выберите момент не раньше создания героя и не позже, чем сейчас."
         case .invalidProfessionCount: "Выберите от одной до трёх профессий."
         case .unknownCatalogItem(let id): "Профессии «\(id)» нет в каталоге."
         case .heroAlreadyExists: "Герой уже создан."

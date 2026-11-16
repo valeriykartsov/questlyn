@@ -44,7 +44,10 @@ struct ExploreFlowView: View {
                 }
             }
         }
-        .onAppear(perform: autoStartIfNeeded)
+        .task {
+            await model.loadExploreHabits()
+            autoStartIfNeeded()
+        }
     }
 
     private var range: (LocalDate, LocalDate) { (LocalDate(first, timeZone: .current), LocalDate(last, timeZone: .current)) }
@@ -73,6 +76,21 @@ struct ExploreFlowView: View {
         if UserDefaults.standard.bool(forKey: "QuestlynExploreEncounter"), let session, let npc = session.island.npcs.last {
             session.startEncounter(npc: npc)
             session.encounter?.perform(.fight)
+        }
+        // `-QuestlynExploreDemo night | bag | tower` — этап 14: ночь, сумка со спутником, герой у Чёрной башни.
+        if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
+            if demo.contains("night") { session.clockHour = 22 }
+            if demo.contains("bag") {
+                for item in ExploreItem.allCases { _ = session.addItem(item) }
+                session.companion = session.island.npcs.first
+                if let city = session.island.cities.first, let task = session.island.tasks.first(where: { $0.cityId == city.id }) {
+                    session.takeTask(task)
+                }
+            }
+            if demo.contains("tower"), let tower = session.island.towers.first,
+               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isLand($0) }) {
+                session.heroTile = spot
+            }
         }
         // `-QuestlynExploreShip shore | sail` — герой у корабля своего острова или уже на нём, в паре клеток от берега (12B).
         if let mode = UserDefaults.standard.string(forKey: "QuestlynExploreShip"), let session, let ship = session.island.ships.last {
@@ -290,6 +308,7 @@ struct ExploreGameView: View {
     @Bindable var session: ExploreSession
     let exit: () -> Void
     @State private var scene: ExploreScene?
+    @State private var showsTasks = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -318,12 +337,21 @@ struct ExploreGameView: View {
                             .transition(.opacity)
                     }
                     Spacer()
+                    bagBar
                     shipBar
                     abilityBar
                 }
                 .padding(.horizontal, QSpacing.l)
+                if showsTasks {
+                    TaskListCard(session: session) { showsTasks = false }
+                        .transition(.opacity)
+                }
+                if let letter = session.letter {
+                    LetterCard(bottle: letter) { session.letter = nil }
+                        .transition(.opacity)
+                }
                 if session.encounter != nil {
-                    EncounterView(session: session) { outcome, npc in scene?.resolveEncounter(outcome, npcId: npc) }
+                    EncounterView(session: session) { outcome, npc, tower in scene?.resolveEncounter(outcome, npcId: npc, towerId: tower) }
                         .transition(.opacity)
                 }
             }
@@ -389,12 +417,36 @@ struct ExploreGameView: View {
     }
 
     private var goals: some View {
-        HStack(spacing: QSpacing.l) {
-            if session.island.regions.count > 1 { Text("Острова \(session.visitedRegions.count)/\(session.island.regions.count)") }
-            if !session.island.cities.isEmpty { Text("Города \(session.visitedCities.count)/\(session.island.cities.count)") }
-            if !session.island.chests.isEmpty { Text("Сундуки \(session.openedChests.count)/\(session.island.chests.count)") }
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: QSpacing.l) {
+                if session.island.regions.count > 1 { Text("Острова \(session.visitedRegions.count)/\(session.island.regions.count)") }
+                if !session.island.cities.isEmpty { Text("Города \(session.visitedCities.count)/\(session.island.cities.count)") }
+                if !session.island.chests.isEmpty { Text("Сундуки \(session.openedChests.count)/\(session.island.chests.count)") }
+            }
+            .font(QFont.text(12, weight: .semibold))
+            // Этап 14: часы острова, башни, задания, спутник.
+            HStack(spacing: QSpacing.m) {
+                Text("\(session.isNight ? "☾" : "☀") \(session.clockText)").monospacedDigit().lineLimit(1).fixedSize()
+                if !session.island.towers.isEmpty { Text("Башни \(session.conqueredTowers.count)/\(session.island.towers.count)").lineLimit(1).fixedSize() }
+                if !session.island.tasks.isEmpty {
+                    Button { showsTasks = true } label: {
+                        HStack(spacing: 3) {
+                            Text("Задания \(session.doneTasks.count)/\(session.takenTasks.count)").lineLimit(1).fixedSize()
+                            Image(systemName: "list.bullet").font(.system(size: 10, weight: .bold))
+                        }
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(QColor.amber.opacity(0.25), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Задания: выполнено \(session.doneTasks.count) из \(session.takenTasks.count) взятых")
+                }
+                if session.companion != nil {
+                    Image(systemName: "heart.fill").foregroundStyle(QColor.forest).accessibilityLabel("Спутник с героем")
+                }
+            }
+            .font(QFont.text(11, weight: .semibold))
         }
-        .font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.ink)
+        .foregroundStyle(QColor.ink)
         .padding(.horizontal, QSpacing.l).padding(.vertical, QSpacing.s)
         .background(QColor.sheet.opacity(0.94), in: RoundedRectangle(cornerRadius: QRadius.control))
     }
@@ -414,6 +466,40 @@ struct ExploreGameView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(QColor.sheet, lineWidth: 2))
         .accessibilityLabel("Мини-карта")
+    }
+
+    /// Сумка (14.5, макет ExploreBag): четыре вида расходников, касание — использовать.
+    @ViewBuilder private var bagBar: some View {
+        if session.bagCount > 0 {
+            HStack(spacing: QSpacing.xs) {
+                ForEach(ExploreItem.allCases, id: \.self) { item in
+                    let count = session.bag[item] ?? 0
+                    Button { session.useItem(item) } label: {
+                        VStack(spacing: 1) {
+                            Image(systemName: Self.symbol(item)).font(.system(size: 14, weight: .semibold))
+                            Text(item.title).font(QFont.text(11, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                            Text("×\(count)").font(QFont.text(10)).monospacedDigit()
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .foregroundStyle(count > 0 ? QColor.ink : QColor.inkSecondary)
+                        .background(QColor.sheet.opacity(count > 0 ? 0.96 : 0.6), in: RoundedRectangle(cornerRadius: QRadius.small))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(count == 0)
+                    .accessibilityLabel("\(item.title), \(count), \(item.note)")
+                }
+            }
+            .padding(.bottom, QSpacing.s)
+        }
+    }
+
+    static func symbol(_ item: ExploreItem) -> String {
+        switch item {
+        case .potionHP: "heart.fill"
+        case .potionMP: "drop.fill"
+        case .torch: "flame.fill"
+        case .compass: "location.north.fill"
+        }
     }
 
     /// «Сесть на корабль» у фрегата, «Сойти на берег» в плавании (12B, макеты ExploreBoarding и ExploreSailing).
@@ -476,7 +562,7 @@ struct ExploreGameView: View {
 
 struct EncounterView: View {
     @Bindable var session: ExploreSession
-    let resolved: (EncounterOutcome?, Int?) -> Void
+    let resolved: (EncounterOutcome?, Int?, Int?) -> Void
     @State private var showsSkills = true
 
     var body: some View {
@@ -488,12 +574,16 @@ struct EncounterView: View {
                         Text("Встреча · ход \(encounter.turn)").font(QFont.text(11, weight: .bold)).textCase(.uppercase).tracking(0.6)
                             .foregroundStyle(QColor.hp)
                         Spacer()
-                        Text("встречались в событиях: \(npcMeetings)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        if encounter.guardian == nil {
+                            Text("встречались в событиях: \(npcMeetings)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        } else {
+                            Text("Чёрная башня").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        }
                     }
                     Text(title(encounter)).font(QFont.title(18, weight: .bold))
                     HStack(spacing: QSpacing.l) {
                         meter("Вы", value: encounter.heroHP, max: session.hero.maxHP, color: QColor.hp)
-                        meter(encounter.tier.title, value: encounter.npcHP, max: encounter.npcMaxHP, color: QColor.hp)
+                        meter(encounter.opponentTitle, value: encounter.npcHP, max: encounter.npcMaxHP, color: QColor.hp)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         ForEach(Array(encounter.log.suffix(3).enumerated()), id: \.offset) { _, line in
@@ -502,9 +592,9 @@ struct EncounterView: View {
                     }
                     if encounter.outcome == nil { actions(encounter) } else {
                         Button("Продолжить") {
-                            let npc = session.encounterNPC
+                            let npc = session.encounterNPC, tower = session.encounterTower
                             let outcome = session.finishEncounter()
-                            resolved(outcome, npc)
+                            resolved(outcome, npc, tower)
                         }
                         .buttonStyle(PrimaryButtonStyle())
                     }
@@ -533,7 +623,7 @@ struct EncounterView: View {
         case .persuaded: "Разошлись миром"
         case .fled: "Вы оторвались"
         case .lost: "Без сил"
-        case nil: "\(encounter.tier.title) преградил путь"
+        case nil: encounter.guardian.map { "Страж башни «\($0.title)»" } ?? "\(encounter.tier.title) преградил путь"
         }
     }
 
@@ -636,6 +726,10 @@ struct ExploreSummaryView: View {
                 }
                 VStack(spacing: 0) {
                     if session.island.regions.count > 1 { row("Островов посещено", session.visitedRegions.count) }
+                    if !session.island.bottles.isEmpty { row("Бутылок найдено", session.readBottles.count) }
+                    if !session.island.towers.isEmpty { row("Башен взято", session.conqueredTowers.count) }
+                    if !session.island.lighthouses.isEmpty { row("Маяков зажжено", session.litLighthouses.count) }
+                    if !session.island.tasks.isEmpty { row("Заданий выполнено", session.doneTasks.count) }
                     row("Побед", session.wins)
                     row("Уговорено", session.persuaded)
                     row("Убежал", session.escapes)
@@ -696,5 +790,99 @@ struct ExploreSummaryView: View {
         }
         .padding(.horizontal, QSpacing.xl).frame(minHeight: 46)
         .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
+    }
+}
+
+/// Письмо из бутылки (14.5): заметка «Дневника» — дата, настроение, текст.
+struct LetterCard: View {
+    let bottle: IslandBottle
+    let close: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                Text("Письмо в бутылке").font(QFont.text(11, weight: .bold)).textCase(.uppercase).tracking(0.6).foregroundStyle(QColor.mp)
+                HStack(spacing: QSpacing.s) {
+                    Image(systemName: WeatherStyle.symbol(Weather.from(bottle.note.mood, on: bottle.note.date)))
+                    Text("\(Format.shortDay(bottle.note.date)) · \(bottle.note.mood.title)").font(QFont.text(15, weight: .bold))
+                }
+                Text(bottle.note.note).font(QFont.title(18)).fixedSize(horizontal: false, vertical: true)
+                Button("Дальше", action: close).buttonStyle(PrimaryButtonStyle())
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(QSpacing.xl)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.xl)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+}
+
+/// Задания досок (16.11.2026): что взято, что нужно сделать и прогресс. Условия считаются за всю прогулку.
+struct TaskListCard: View {
+    let session: ExploreSession
+    let close: () -> Void
+
+    private var taken: [CityTask] { session.takenTasks.compactMap { id in session.island.tasks.first { $0.id == id } } }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                HStack {
+                    Text("Задания досок").font(QFont.title(20))
+                    Spacer()
+                    Text("\(session.doneTasks.count) из \(taken.count)").font(QFont.text(13, weight: .semibold)).monospacedDigit()
+                }
+                if taken.isEmpty {
+                    Text("Пока ни одного. Задание берётся при первом входе в город с доской.")
+                        .font(QFont.text(14)).foregroundStyle(QColor.inkSecondary)
+                } else {
+                    // Мало заданий — карточка по содержимому, много — прокрутка.
+                    ViewThatFits(in: .vertical) {
+                        VStack(spacing: QSpacing.s) { ForEach(taken) { task in row(task) } }
+                        ScrollView {
+                            VStack(spacing: QSpacing.s) { ForEach(taken) { task in row(task) } }
+                        }
+                    }
+                    .frame(maxHeight: 360)
+                    .fixedSize(horizontal: false, vertical: taken.count <= 4)
+                }
+                let left = session.island.tasks.count - taken.count
+                if left > 0 {
+                    Text("Ещё не взято: \(left). Награда за каждое — +\(Int(ExploreRules.taskRewardShare * 100))% HP и MP.")
+                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+                Button("Закрыть", action: close).buttonStyle(SecondaryButtonStyle())
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(QSpacing.xl)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.l)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+
+    private func row(_ task: CityTask) -> some View {
+        let state = session.progress(task)
+        let done = session.doneTasks.contains(task.id)
+        return HStack(spacing: QSpacing.m) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 20))
+                .foregroundStyle(done ? QColor.forest : QColor.inkSecondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(session.taskTitle(task)).font(QFont.text(15, weight: .semibold))
+                    .strikethrough(done, color: QColor.inkSecondary)
+                Text("Доска «\(session.cityName(task))»").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(done ? "готово" : "\(state.done)/\(state.total)")
+                .font(QFont.text(13, weight: .bold)).monospacedDigit()
+                .foregroundStyle(done ? QColor.forest : QColor.ink)
+        }
+        .padding(QSpacing.m)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+        .accessibilityElement(children: .combine)
     }
 }

@@ -53,6 +53,12 @@ public struct HabitDefinition: Identifiable, Hashable, Codable, Sendable {
         kind == .daily && counts(inWeekOf: date) && date >= startDate && weekdays.contains(date.weekday)
     }
 
+    /// Можно ли отметить ежедневный в этот день: по дням недели, в том числе раньше дня создания (14.4).
+    /// В DIS дни до создания не входят — `isScheduled` их не считает.
+    public func isMarkable(on date: LocalDate) -> Bool {
+        kind == .daily && counts(inWeekOf: date) && weekdays.contains(date.weekday)
+    }
+
     /// Входит ли недельный квест в DIS этой недели: с первой полной недели после создания.
     public func countsForWeek(starting weekStart: LocalDate) -> Bool {
         kind == .weekly && counts(inWeekOf: weekStart) && startDate <= weekStart
@@ -95,9 +101,10 @@ public enum HabitMarkingRules {
         date == today || date == today.adding(days: -1)
     }
 
-    /// Недельный квест можно отметить за любой день текущей недели (02, 12.11.2026), а также за вчера (воскресенье в понедельник).
+    /// Любой день текущей недели, а также вчера (воскресенье в понедельник): недельный — с 12.11.2026,
+    /// ежедневный — с 16.11.2026 (14.4), в том числе раньше дня создания привычки.
     public static func canMark(_ date: LocalDate, today: LocalDate, kind: HabitKind) -> Bool {
-        kind == .weekly ? canMark(date, today: today) || (date >= today.weekStart && date <= today) : canMark(date, today: today)
+        canMark(date, today: today) || (date >= today.weekStart && date <= today)
     }
 
     /// Отметку недельного квеста можно снять за любой день текущей недели (02, 11.11.2026); закрытые недели не меняются.

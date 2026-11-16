@@ -6,6 +6,7 @@ import Application
 struct HeroView: View {
     let model: AppModel
     @State private var isCreatingSkill = false
+    @State private var isShowingRanks = false
     @State private var isShowingSettings = false
     @State private var isEditingProfessions = false
     @State private var openedAttribute: Attribute?
@@ -83,9 +84,20 @@ struct HeroView: View {
     }
 
     private var rank: some View {
+        Button { isShowingRanks = true } label: { rankCard }
+            .buttonStyle(.plain)
+            .accessibilityHint("Открыть все ранги")
+            .sheet(isPresented: $isShowingRanks) { RankSheet(progress: progress) }
+    }
+
+    private var rankCard: some View {
         VStack(alignment: .leading, spacing: QSpacing.m) {
-            Text(AdventurerRank.title(for: progress.rank))
-                .font(QFont.title(20))
+            HStack {
+                Text(AdventurerRank.title(for: progress.rank))
+                    .font(QFont.title(20))
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+            }
             if let next = progress.nextRank {
                 ProgressBar(fraction: progress.rankPoints / Double(next.threshold), color: QColor.amber)
                 Text("\(Format.number(progress.rankPoints)) / \(next.threshold) очков до \(next.letter) · \(next.title)")

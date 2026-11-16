@@ -167,8 +167,11 @@ struct JournalView: View {
             ForEach(weekly) { status in
                 Button { openedHabit = status.id } label: {
                     HStack(spacing: QSpacing.l) {
-                        Text(status.habit.title).font(QFont.text(15)).frame(maxWidth: .infinity, alignment: .leading)
-                        ProgressBar(fraction: Double(status.weekDone) / Double(max(status.weekPlanned, 1)), color: QColor.forest)
+                        Text(status.habit.title).font(QFont.text(15))
+                            .strikethrough(status.isWeekGoalMet, color: QColor.inkSecondary)
+                            .foregroundStyle(status.isWeekGoalMet ? QColor.inkSecondary : QColor.ink)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ProgressBar(fraction: min(1, Double(status.weekDone) / Double(max(status.weekPlanned, 1))), color: QColor.forest)
                             .frame(width: 72)
                         Text("\(status.weekDone)/\(status.weekPlanned)")
                             .font(QFont.text(13, weight: .semibold)).monospacedDigit()

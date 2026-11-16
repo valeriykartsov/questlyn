@@ -96,9 +96,8 @@ struct Stage8CTests {
         let thursday = ISO8601DateFormatter().date(from: "2026-11-12T09:00:00Z")!
         let mark = HabitMarkService(store: store)
         _ = try await mark.mark(habitId: weekly.id, on: LocalDate(monday, timeZone: utc), now: thursday, timeZone: utc)
-        await #expect(throws: QuestlynError.cannotMarkDate) {
-            _ = try await mark.mark(habitId: daily.id, on: LocalDate(monday, timeZone: utc), now: thursday, timeZone: utc)
-        }
+        // С 14.4 ежедневный тоже отмечается за любой день текущей недели.
+        _ = try await mark.mark(habitId: daily.id, on: LocalDate(monday, timeZone: utc), now: thursday, timeZone: utc)
         await #expect(throws: QuestlynError.cannotMarkDate) {
             _ = try await mark.mark(habitId: weekly.id, on: LocalDate(thursday, timeZone: utc).adding(days: 1), now: thursday, timeZone: utc)
         }

@@ -16,6 +16,22 @@ struct WellbeingFlowTests {
         try await OnboardingService(store: store).start(heroName: "Арин", catalogItemIds: ["software-engineer"], classTitle: "К", now: now, timeZone: utc)
     }
 
+    /// 14.3: запись за прошлый день — не раньше создания героя и не в будущем; погода дня — по ней.
+    @Test func pastMoodRespectsHeroCreationAndNow() async throws {
+        try await setUp()
+        let service = WellbeingService(store: store)
+        let entry = try await service.recordPastMood(.bad, note: " длинный день ", isDaySummary: true, at: now - 3600, now: now + 86400, timeZone: utc)
+        #expect(entry.note == "длинный день" && entry.localDate == LocalDate(now, timeZone: utc))
+        await #expect(throws: QuestlynError.invalidDiaryDate) {
+            try await service.recordPastMood(.good, note: "", isDaySummary: false, at: now - 2 * 86400, now: now + 86400, timeZone: utc)
+        }
+        await #expect(throws: QuestlynError.invalidDiaryDate) {
+            try await service.recordPastMood(.good, note: "", isDaySummary: false, at: now + 2 * 86400, now: now + 86400, timeZone: utc)
+        }
+        let overview = try await TodayService(store: store).overview(now: now + 86400, timeZone: utc)
+        #expect(overview.moods.contains { $0.id == entry.id })
+    }
+
     @Test func checkInRecordsMoodAndCounters() async throws {
         try await setUp()
         let service = WellbeingService(store: store)

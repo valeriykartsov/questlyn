@@ -194,6 +194,40 @@ enum ExploreRenderer {
         return canvas.image
     }
 
+    /// Спрайт по строкам: символ → цвет, «.» — прозрачно (этап 14).
+    static func pattern(_ rows: [String], _ palette: [Character: UInt32]) -> CGImage? {
+        var canvas = RGBACanvas(width: rows.map(\.count).max() ?? 0, height: rows.count, fill: nil)
+        for (y, row) in rows.enumerated() { for (x, char) in row.enumerated() { if let color = palette[char] { canvas.set(x, y, color) } } }
+        return canvas.image
+    }
+
+    /// Бутылка с письмом в воде.
+    static func bottle() -> CGImage? {
+        pattern(["...cc...", "...gg...", "..gwwg..", ".gwppwg.", ".gwppwg.", ".gwwwwg.", "..gggg..", "~~~~~~~~"],
+                ["c": 0x7A4A2A, "g": 0x3E6FA3, "w": 0xC8E6F0, "p": 0xFFFCF6, "~": 0xDDE8F2])
+    }
+
+    /// Чёрная башня-подземелье Epic; взятая — с белым флагом.
+    static func tower(conquered: Bool) -> CGImage? {
+        pattern(["..f.f.f.f.f..", "..bbbbbbbbb..", "..bbbbbbbbb..", "...bbbbbbb...", "...bbbrbbbb...", "...bbbbbbb...", "...bbbbbbb...",
+                 "...bbrbbbb...", "...bbbbbbb...", "...bbbbbbb...", "...bbbbbbb...", "...bbbbbbb...", "...bbddbbb...", "...bbddbbb...",
+                 "..bbbddbbbb..", ".bbbbddbbbbb."],
+                ["b": 0x1B1B22, "f": conquered ? 0xFFFCF6 : 0x1B1B22, "r": conquered ? 0x8A8B92 : 0xE5482B, "d": 0x7A2E2E])
+    }
+
+    /// Маяк привычки; зажжённый — с огнём.
+    static func lighthouse(lit: Bool) -> CGImage? {
+        pattern(["...yyy...", "..yyyyy..", "...lll...", "...www...", "...rrr...", "...www...", "..rrrrr..", "..wwwww..", "..rrrrr..",
+                 "..wwwww..", ".sssssss."],
+                (lit ? ["y": 0xF2D27A] : [:]).merging(["l": lit ? 0xF7D898 : 0x8E8576, "w": 0xFFFCF6, "r": 0xA8432F, "s": 0x8E8576]) { a, _ in a })
+    }
+
+    /// Доска заданий у города.
+    static func board() -> CGImage? {
+        pattern(["oooooooooo", "oppopppppo", "oppoppoppo", "oooooooooo", "....tt....", "....tt....", "....tt...."],
+                ["o": 0x5C3410, "p": 0xF5F0E6, "t": 0x5C3410])
+    }
+
     static func chest(opened: Bool) -> CGImage? {
         var canvas = RGBACanvas(width: 10, height: 9, fill: nil)
         for y in 2..<9 { for x in 0..<10 { canvas.set(x, y, y == 2 || y == 8 || x == 0 || x == 9 ? 0x5C3410 : 0xB8651B) } }

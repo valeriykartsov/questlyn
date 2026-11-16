@@ -7,6 +7,7 @@ import Application
 struct DiarySheet: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
+    @State private var isAdding = false
 
     var body: some View {
         NavigationStack {
@@ -18,7 +19,78 @@ struct DiarySheet: View {
             .paperScreen()
             .navigationTitle("Дневник")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { isAdding = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Запись за прошлый день")
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } }
+            }
+            .sheet(isPresented: $isAdding) { NavigationStack { PastMoodForm(model: model) } }
+        }
+        .tint(QColor.amber)
+    }
+}
+
+/// Запись в «Дневник» за прошлый день (макет 14.3): день и время, настроение, заметка, «Итог дня».
+struct PastMoodForm: View {
+    let model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var moment = Date.now.addingTimeInterval(-86400)
+    @State private var mood: Mood = .neutral
+    @State private var note = ""
+    @State private var isDaySummary = true
+    @State private var isSaving = false
+
+    /// Не раньше начала дня создания героя.
+    private var earliest: Date {
+        guard let created = model.hero?.createdAt else { return .distantPast }
+        return Calendar.current.startOfDay(for: created)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                DatePicker("День и время", selection: $moment, in: earliest...Date.now)
+                    .environment(\.locale, Locale(identifier: "ru_RU"))
+            } footer: {
+                Text("Не раньше дня создания героя и не позже, чем сейчас.")
+            }
+            .listRowBackground(QColor.sheet)
+
+            Section("Настроение") {
+                Picker("Настроение", selection: $mood) {
+                    ForEach(Mood.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                TextField("Заметка", text: $note, prompt: Text("Заметка · необязательно").foregroundStyle(QColor.placeholder), axis: .vertical)
+                    .lineLimit(3...8)
+                Toggle("Итог дня", isOn: $isDaySummary).tint(QColor.forest)
+            }
+            .listRowBackground(QColor.sheet)
+
+            Section {
+                Text("Только настроение и заметка: вредное и полезное за прошлые дни не вносятся — HP задним числом не пересчитывается. Погода этого дня на картах — по настроению.")
+                    .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
+            }
+            .listRowBackground(Color.clear)
+        }
+        .scrollContentBackground(.hidden)
+        .paperScreen()
+        .navigationTitle("Запись в дневник")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Сохранить") {
+                    isSaving = true
+                    Task {
+                        if await model.recordPastMood(mood, note: note, isDaySummary: isDaySummary, at: moment) { dismiss() }
+                        isSaving = false
+                    }
+                }
+                .disabled(isSaving)
+            }
         }
         .tint(QColor.amber)
     }
