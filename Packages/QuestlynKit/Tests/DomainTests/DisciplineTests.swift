@@ -76,6 +76,22 @@ struct DisciplineTests {
         #expect(!HabitMarkingRules.canMark(today.adding(days: 1), today: today))
     }
 
+    @Test func dailyCanBeMarkedAnyDayOfThisWeekEvenBeforeCreation() {
+        // Пятница 13.11: можно отметить пн–пт этой недели, нельзя — прошлую неделю и будущее (14.4).
+        let friday = LocalDate(year: 2026, month: 11, day: 13)
+        #expect(HabitMarkingRules.canMark(friday.weekStart, today: friday, kind: .daily))
+        #expect(!HabitMarkingRules.canMark(friday.weekStart.adding(days: -1), today: friday, kind: .daily))
+        #expect(!HabitMarkingRules.canMark(friday.adding(days: 1), today: friday, kind: .daily))
+        // Понедельник: вчерашнее воскресенье прошлой недели — по-прежнему можно.
+        let monday = LocalDate(year: 2026, month: 11, day: 16)
+        #expect(HabitMarkingRules.canMark(monday.adding(days: -1), today: monday, kind: .daily))
+        let habit = HabitDefinition(kind: .daily, title: "Чтение", weekdays: [.monday, .wednesday], timezoneId: "UTC",
+                                    startDate: LocalDate(year: 2026, month: 11, day: 11), createdAt: Date(timeIntervalSince1970: 0))
+        let mondayBefore = LocalDate(year: 2026, month: 11, day: 9)
+        #expect(habit.isMarkable(on: mondayBefore) && !habit.isScheduled(on: mondayBefore))
+        #expect(!habit.isMarkable(on: LocalDate(year: 2026, month: 11, day: 10)))
+    }
+
     @Test func habitGrantsWithSkillOnly() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let heroId = UUID()

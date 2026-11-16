@@ -91,9 +91,9 @@ public struct HabitMarkService: Sendable {
     public func mark(habitId: UUID, on date: LocalDate, now: Date, timeZone: TimeZone) async throws -> [ProgressGrant] {
         guard let habit = try await store.habit(id: habitId) else { throw QuestlynError.habitNotFound }
         let today = LocalDate(now, timeZone: timeZone)
-        guard HabitMarkingRules.canMark(date, today: today, kind: habit.kind), date >= habit.startDate else { throw QuestlynError.cannotMarkDate }
+        guard HabitMarkingRules.canMark(date, today: today, kind: habit.kind) else { throw QuestlynError.cannotMarkDate }
         if habit.kind == .daily {
-            guard habit.isScheduled(on: date) else { throw QuestlynError.notScheduled }
+            guard habit.isMarkable(on: date) else { throw QuestlynError.notScheduled }
             guard try await store.occurrences(from: date, through: date).allSatisfy({ $0.habitId != habitId }) else {
                 throw QuestlynError.alreadyMarked
             }
@@ -114,12 +114,13 @@ public struct HabitMarkService: Sendable {
         return grants
     }
 
-    /// Снять конкретную отметку недельного квеста за любой день текущей недели (8.5). XP за неё отменяется.
+    /// Снять конкретную отметку за любой день текущей недели: недельного (8.5) и ежедневного (14.4). XP за неё отменяется.
     public func unmarkWeekly(occurrenceId: UUID, now: Date, timeZone: TimeZone) async throws {
         let today = LocalDate(now, timeZone: timeZone)
         guard let occurrence = try await store.allOccurrences().first(where: { $0.id == occurrenceId && $0.isActive }),
               let habit = try await store.habit(id: occurrence.habitId) else { throw QuestlynError.notCompleted }
-        guard habit.kind == .weekly, HabitMarkingRules.canUnmarkWeekly(occurrence.localDate, today: today) else {
+        _ = habit
+        guard HabitMarkingRules.canUnmarkWeekly(occurrence.localDate, today: today) else {
             throw QuestlynError.cannotMarkDate
         }
         try await store.undoOccurrence(id: occurrence.id, at: now)
@@ -129,7 +130,7 @@ public struct HabitMarkService: Sendable {
     /// Снять последнюю отметку за день.
     public func unmark(habitId: UUID, on date: LocalDate, now: Date, timeZone: TimeZone) async throws {
         let today = LocalDate(now, timeZone: timeZone)
-        guard HabitMarkingRules.canMark(date, today: today) else { throw QuestlynError.cannotMarkDate }
+        guard HabitMarkingRules.canMark(date, today: today, kind: .daily) else { throw QuestlynError.cannotMarkDate }
         guard let occurrence = try await store.occurrences(from: date, through: date).last(where: { $0.habitId == habitId }) else {
             throw QuestlynError.notCompleted
         }
@@ -217,6 +218,9 @@ public struct HabitStatus: Sendable, Equatable, Identifiable {
     public var weekDone: Int { weekMarks.filter { $0.key >= today.weekStart }.values.reduce(0, +) }
     public func marks(on date: LocalDate) -> Int { weekMarks[date] ?? 0 }
     /// Для daily — запланировано на неделе; для weekly — цель.
+    /// Недельный: цель недели выполнена — квест зачёркивается (14.2); отмечать сверх цели можно.
+    public var isWeekGoalMet: Bool { habit.kind == .weekly && weekDone >= max(weekPlanned, 1) }
+
     public var weekPlanned: Int {
         habit.kind == .weekly ? habit.targetPerWeek : today.weekDays.filter { habit.isScheduled(on: $0) }.count
     }

@@ -110,6 +110,16 @@ final class AppModel {
         }
     }
 
+    /// Запись «Дневника» за прошлый момент (14.3): только настроение и заметка.
+    func recordPastMood(_ mood: Mood, note: String, isDaySummary: Bool, at moment: Date) async -> Bool {
+        await run { [self] in
+            let entry = try await WellbeingService(store: store).recordPastMood(mood, note: note, isDaySummary: isDaySummary,
+                                                                               at: moment, now: .now, timeZone: timeZone)
+            if writesStateOfMind { try? await moodSink.write(entry) }
+            await reload()
+        }
+    }
+
     func checkIn(_ draft: CheckInDraft) async -> Bool {
         await run { [self] in
             let report = try await WellbeingService(store: store).checkIn(draft, now: .now, timeZone: timeZone)
@@ -404,8 +414,29 @@ final class AppModel {
         for mood in (overview?.moods ?? []).sorted(by: { $0.at < $1.at }) where mood.localDate >= first && mood.localDate <= last {
             weekMoods[mood.localDate.weekStart] = mood.mood
         }
+        // Этап 14: заметки «Дневника» — бутылки, Epic — Чёрные башни, отметки ежедневных — маяки.
+        let diary = (overview?.moods ?? []).compactMap { mood -> ExploreDiaryNote? in
+            guard let note = mood.note, mood.localDate >= first, mood.localDate <= last else { return nil }
+            return ExploreDiaryNote(date: mood.localDate, mood: mood.mood, note: note)
+        }.sorted { $0.date < $1.date }
+        let epics = self.epics.map { status in
+            ExploreEpic(title: status.epic.title, steps: status.steps.count,
+                        dates: status.steps.compactMap { $0.completion?.localDate ?? $0.quest.dueDate })
+        }
         return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
                             hasCalendar: calendar.isAuthorized || !events.isEmpty, timeZone: timeZone)
+            .with(diary: diary, epics: epics, habits: exploreHabitDays)
+    }
+
+    /// Дни отметок ежедневных за последние ~3 месяца — для маяков «Побродить» (14.5).
+    private(set) var exploreHabitDays: [ExploreHabitDays] = []
+
+    func loadExploreHabits() async {
+        let from = today.adding(days: -(ExploreRules.maxDays + 7))
+        let marks = (try? await store.occurrences(from: from, through: today)) ?? []
+        exploreHabitDays = habits.filter { $0.habit.kind == .daily }.map { status in
+            ExploreHabitDays(title: status.habit.title, days: Set(marks.filter { $0.habitId == status.id && $0.isActive }.map(\.localDate)))
+        }
     }
 
     /// Навыки, которые можно взять в дорогу: способность по виду активности или атрибуту профессии, сила — по XP.

@@ -49,6 +49,30 @@ public enum ExploreRules {
     /// Корабль быстрее шага вдвое; плавание не тратит HP и MP.
     public static let sailSpeedFactor = 2.0
 
+    // Этап 14 (16.11.2026, 09 раздел 1.2, Рабочая гипотеза).
+    public static let bottleCap = 8
+    public static let pickupRadius = 1.5
+    public static let towerCap = 2
+    public static let towerMinDistanceFromStart = 10.0
+    public static func guardianHP(steps: Int) -> Double { 40 + 15 * Double(steps) }
+    public static let guardianDamageShare = 0.12
+    public static let lighthouseStreak = 7
+    public static let lighthouseVisionBonus = 3.0
+    public static let lighthouseSeconds: TimeInterval = 60
+    public static let potionShare = 0.30
+    public static let torchVision = 15.0
+    public static let torchSeconds: TimeInterval = 30
+    public static let compassSeconds: TimeInterval = 20
+    public static let bagCap = 6
+    public static let taskRewardShare = 0.25
+    public static let taskChests = 2
+    /// Удар спутника в начале встречи — по его типу.
+    public static func companionStrike(_ tier: NPCTier) -> Double { 4 + 4 * Double(tier.rawValue) }
+    /// Сутки на карте — 12 минут; ночь 21–6, обзор ×0,7.
+    public static let daySeconds: TimeInterval = 12 * 60
+    public static let nightVisionFactor = 0.7
+    public static func isNight(hour: Double) -> Bool { hour >= 21 || hour < 6 }
+
     // Герой (09, раздел 4).
     public static func walkSpeed(endurance: Int) -> Double { min(4.5, 3 + 0.1 * Double(endurance)) }
     public static func strike(strength: Int) -> Double { 8 + 2 * Double(strength) }
@@ -227,6 +251,39 @@ public struct ExploreEvent: Hashable, Sendable {
     }
 }
 
+/// Заметка «Дневника» — бутылка с письмом (14.5).
+public struct ExploreDiaryNote: Hashable, Sendable {
+    public var date: LocalDate
+    public var mood: Mood
+    public var note: String
+    public init(date: LocalDate, mood: Mood, note: String) { self.date = date; self.mood = mood; self.note = note }
+}
+
+/// Epic: даты его шагов (срок или выполнение) — Чёрная башня в месяце шага (14.5).
+public struct ExploreEpic: Hashable, Sendable {
+    public var title: String
+    public var steps: Int
+    public var dates: [LocalDate]
+    public init(title: String, steps: Int, dates: [LocalDate]) { self.title = title; self.steps = steps; self.dates = dates }
+}
+
+/// Ежедневная привычка и дни её отметок — маяк при серии (14.5).
+public struct ExploreHabitDays: Hashable, Sendable {
+    public var title: String
+    public var days: Set<LocalDate>
+    public init(title: String, days: Set<LocalDate>) { self.title = title; self.days = days }
+
+    /// Самая длинная серия подряд внутри диапазона.
+    public func longestStreak(from first: LocalDate, through last: LocalDate) -> Int {
+        var best = 0, current = 0, day = first
+        while day <= last {
+            if days.contains(day) { current += 1; best = max(best, current) } else { current = 0 }
+            day = day.adding(days: 1)
+        }
+        return best
+    }
+}
+
 public struct ExploreInput: Sendable {
     public var first: LocalDate
     public var last: LocalDate
@@ -240,6 +297,9 @@ public struct ExploreInput: Sendable {
     public var hasCalendar: Bool
     /// Пояс для дат событий: по нему событие попадает на остров своего месяца.
     public var timeZone: TimeZone
+    public var diary: [ExploreDiaryNote] = []
+    public var epics: [ExploreEpic] = []
+    public var habits: [ExploreHabitDays] = []
 
     public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
                 nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
@@ -280,6 +340,17 @@ public struct ExploreInput: Sendable {
                      quests: quests.filter { quest in quest.date.map { $0 >= first && $0 <= last } ?? isLastMonth },
                      nights: nights.filter { $0.key >= first && $0.key <= last },
                      weekMoods: weekMoods, hasCalendar: hasCalendar, timeZone: timeZone)
+            .with(diary: diary.filter { $0.date >= first && $0.date <= last },
+                  epics: epics.filter { epic in epic.dates.contains { $0 >= first && $0 <= last } },
+                  habits: habits)
+    }
+
+    public func with(diary: [ExploreDiaryNote], epics: [ExploreEpic], habits: [ExploreHabitDays]) -> ExploreInput {
+        var copy = self
+        copy.diary = diary
+        copy.epics = epics
+        copy.habits = habits
+        return copy
     }
 
     /// Зерно из диапазона; «Другой остров» прибавляет номер попытки.
@@ -322,6 +393,66 @@ public struct IslandChest: Hashable, Sendable, Identifiable {
     public var id: Int
     public var title: String
     public var position: TilePoint
+    /// Предмет внутри (14.5): каждый сундук даёт один.
+    public var item: ExploreItem = .potionHP
+}
+
+/// Расходники из сундуков (14.5) — только в прогулке.
+public enum ExploreItem: String, Sendable, CaseIterable, Hashable {
+    case potionHP, potionMP, torch, compass
+
+    public var title: String {
+        switch self {
+        case .potionHP: "Зелье HP"
+        case .potionMP: "Зелье MP"
+        case .torch: "Факел"
+        case .compass: "Компас"
+        }
+    }
+
+    public var note: String {
+        switch self {
+        case .potionHP: "+\(Int(ExploreRules.potionShare * 100))% HP"
+        case .potionMP: "+\(Int(ExploreRules.potionShare * 100))% MP"
+        case .torch: "обзор \(Int(ExploreRules.torchVision)) клеток, \(Int(ExploreRules.torchSeconds)) с"
+        case .compass: "к сундуку, \(Int(ExploreRules.compassSeconds)) с"
+        }
+    }
+}
+
+/// Бутылка с письмом — в воде у берега (14.5).
+public struct IslandBottle: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var position: TilePoint
+    public var note: ExploreDiaryNote
+}
+
+/// Чёрная башня Epic со стражем (14.5).
+public struct IslandTower: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var title: String
+    public var steps: Int
+    public var position: TilePoint
+    public var guardianHP: Double { ExploreRules.guardianHP(steps: steps) }
+}
+
+/// Маяк привычки с серией (14.5) — на берегу.
+public struct IslandLighthouse: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var title: String
+    public var position: TilePoint
+}
+
+/// Задание доски в городе (14.5).
+public struct CityTask: Hashable, Sendable, Identifiable {
+    public enum Kind: Hashable, Sendable {
+        case reachVillage(Int)
+        case openChests(Int)
+        case lightCampfire
+    }
+    public var id: Int
+    public var cityId: Int
+    public var kind: Kind
 }
 
 public struct IslandCampfire: Hashable, Sendable, Identifiable {
@@ -375,6 +506,10 @@ public struct Island: Sendable {
     public var regions: [IslandRegion] = []
     /// Корабли — только когда островов больше одного.
     public var ships: [IslandShip] = []
+    public var bottles: [IslandBottle] = []
+    public var towers: [IslandTower] = []
+    public var lighthouses: [IslandLighthouse] = []
+    public var tasks: [CityTask] = []
 
     init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
          chests: [IslandChest], campfires: [IslandCampfire], weatherBands: [Weather], start: TilePoint) {
@@ -528,7 +663,17 @@ public enum IslandGenerator {
             }
             for var npc in part.npcs { npc.id = world.npcs.count; npc.home = moved(npc.home, origin); world.npcs.append(npc) }
             for var chest in part.chests { chest.id = world.chests.count; chest.position = moved(chest.position, origin); world.chests.append(chest) }
+            let villageBase = world.villages.count - part.villages.count, cityBase = world.cities.count - part.cities.count
             for var fire in part.campfires { fire.id = world.campfires.count; fire.position = moved(fire.position, origin); world.campfires.append(fire) }
+            for var bottle in part.bottles { bottle.id = world.bottles.count; bottle.position = moved(bottle.position, origin); world.bottles.append(bottle) }
+            for var tower in part.towers { tower.id = world.towers.count; tower.position = moved(tower.position, origin); world.towers.append(tower) }
+            for var light in part.lighthouses { light.id = world.lighthouses.count; light.position = moved(light.position, origin); world.lighthouses.append(light) }
+            for var task in part.tasks {
+                task.id = world.tasks.count
+                task.cityId += cityBase
+                if case let .reachVillage(village) = task.kind { task.kind = .reachVillage(1000 + village - 1000 + villageBase) }
+                world.tasks.append(task)
+            }
             world.regions.append(IslandRegion(id: index, first: months[index].first, last: months[index].last,
                                               size: part.size, origin: origin, side: part.side))
         }
@@ -667,6 +812,49 @@ public enum IslandGenerator {
             island.campfires.append(IslandCampfire(id: island.campfires.count, quality: best, position: spot))
         }
 
+        // Предметы в сундуках — по зерну.
+        for index in island.chests.indices {
+            island.chests[index].item = ExploreItem.allCases[random.int(ExploreItem.allCases.count)]
+        }
+        // Чёрные башни Epic — вдали от старта (14.5).
+        for epic in input.epics.prefix(ExploreRules.towerCap) {
+            guard let spot = freeSpot(minDistance: 4, from: occupied, avoid: [(island.start, ExploreRules.towerMinDistanceFromStart)]) else { continue }
+            occupied.append(spot)
+            island.towers.append(IslandTower(id: island.towers.count, title: epic.title, steps: epic.steps, position: spot))
+        }
+        // Маяки — на песке у воды, для привычек с серией от 7 дней в этом месяце.
+        let sands = (0..<(side * side)).compactMap { index -> TilePoint? in
+            island.terrain[index] == .sand ? TilePoint(index % side, index / side) : nil
+        }
+        for habit in input.habits where habit.longestStreak(from: input.first, through: input.last) >= ExploreRules.lighthouseStreak {
+            let options = sands.filter { point in island.lighthouses.allSatisfy { $0.position.distance(to: point) >= 10 } }
+            guard !options.isEmpty else { break }
+            island.lighthouses.append(IslandLighthouse(id: island.lighthouses.count, title: habit.title, position: options[random.int(options.count)]))
+        }
+        // Бутылки — в воде рядом с берегом: подобрать с берега или с корабля.
+        let shoreWater = (0..<(side * side)).compactMap { index -> TilePoint? in
+            guard island.terrain[index] == .water else { return nil }
+            let point = TilePoint(index % side, index / side)
+            return [(1, 0), (-1, 0), (0, 1), (0, -1)].contains { island.terrain(at: TilePoint(point.x + $0.0, point.y + $0.1)) == .sand } ? point : nil
+        }
+        for note in input.diary.prefix(ExploreRules.bottleCap) where !shoreWater.isEmpty {
+            let options = shoreWater.filter { point in island.bottles.allSatisfy { $0.position.distance(to: point) >= 6 } }
+            let pool = options.isEmpty ? shoreWater : options
+            let spot = pool[random.int(pool.count)]
+            island.bottles.append(IslandBottle(id: island.bottles.count, position: spot, note: note))
+        }
+        // Доска заданий — одно задание в каждом городе.
+        for city in island.cities {
+            let kind: CityTask.Kind
+            switch random.int(3) {
+            case 0 where !island.villages.isEmpty:
+                let village = island.villages.min { $0.center.distance(to: city.center) < $1.center.distance(to: city.center) }!
+                kind = .reachVillage(village.id)
+            case 2 where !island.campfires.isEmpty: kind = .lightCampfire
+            default: kind = island.chests.count >= ExploreRules.taskChests ? .openChests(ExploreRules.taskChests) : .lightCampfire
+            }
+            island.tasks.append(CityTask(id: island.tasks.count, cityId: city.id, kind: kind))
+        }
         island.weatherBands = weatherBands(input)
         return island
     }
@@ -752,18 +940,43 @@ public struct Encounter: Sendable {
     private var npcSkips = 0
     private var guardTurns = 0
     private var nextHitBonus = 1.0
+    private var companionHit = false
     private var random: ExploreRandom
+    /// Страж Чёрной башни (14.5): своё HP и урон, вместо типа NPC.
+    public let guardian: Guardian?
 
-    public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64) {
+    public struct Guardian: Hashable, Sendable {
+        public var title: String
+        public var hp: Double
+        public var damageShare: Double
+        public init(title: String, hp: Double, damageShare: Double = ExploreRules.guardianDamageShare) {
+            self.title = title; self.hp = hp; self.damageShare = damageShare
+        }
+    }
+
+    public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64, guardian: Guardian? = nil) {
         self.tier = tier
         self.hero = hero
         self.heroHP = heroHP
         self.heroMP = heroMP
-        self.npcHP = tier.hp
+        self.guardian = guardian
+        self.npcHP = guardian?.hp ?? tier.hp
         self.random = ExploreRandom(seed)
     }
 
-    public var npcMaxHP: Double { tier.hp }
+    public var npcMaxHP: Double { guardian?.hp ?? tier.hp }
+    /// Кто противник: «Страж башни» или тип NPC.
+    public var opponentTitle: String { guardian == nil ? tier.title : "Страж башни" }
+
+    /// Спутник бьёт один раз в начале встречи (14.5).
+    public mutating func companionAssist(tier companion: NPCTier) {
+        guard outcome == nil, turn == 1, !companionHit else { return }
+        companionHit = true
+        let damage = ExploreRules.companionStrike(companion).rounded()
+        npcHP = max(0, npcHP - damage)
+        log.append("Спутник ударил: −\(Int(damage))")
+        if npcHP <= 0 { outcome = .won; log.append("\(opponentTitle) повержен") }
+    }
     public var strikeRange: ClosedRange<Int> {
         let base = ExploreRules.strike(strength: hero.level(.strength))
         return Int((base * (1 - ExploreRules.hitSpread)).rounded())...Int((base * (1 + ExploreRules.hitSpread)).rounded())
@@ -800,7 +1013,7 @@ public struct Encounter: Sendable {
             cooldowns[skill.ability] = hero.cooldown
             use(skill)
         }
-        if npcHP <= 0 { outcome = .won; log.append("\(tier.title) повержен"); return }
+        if npcHP <= 0 { outcome = .won; log.append("\(opponentTitle) повержен"); return }
         guard outcome == nil else { return }
         npcTurn()
         turn += 1
@@ -848,11 +1061,11 @@ public struct Encounter: Sendable {
             log.append("\(tier.title) пропускает ход")
             return
         }
-        var damage = tier.damageShare * hero.maxHP * random.spread(ExploreRules.hitSpread)
+        var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if guardTurns > 0 { damage *= 0.5; guardTurns -= 1 }
         damage = damage.rounded()
         heroHP = max(0, heroHP - damage)
-        log.append("\(tier.title) ударил: −\(Int(damage)) HP")
+        log.append("\(opponentTitle) ударил: −\(Int(damage)) HP")
         if heroHP <= 0 { outcome = .lost; log.append("Вы без сил — очнётесь в городе") }
     }
 }

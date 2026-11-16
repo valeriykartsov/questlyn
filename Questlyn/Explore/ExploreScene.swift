@@ -38,6 +38,13 @@ final class ExploreScene: SKScene {
     private var chestNodes: [Int: SKSpriteNode] = [:]
     /// Фрегаты архипелага (12B).
     private var shipNodes: [SKSpriteNode] = []
+    // Этап 14: бутылки, башни, маяки, ночь, компас.
+    private var bottleNodes: [Int: SKSpriteNode] = [:]
+    private var towerNodes: [Int: SKSpriteNode] = [:]
+    private var lightNodes: [Int: SKSpriteNode] = [:]
+    private let nightNode = SKSpriteNode(color: UIColor(red: 0.04, green: 0.06, blue: 0.16, alpha: 1), size: CGSize(width: 2400, height: 2400))
+    private let compassNode = SKShapeNode()
+    private var clockAccumulator: Double = 0
     /// Нос корабля на спрайте — слева; плывя вправо по экрану, корабль разворачивается.
     private var shipFacesRight = false
     private var fireNodes: [Int: SKSpriteNode] = [:]
@@ -163,6 +170,44 @@ final class ExploreScene: SKScene {
             fireNodes[fire.id] = node
             addChild(node)
         }
+        for bottle in island.bottles {
+            let node = sprite(ExploreRenderer.bottle())
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.2)
+            node.position = point(Double(bottle.position.x), Double(bottle.position.y))
+            node.zPosition = depth(Double(bottle.position.x), Double(bottle.position.y))
+            node.run(.repeatForever(.sequence([.moveBy(x: 0, y: 1, duration: 0.8), .moveBy(x: 0, y: -1, duration: 0.8)])))
+            bottleNodes[bottle.id] = node
+            addChild(node)
+        }
+        for tower in island.towers {
+            let node = sprite(ExploreRenderer.tower(conquered: false))
+            node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            node.setScale(1.6)
+            node.position = point(Double(tower.position.x), Double(tower.position.y))
+            node.zPosition = depth(Double(tower.position.x), Double(tower.position.y))
+            towerNodes[tower.id] = node
+            addChild(node)
+            addLabel("Чёрная башня · \(tower.title)", at: tower.position, lift: 30, dark: true)
+        }
+        for light in island.lighthouses {
+            let node = sprite(ExploreRenderer.lighthouse(lit: false))
+            node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            node.setScale(1.4)
+            node.position = point(Double(light.position.x), Double(light.position.y))
+            node.zPosition = depth(Double(light.position.x), Double(light.position.y))
+            lightNodes[light.id] = node
+            addChild(node)
+            addLabel("Маяк · \(light.title)", at: light.position, lift: 20, dark: false)
+        }
+        for task in island.tasks {
+            guard let city = island.cities.first(where: { $0.id == task.cityId }) else { continue }
+            let node = sprite(ExploreRenderer.board())
+            node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            let spot = (Double(city.center.x) + 2, Double(city.center.y) - 1)
+            node.position = point(spot.0, spot.1)
+            node.zPosition = depth(spot.0, spot.1)
+            addChild(node)
+        }
         let looks: [HeroAppearance] = [
             HeroAppearance(hair: .red, skin: .light, outfit: .archer), HeroAppearance(hair: .blond, skin: .tan, outfit: .warrior),
             HeroAppearance(hair: .black, skin: .deep, outfit: .mage), HeroAppearance(hair: .dark, skin: .medium, outfit: .baller),
@@ -231,11 +276,42 @@ final class ExploreScene: SKScene {
         camera = cameraNode
         cameraNode.setScale(session.zoom)
         addChild(cameraNode)
+        // Ночь (14.5): тёмная пелена поверх острова, под туманом.
+        nightNode.zPosition = 19_500
+        nightNode.alpha = 0
+        cameraNode.addChild(nightNode)
+        // Компас: стрелка к ближайшему неоткрытому сундуку.
+        let arrow = CGMutablePath()
+        arrow.move(to: CGPoint(x: 0, y: 10)); arrow.addLine(to: CGPoint(x: -6, y: -6)); arrow.addLine(to: CGPoint(x: 6, y: -6)); arrow.closeSubpath()
+        compassNode.path = arrow
+        compassNode.fillColor = UIColor(red: 0.18, green: 0.42, blue: 0.31, alpha: 1)
+        compassNode.strokeColor = UIColor(white: 1, alpha: 0.9)
+        compassNode.lineWidth = 1.5
+        compassNode.zPosition = 21_000
+        compassNode.isHidden = true
+        cameraNode.addChild(compassNode)
         fogNode.zPosition = 20_000
         cameraNode.addChild(fogNode)
         if session.precipitation { cameraNode.addChild(precipitationNode(snow: session.season == .winter)) }
         updateFog()
         layoutDynamic()
+    }
+
+    /// Подпись объекта острова в масштабе персонажей.
+    private func addLabel(_ text: String, at tile: TilePoint, lift: Double, dark: Bool) {
+        let label = SKLabelNode(text: text)
+        label.fontName = "HelveticaNeue-Bold"
+        label.fontSize = 4
+        label.fontColor = dark ? .white : UIColor(red: 0.12, green: 0.16, blue: 0.27, alpha: 1)
+        label.position = point(Double(tile.x), Double(tile.y), lift: lift)
+        label.zPosition = 9_000
+        let plate = SKShapeNode(rectOf: CGSize(width: label.frame.width + 5, height: 6.5), cornerRadius: 2)
+        plate.fillColor = dark ? UIColor(red: 0.1, green: 0.1, blue: 0.13, alpha: 0.92) : UIColor(white: 1, alpha: 0.85)
+        plate.strokeColor = .clear
+        plate.position = CGPoint(x: 0, y: 1.6)
+        plate.zPosition = -1
+        label.addChild(plate)
+        addChild(label)
     }
 
     /// Персонажи мельче при прежнем масштабе карты (8C.9).
@@ -325,9 +401,42 @@ final class ExploreScene: SKScene {
         moveNPCs(dt)
         moveGhosts(dt)
         interact(dt)
+        advanceClock(dt)
         layoutDynamic()
         updateFog()
+        updateCompass()
         if abs(cameraNode.xScale - session.zoom) > 0.001 { cameraNode.run(.scale(to: session.zoom, duration: 0.15)) }
+    }
+
+    /// Сутки на острове — 12 минут (14.5); модель обновляется раз в игровую минуту.
+    private func advanceClock(_ dt: Double) {
+        clockAccumulator += dt / ExploreRules.daySeconds * 24
+        if clockAccumulator >= 1.0 / 60 {
+            session.clockHour = (session.clockHour + clockAccumulator).truncatingRemainder(dividingBy: 24)
+            clockAccumulator = 0
+        }
+        // Плавные сумерки: 19–21 темнеет, 6–8 светает.
+        let hour = session.clockHour
+        let darkness: Double = switch hour {
+        case 21..<24, 0..<6: 1
+        case 19..<21: (hour - 19) / 2
+        case 6..<8: 1 - (hour - 6) / 2
+        default: 0
+        }
+        nightNode.alpha = CGFloat(darkness * 0.45)
+    }
+
+    private func updateCompass() {
+        guard (session.compassUntil ?? .distantPast) > .now else { compassNode.isHidden = true; return }
+        let goals = session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position)
+        guard let goal = goals.min(by: { hypot(Double($0.x) - heroPosition.x, Double($0.y) - heroPosition.y) < hypot(Double($1.x) - heroPosition.x, Double($1.y) - heroPosition.y) }) else {
+            compassNode.isHidden = true; return
+        }
+        let from = point(heroPosition.x, heroPosition.y), to = point(Double(goal.x), Double(goal.y))
+        let angle = atan2(to.y - from.y, to.x - from.x)
+        compassNode.isHidden = false
+        compassNode.zRotation = angle - .pi / 2
+        compassNode.position = CGPoint(x: cos(angle) * 40, y: sin(angle) * 40 + 20)
     }
 
     private func moveHero(_ dt: Double) {
@@ -356,6 +465,17 @@ final class ExploreScene: SKScene {
         for index in npcs.indices {
             var state = npcs[index]
             let npc = island.npcs[index]
+            // Спутник (14.5) идёт за героем, в том числе на корабле.
+            if npc.id == session.companion?.id {
+                state.peaceful = true
+                state.chasing = false
+                let target = (heroPosition.x - 0.9, heroPosition.y + 0.5)
+                let dx = target.0 - state.x, dy = target.1 - state.y, distance = hypot(dx, dy)
+                if distance > 6 || session.sailing != nil { state.x = target.0; state.y = target.1 }
+                else if distance > 0.3 { let move = min(distance, session.speed * dt); state.x += dx / distance * move; state.y += dy / distance * move }
+                npcs[index] = state
+                continue
+            }
             let toHero = hypot(heroPosition.x - state.x, heroPosition.y - state.y)
             state.chasing = !state.peaceful && now >= state.calmUntil && !heroSafe && toHero <= npc.tier.chaseRadius
             if state.chasing {
@@ -423,10 +543,36 @@ final class ExploreScene: SKScene {
     private func interact(_ dt: Double) {
         let island = session.island
         let tile = session.heroTile
+        let here = (x: heroPosition.x, y: heroPosition.y)
+        func near(_ point: TilePoint, _ radius: Double) -> Bool { hypot(Double(point.x) - here.x, Double(point.y) - here.y) <= radius }
+        // Бутылки — с берега или с корабля (14.5).
+        if session.letter == nil, let bottle = island.bottles.first(where: { !session.readBottles.contains($0.id) && near($0.position, ExploreRules.pickupRadius) }) {
+            session.readBottles.insert(bottle.id)
+            bottleNodes[bottle.id]?.run(.sequence([.fadeOut(withDuration: 0.3), .removeFromParent()]))
+            session.letter = bottle
+        }
         guard session.sailing == nil else { return }
         if let region = island.region(at: tile) { session.visitedRegions.insert(region.id) }
+        for village in island.villages where !session.visitedVillages.contains(village.id) && near(village.center, 1.5) {
+            session.visitedVillages.insert(village.id)
+        }
+        for light in island.lighthouses where !session.litLighthouses.contains(light.id) && near(light.position, 1.5) {
+            session.litLighthouses.insert(light.id)
+            session.lighthouseUntil = .now + ExploreRules.lighthouseSeconds
+            lightNodes[light.id]?.texture = texture(ExploreRenderer.lighthouse(lit: true))
+            if let node = lightNodes[light.id] { flash(node) }
+            session.toast = "Маяк «\(light.title)» зажжён: обзор +\(Int(ExploreRules.lighthouseVisionBonus))"
+        }
+        if let tower = island.towers.first(where: { !session.conqueredTowers.contains($0.id) && near($0.position, 1.2) }) {
+            path = []
+            session.startGuardian(tower)
+            onEncounter?()
+            return
+        }
         if let city = island.safeCity(at: tile) {
             session.visitedCities.insert(city.id)
+            // Доска заданий: первое посещение города берёт его задание.
+            if let task = island.tasks.first(where: { $0.cityId == city.id }) { session.takeTask(task) }
             session.lastCity = city.center
             // В городе +10% в секунду (09, раздел 5); обновляем модель не чаще раза в 0,25 с.
             restAccumulator += dt
@@ -440,7 +586,7 @@ final class ExploreScene: SKScene {
             session.openedChests.insert(chest.id)
             chestNodes[chest.id]?.texture = texture(ExploreRenderer.chest(opened: true))
             if let node = chestNodes[chest.id] { flash(node) }
-            session.toast = "Сундук: \(chest.title)"
+            session.toast = "Сундук: \(chest.title)" + (session.addItem(chest.item) ? " · \(chest.item.title)" : " · сумка полна")
         }
         for fire in island.campfires where !session.litCampfires.contains(fire.id) && fire.position.distance(to: tile) <= 1 {
             session.litCampfires.insert(fire.id)
@@ -451,6 +597,7 @@ final class ExploreScene: SKScene {
             session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * share)
             session.toast = "Костёр: +\(Int((share * 100).rounded()))% HP и MP"
         }
+        session.settleTasks()
     }
 
     /// Короткая вспышка при находке: увеличение и золотое кольцо.
@@ -539,7 +686,25 @@ final class ExploreScene: SKScene {
 
     // MARK: После встречи
 
-    func resolveEncounter(_ outcome: EncounterOutcome?, npcId: Int?) {
+    func resolveEncounter(_ outcome: EncounterOutcome?, npcId: Int?, towerId: Int? = nil) {
+        if let towerId {
+            if outcome == .won {
+                towerNodes[towerId]?.texture = texture(ExploreRenderer.tower(conquered: true))
+                if let node = towerNodes[towerId] { flash(node) }
+            } else {
+                // Побег или поражение — отойти от башни, чтобы встреча не началась снова.
+                if outcome == .lost { let home = session.lastCity; heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home }
+                else if let tower = session.island.towers.first(where: { $0.id == towerId }) {
+                    let dx = heroPosition.x - Double(tower.position.x), dy = heroPosition.y - Double(tower.position.y)
+                    let length = max(0.01, hypot(dx, dy))
+                    let target = TilePoint(Int((heroPosition.x + dx / length * 3).rounded()), Int((heroPosition.y + dy / length * 3).rounded()))
+                    if session.island.isLand(target) { heroPosition = (Double(target.x), Double(target.y)); session.heroTile = target }
+                }
+            }
+            path = []
+            layoutDynamic()
+            return
+        }
         guard let npcId, npcs.indices.contains(npcId) else { return }
         switch outcome {
         case .won, .persuaded:

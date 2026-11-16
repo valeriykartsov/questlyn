@@ -28,7 +28,7 @@ struct HabitDetailView: View {
                 ToolbarItem(placement: .primaryAction) { Button("Изменить") { isEditing = true } }
             }
             .task(id: status.map { "\($0.weekDone)-\($0.today)" }) {
-                if status?.habit.kind == .weekly { weekMarks = await model.weekOccurrences(habitId: habitId) }
+                weekMarks = await model.weekOccurrences(habitId: habitId)
             }
             .alert(pendingUnmark.map { "Снять отметку за \(Format.shortDay($0.localDate).lowercased())?" } ?? "",
                    isPresented: Binding(get: { pendingUnmark != nil }, set: { if !$0 { pendingUnmark = nil } })) {
@@ -109,7 +109,7 @@ struct HabitDetailView: View {
         HStack(spacing: QSpacing.xs) {
             ForEach(status.today.weekDays, id: \.self) { day in
                 let count = status.weekMarks[day] ?? 0
-                let scheduled = status.habit.kind == .weekly || status.habit.isScheduled(on: day)
+                let scheduled = status.habit.kind == .weekly || status.habit.isMarkable(on: day)
                 let isToday = day == status.today
                 VStack(spacing: QSpacing.xs) {
                     Text(day.weekday.shortTitle)
@@ -138,9 +138,11 @@ struct HabitDetailView: View {
         }
     }
 
-    /// Недельный квест: касание дня текущей недели (не позже сегодня) — отметить или снять отметку (8C.8).
+    /// Касание дня текущей недели (не позже сегодня) — отметить или снять отметку: недельный (8C.8),
+    /// ежедневный — по дням расписания, в том числе раньше дня создания (14.4).
     private func canToggle(_ day: LocalDate, status: HabitStatus) -> Bool {
-        status.habit.kind == .weekly && day <= status.today && day >= status.today.weekStart && day >= status.habit.startDate
+        guard day <= status.today, day >= status.today.weekStart else { return false }
+        return status.habit.kind == .weekly || status.habit.isMarkable(on: day)
     }
 
     private func toggleWeekDay(_ day: LocalDate, status: HabitStatus, count: Int) {

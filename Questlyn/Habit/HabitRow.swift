@@ -10,6 +10,9 @@ struct HabitRow: View {
     let toggle: () -> Void
     let open: () -> Void
 
+    /// Ежедневный — отмечен сегодня; недельный — цель недели выполнена (14.2).
+    private var isDone: Bool { status.habit.kind == .daily ? status.doneToday : status.isWeekGoalMet }
+
     var body: some View {
         HStack(spacing: QSpacing.l) {
             Button(action: toggle) {
@@ -24,8 +27,8 @@ struct HabitRow: View {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(status.habit.title)
                             .font(QFont.text(15))
-                            .strikethrough(status.doneToday && status.habit.kind == .daily, color: QColor.inkSecondary)
-                            .foregroundStyle(status.doneToday && status.habit.kind == .daily ? QColor.inkSecondary : QColor.ink)
+                            .strikethrough(isDone, color: QColor.inkSecondary)
+                            .foregroundStyle(isDone ? QColor.inkSecondary : QColor.ink)
                             .multilineTextAlignment(.leading)
                         if status.habit.kind == .weekly {
                             Text("На неделе · \(status.weekDone) из \(status.weekPlanned)")
