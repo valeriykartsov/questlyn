@@ -90,6 +90,25 @@ final class ExploreSession {
     let landCount: Int
     /// Карта мира открыта — игра на паузе.
     var isWorldMapOpen = false
+    // MARK: 15B и 15G (17.11.2026)
+
+    /// Баффы монументов полезного: вид → сила 0…1, до конца прогулки.
+    var buffs: [ExploreBuff: Double] = [:]
+    /// Открытая карточка памятника Epic.
+    var monumentCard: IslandMonument?
+    var finalTower: IslandTower? { island.towers.first(where: \.isFinal) }
+    var isArchipelagoPassed: Bool { finalTower.map { conqueredTowers.contains($0.id) } ?? false }
+    func buff(_ kind: ExploreBuff) -> Double { (buffs[kind] ?? 0) * kind.maximum }
+    /// Подойти к монументу: бафф до конца прогулки (заменяет, если сильнее).
+    func visit(_ shrine: IslandShrine) {
+        guard shrine.strength > (buffs[shrine.buff] ?? 0) else { return }
+        buffs[shrine.buff] = shrine.strength
+        toast = "Монумент «\(shrine.buff.title)»: \(shrine.buff.effect(shrine.strength)) до конца прогулки"
+    }
+    /// Множители боя от баффов: растяжка — меньше урона, отдых — короче перезарядка.
+    var damageTakenFactor: Double { 1 - buff(.stretch) }
+    var cooldownFactor: Double { 1 - buff(.nap) }
+
     // MARK: Режим игры (16.11.2026)
 
     let mode: ExploreMode
@@ -108,6 +127,8 @@ final class ExploreSession {
         activeTower = nil
         activeFight = ActiveFight(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id),
                                   companion: companion?.tier)
+        activeFight?.damageTakenFactor = damageTakenFactor
+        activeFight?.cooldownFactor = cooldownFactor
         toast = "Встреча · \(npc.tier.title) — бей и отходи; дальше \(Self.cells(npc.tier.chaseRadius)) — сбежал"
     }
 
@@ -115,7 +136,10 @@ final class ExploreSession {
         activeTower = tower.id
         activeNPC = nil
         activeFight = ActiveFight(tier: .regular, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 17 + tower.id),
-                                  guardian: .init(title: tower.title, hp: tower.guardianHP), companion: companion?.tier)
+                                  guardian: .init(title: tower.title, hp: tower.guardianHP, damageShare: tower.guardianDamageShare),
+                                  companion: companion?.tier)
+        activeFight?.damageTakenFactor = damageTakenFactor
+        activeFight?.cooldownFactor = cooldownFactor
         toast = "Страж башни «\(tower.title)» — дальше \(Self.cells(ExploreRules.guardianLeash)) от башни — сбежал"
     }
 
@@ -153,7 +177,8 @@ final class ExploreSession {
             if let id = activeTower, let tower = island.towers.first(where: { $0.id == id }) {
                 conqueredTowers.insert(id)
                 let item = ExploreItem.allCases[(id + steps) % ExploreItem.allCases.count]
-                toast = "Сундук «Epic: \(tower.title)»" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
+                toast = tower.isFinal ? "🏆 Архипелаг пройден — босс повержен"
+                    : "Сундук «Epic: \(tower.title)»" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
             } else {
                 toast = "\(fight.opponentTitle) повержен"
             }
@@ -276,7 +301,9 @@ final class ExploreSession {
         encounterTower = tower.id
         encounterNPC = nil
         var fight = Encounter(tier: .regular, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 17 + tower.id),
-                              guardian: .init(title: tower.title, hp: tower.guardianHP))
+                              guardian: .init(title: tower.title, hp: tower.guardianHP, damageShare: tower.guardianDamageShare))
+        fight.damageTakenFactor = damageTakenFactor
+        fight.cooldownFactor = cooldownFactor
         if let companion { fight.companionAssist(tier: companion.tier) }
         encounter = fight
     }
@@ -340,13 +367,14 @@ final class ExploreSession {
     var speed: Double {
         if sailing != nil { return hero.walkSpeed * ExploreRules.sailSpeedFactor }
         // По дороге быстрее — по её износу (15A.2).
-        return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) * (roadHere?.wear.speedFactor ?? 1)
+        let swamp = island.isSwamp(heroTile) ? ExploreRules.swampSpeedFactor : 1
+        return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) * (roadHere?.wear.speedFactor ?? 1) * (1 + buff(.walk)) * swamp
     }
     /// Обзор: Разведка и факел — 15 клеток; маяк +3; ночью ×0,7 (14.5).
     var vision: Double {
         let now = Date.now
         if (scoutUntil ?? .distantPast) > now || (torchUntil ?? .distantPast) > now { return ExploreRules.torchVision }
-        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0)
+        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom)
         if isNight { value *= ExploreRules.nightVisionFactor }
         return value
     }
@@ -355,6 +383,8 @@ final class ExploreSession {
         encounterNPC = npc.id
         encounterTower = nil
         var fight = Encounter(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id))
+        fight.damageTakenFactor = damageTakenFactor
+        fight.cooldownFactor = cooldownFactor
         if let companion { fight.companionAssist(tier: companion.tier) }
         encounter = fight
     }
@@ -372,7 +402,8 @@ final class ExploreSession {
             if let id = encounterTower, let tower = island.towers.first(where: { $0.id == id }) {
                 conqueredTowers.insert(id)
                 let item = ExploreItem.allCases[(id + steps) % ExploreItem.allCases.count]
-                toast = "Сундук «Epic: \(tower.title)»" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
+                toast = tower.isFinal ? "🏆 Архипелаг пройден — босс повержен"
+                    : "Сундук «Epic: \(tower.title)»" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
             }
         case .persuaded:
             persuaded += 1

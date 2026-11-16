@@ -116,4 +116,25 @@ struct DisciplineTests {
         #expect(!weekly.countsForWeek(starting: start.weekStart))
         #expect(weekly.countsForWeek(starting: start.weekStart.adding(days: 7)))
     }
+
+    // MARK: По дням (15G.1)
+
+    @Test func dayFormulaMatchesWeekOverSevenDays() {
+        // 100% при одной привычке: v = 1 → +30/7.
+        let full = DisciplineCalculator.evaluateDay(done: 1, scheduled: 1)
+        #expect(abs(full.delta - 30.0 / 7) < 0.0001 && full.v == 1)
+        // Пустой день: 0%, v = 0,5 → −15/7; спад за день не больше −30/7.
+        #expect(abs(DisciplineCalculator.evaluateDay(done: 0, scheduled: 0).delta + 15.0 / 7) < 0.0001)
+        #expect(DisciplineCalculator.evaluateDay(done: 0, scheduled: 3).delta >= -30.0 / 7 - 0.0001)
+        // 2 из 3: v = min(1,5; 0,5 + 21/14) = 1,5.
+        let two = DisciplineCalculator.evaluateDay(done: 2, scheduled: 3)
+        #expect(two.v == 1.5 && abs(two.delta - 0.6 * (200.0 / 3 - 50) * 1.5 / 7) < 0.0001)
+        // Воскресенье: недельный квест 2 из 3 входит в p.
+        let sunday = DisciplineCalculator.evaluateDay(done: 1, scheduled: 1, weekly: [(2, 3)])
+        #expect(abs(sunday.percent - (100 + 200.0 / 3) / 2) < 0.0001)
+        #expect(DisciplineCalculator.firstCountedDay(heroCreatedOn: LocalDate(year: 2026, month: 11, day: 4)) == LocalDate(year: 2026, month: 11, day: 5))
+        let day = LocalDate(year: 2026, month: 11, day: 15)
+        #expect(DisciplineCalculator.isDaily(DisciplineCalculator.sourceId(day: day)))
+        #expect(!DisciplineCalculator.isDaily(DisciplineCalculator.sourceId(weekStart: day.weekStart)))
+    }
 }

@@ -73,6 +73,20 @@ public enum ExploreRules {
     public static let nightVisionFactor = 0.7
     public static func isNight(hour: Double) -> Bool { hour >= 21 || hour < 6 }
 
+    // Этапы 15B и 15G (17.11.2026, 09 раздел 1.4, Рабочая гипотеза).
+    /// Финальная Чёрная башня: HP 150 + 2 × дни диапазона, урон 15% макс. HP.
+    public static func finalTowerHP(days: Int) -> Double { 150 + 2 * Double(days) }
+    public static let finalTowerDamageShare = 0.15
+    /// Болото: пятен на остров не больше, радиус пятна; −1% HP в секунду, шаг ×0,6.
+    public static let swampCap = 8
+    public static let swampRadius = 3.0
+    public static let swampHPPerSecond = 0.01
+    public static let swampSpeedFactor = 0.6
+    /// Сектора навыков: три навыка с наибольшим ростом за месяц.
+    public static let sectorSkills = 3
+    /// Монумент полезного: полная сила баффа — с 10 отметок вида за месяц.
+    public static let buffFullMarks = 10.0
+
     // Этап 15A (16.11.2026, 09 раздел 1.3, Рабочая гипотеза).
     /// Горы — не ближе 4 клеток к морю, там, где шум высоты выше порога.
     public static let mountainCoastDistance = 4
@@ -276,6 +290,83 @@ public struct ExploreEpic: Hashable, Sendable {
     public init(title: String, steps: Int, dates: [LocalDate]) { self.title = title; self.steps = steps; self.dates = dates }
 }
 
+/// Навык и его прирост XP по дням (15B.1): сектора острова.
+public struct ExploreSkillGain: Hashable, Sendable {
+    public var title: String
+    public var gains: [LocalDate: Double]
+    public init(title: String, gains: [LocalDate: Double]) { self.title = title; self.gains = gains }
+    public func gain(from first: LocalDate, through last: LocalDate) -> Double {
+        gains.filter { $0.key >= first && $0.key <= last }.values.reduce(0, +)
+    }
+}
+
+/// Закрытый Epic (15B.2): памятник на острове месяца закрытия.
+public struct ExploreClosedEpic: Hashable, Sendable {
+    public var title: String
+    public var steps: Int
+    public var started: LocalDate
+    public var closed: LocalDate
+    public init(title: String, steps: Int, started: LocalDate, closed: LocalDate) {
+        self.title = title; self.steps = steps; self.started = started; self.closed = closed
+    }
+}
+
+/// Вид «Полезного» из «Как вы?» для монументов (15G.4).
+public enum ExploreBuff: String, Sendable, CaseIterable, Hashable {
+    case water, walk, stretch, vegetables, nap, custom
+
+    public init(_ kind: BenefitKind) {
+        switch kind {
+        case .water: self = .water
+        case .outdoorWalk: self = .walk
+        case .stretching: self = .stretch
+        case .vegetables: self = .vegetables
+        case .nap: self = .nap
+        case .custom: self = .custom
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case .water: "Вода 2 л"
+        case .walk: "Прогулка на воздухе"
+        case .stretch: "Растяжка"
+        case .vegetables: "Овощи и фрукты"
+        case .nap: "Дневной отдых"
+        case .custom: "Своё действие"
+        }
+    }
+
+    /// Сила на максимуме: доля в секунду, множитель или клетки.
+    public var maximum: Double {
+        switch self {
+        case .water, .vegetables: 0.005
+        case .walk: 0.20
+        case .stretch: 0.25
+        case .nap: 0.30
+        case .custom: 2
+        }
+    }
+
+    /// «+0,5% HP в секунду» — при силе `strength` (0…1).
+    public func effect(_ strength: Double) -> String {
+        let value = maximum * strength
+        func number(_ x: Double, _ digits: Int = 1) -> String {
+            x.formatted(.number.precision(.fractionLength(0...digits)).locale(Locale(identifier: "ru_RU")))
+        }
+        switch self {
+        case .water: return "+\(number(value * 100))% HP в секунду"
+        case .vegetables: return "+\(number(value * 100))% MP в секунду"
+        case .walk: return "скорость +\(number(value * 100, 0))%"
+        case .stretch: return "урон по герою −\(number(value * 100, 0))%"
+        case .nap: return "перезарядка −\(number(value * 100, 0))%"
+        case .custom: return "обзор +\(number(value))"
+        }
+    }
+
+    public static func strength(marks: Int) -> Double { min(1, Double(marks) / ExploreRules.buffFullMarks) }
+}
+
 /// Отметка настроения (15A): погода прогулки — случайная отметка месяца.
 public struct ExploreMood: Hashable, Sendable {
     public var date: LocalDate
@@ -334,6 +425,13 @@ public struct ExploreInput: Sendable {
     public var epics: [ExploreEpic] = []
     public var habits: [ExploreHabitDays] = []
     public var moods: [ExploreMood] = []
+    // 15B, 15G.
+    public var skillGains: [ExploreSkillGain] = []
+    public var closedEpics: [ExploreClosedEpic] = []
+    /// Отметки вредного — по одной дате на отметку.
+    public var harmDays: [LocalDate] = []
+    /// Отметки полезного: дата и вид.
+    public var benefits: [(date: LocalDate, buff: ExploreBuff)] = []
 
     public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
                 nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
@@ -378,6 +476,19 @@ public struct ExploreInput: Sendable {
                   epics: epics.filter { epic in epic.dates.contains { $0 >= first && $0 <= last } },
                   habits: habits)
             .with(moods: moods.filter { $0.date >= first && $0.date <= last })
+            .with(skillGains: skillGains, closedEpics: closedEpics.filter { $0.closed >= first && $0.closed <= last },
+                  harmDays: harmDays.filter { $0 >= first && $0 <= last },
+                  benefits: benefits.filter { $0.date >= first && $0.date <= last })
+    }
+
+    public func with(skillGains: [ExploreSkillGain], closedEpics: [ExploreClosedEpic], harmDays: [LocalDate],
+                     benefits: [(date: LocalDate, buff: ExploreBuff)]) -> ExploreInput {
+        var copy = self
+        copy.skillGains = skillGains
+        copy.closedEpics = closedEpics
+        copy.harmDays = harmDays
+        copy.benefits = benefits
+        return copy
     }
 
     public func with(moods: [ExploreMood]) -> ExploreInput {
@@ -538,7 +649,38 @@ public struct IslandTower: Hashable, Sendable, Identifiable {
     public var title: String
     public var steps: Int
     public var position: TilePoint
-    public var guardianHP: Double { ExploreRules.guardianHP(steps: steps) }
+    /// Финальная Чёрная башня архипелага (15G.2): своё HP и урон.
+    public var isFinal = false
+    public var finalHP: Double = 0
+    public var guardianHP: Double { isFinal ? finalHP : ExploreRules.guardianHP(steps: steps) }
+    public var guardianDamageShare: Double { isFinal ? ExploreRules.finalTowerDamageShare : ExploreRules.guardianDamageShare }
+}
+
+/// Сектор навыка на острове месяца (15B.1): рост — богаче, без роста — пустошь.
+public struct IslandSector: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var region: Int
+    public var title: String
+    public var gain: Double
+    public var isWaste: Bool { gain <= 0 }
+    /// Табличка у центра сектора.
+    public var sign: TilePoint
+}
+
+/// Памятник закрытого Epic (15B.2).
+public struct IslandMonument: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var epic: ExploreClosedEpic
+    public var position: TilePoint
+}
+
+/// Монумент полезного (15G.4): бафф до конца прогулки.
+public struct IslandShrine: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var buff: ExploreBuff
+    public var marks: Int
+    public var position: TilePoint
+    public var strength: Double { ExploreBuff.strength(marks: marks) }
 }
 
 /// Маяк привычки с серией (14.5) — на берегу.
@@ -623,6 +765,14 @@ public struct Island: Sendable {
     public var roadAt: [Int32] = []
     /// Погода острова-месяца — случайная отметка настроения месяца.
     public var regionWeather: [Weather] = []
+    // 15B, 15G.
+    public var sectors: [IslandSector] = []
+    /// Номер сектора клетки, −1 — вне секторов.
+    public var sectorAt: [Int8] = []
+    public var monuments: [IslandMonument] = []
+    public var shrines: [IslandShrine] = []
+    /// Болото на клетке.
+    public var swamp: [Bool] = []
 
     init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
          chests: [IslandChest], campfires: [IslandCampfire], start: TilePoint) {
@@ -645,6 +795,17 @@ public struct Island: Sendable {
     public func height(at point: TilePoint) -> Int {
         guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !elevation.isEmpty else { return 0 }
         return Int(elevation[point.y * side + point.x])
+    }
+
+    public func sector(at point: TilePoint) -> IslandSector? {
+        guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !sectorAt.isEmpty else { return nil }
+        let index = Int(sectorAt[point.y * side + point.x])
+        return index >= 0 ? sectors[index] : nil
+    }
+
+    public func isSwamp(_ point: TilePoint) -> Bool {
+        guard point.x >= 0, point.y >= 0, point.x < side, point.y < side, !swamp.isEmpty else { return false }
+        return swamp[point.y * side + point.x]
     }
 
     public func road(at point: TilePoint) -> IslandRoad? {
@@ -766,7 +927,7 @@ public enum IslandGenerator {
         guard parts.count > 1 else {
             var island = parts[0]
             island.regions = [IslandRegion(id: 0, first: input.first, last: input.last, size: island.size, origin: TilePoint(0, 0), side: island.side)]
-            finish(&island, seed: seed)
+            finish(&island, seed: seed, days: input.days)
             return island
         }
 
@@ -786,6 +947,8 @@ public enum IslandGenerator {
         var world = Island(size: parts.map(\.size).max { $0.tiles < $1.tiles } ?? .small, side: side, terrain: [],
                            cities: [], villages: [], npcs: [], chests: [], campfires: [], start: TilePoint(0, 0))
         var elevation = [UInt8](repeating: 0, count: side * side)
+        var sectorAt = [Int8](repeating: -1, count: side * side)
+        var swamp = [Bool](repeating: false, count: side * side)
         func moved(_ point: TilePoint, _ origin: TilePoint) -> TilePoint { TilePoint(point.x + origin.x, point.y + origin.y) }
         for (index, part) in parts.enumerated() {
             let origin = origins[index]
@@ -820,24 +983,39 @@ public enum IslandGenerator {
                 world.roads.append(road)
             }
             world.regionWeather.append(part.regionWeather.first ?? .clear)
+            let sectorBase = world.sectors.count
+            for var sector in part.sectors {
+                sector.id = world.sectors.count; sector.region = index; sector.sign = moved(sector.sign, origin); world.sectors.append(sector)
+            }
+            for var monument in part.monuments { monument.id = world.monuments.count; monument.position = moved(monument.position, origin); world.monuments.append(monument) }
+            for var shrine in part.shrines { shrine.id = world.shrines.count; shrine.position = moved(shrine.position, origin); world.shrines.append(shrine) }
+            for y in 0..<part.side { for x in 0..<part.side {
+                let source = y * part.side + x, target = (y + origin.y) * side + x + origin.x
+                if !part.sectorAt.isEmpty, part.sectorAt[source] >= 0 { sectorAt[target] = Int8(sectorBase + Int(part.sectorAt[source])) }
+                if !part.swamp.isEmpty, part.swamp[source] { swamp[target] = true }
+            } }
             world.regions.append(IslandRegion(id: index, first: months[index].first, last: months[index].last,
                                               size: part.size, origin: origin, side: part.side))
         }
         world.terrain = terrain
         world.elevation = elevation
-        world.start = moved(parts[parts.count - 1].start, origins[parts.count - 1])
+        world.sectorAt = sectorAt
+        world.swamp = swamp
+        // Старт (15G.2) — на северо-западном берегу первого (самого раннего) острова.
+        world.start = moved(parts[0].start, origins[0])
         world.ships = ships(in: world)
         // У корабля, как у старта, NPC не стоят — высадка не начинается со встречи.
         world.npcs = world.npcs.filter { npc in
             world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
         }
         for index in world.npcs.indices { world.npcs[index].id = index }
-        finish(&world, seed: seed)
+        finish(&world, seed: seed, days: input.days)
         return world
     }
 
     /// Общее для острова и архипелага (15A): зоны климата по всему миру и клетки дорог.
-    static func finish(_ island: inout Island, seed: UInt64) {
+    static func finish(_ island: inout Island, seed: UInt64, days: Int = 0) {
+        finalTower(&island, days: days)
         island.zones = climate(side: island.side, seed: seed)
         island.roadAt = [Int32](repeating: -1, count: island.side * island.side)
         for road in island.roads {
@@ -849,6 +1027,29 @@ public enum IslandGenerator {
                 }
             }
         }
+    }
+
+    /// Финальная Чёрная башня (15G.2): на острове последнего месяца, в самой дальней от старта точке суши (не у городов).
+    static func finalTower(_ island: inout Island, days: Int) {
+        guard let region = island.regions.last else { return }
+        var best: TilePoint?, bestDistance = -1.0
+        for y in region.origin.y..<min(island.side, region.origin.y + region.side) {
+            for x in region.origin.x..<min(island.side, region.origin.x + region.side) {
+                let point = TilePoint(x, y)
+                guard island.isWalkable(point), island.road(at: point) == nil,
+                      island.cities.allSatisfy({ $0.center.distance(to: point) > Double(ExploreRules.citySafeRadius + 2) }),
+                      island.towers.allSatisfy({ $0.position.distance(to: point) > 3 }) else { continue }
+                // Рядом должна быть ещё суша — чтобы к башне можно было подойти.
+                guard [(1, 0), (-1, 0), (0, 1), (0, -1)].filter({ island.isWalkable(TilePoint(x + $0.0, y + $0.1)) }).count >= 2 else { continue }
+                let distance = point.distance(to: island.start)
+                if distance > bestDistance { bestDistance = distance; best = point }
+            }
+        }
+        guard let best else { return }
+        var tower = IslandTower(id: island.towers.count, title: "Финальная башня", steps: 0, position: best)
+        tower.isFinal = true
+        tower.finalHP = ExploreRules.finalTowerHP(days: days)
+        island.towers.append(tower)
     }
 
     /// Климат (15A): зона — по «широте» на экране изометрии (x + y), граница волнистая, у самой границы клетки перемешаны.
@@ -966,7 +1167,8 @@ public enum IslandGenerator {
             occupied.append(spot)
             island.villages.append(IslandCity(id: 1000 + island.villages.count, name: group.name, center: spot, events: 1, houses: 1, isCity: false))
         }
-        island.start = island.cities.first?.center ?? nearestLand(to: TilePoint(side / 2, side / 2), in: island)
+        // Старт (15G.2) — на берегу в самой северо-западной части острова: на экране изометрии это наименьший x.
+        island.start = northWestShore(island) ?? island.cities.first?.center ?? nearestLand(to: TilePoint(side / 2, side / 2), in: island)
         roads(&island, input: input)
 
         // NPC: уникальные участники, потолок по размеру — самые частые остаются.
@@ -1041,7 +1243,100 @@ public enum IslandGenerator {
             island.tasks.append(CityTask(id: island.tasks.count, cityId: city.id, kind: kind))
         }
         island.regionWeather = [weather(input, random: &random)]
+        lifeOnMap(&island, input: input, random: &random)
         return island
+    }
+
+    /// Самая северо-западная клетка берега: суша, где можно стоять, рядом с водой.
+    static func northWestShore(_ island: Island) -> TilePoint? {
+        var best: TilePoint?
+        for y in 0..<island.side { for x in 0..<island.side {
+            let point = TilePoint(x, y)
+            guard island.isWalkable(point),
+                  [(1, 0), (-1, 0), (0, 1), (0, -1)].contains(where: { island.terrain(at: TilePoint(x + $0.0, y + $0.1)) == .water }) else { continue }
+            if let current = best, (current.x, current.x + current.y) <= (x, x + y) { continue }
+            best = point
+        } }
+        return best
+    }
+
+    /// 15B и 15G.4 на острове месяца: сектора навыков, памятники Epic, монументы полезного, болото.
+    static func lifeOnMap(_ island: inout Island, input: ExploreInput, random: inout ExploreRandom) {
+        let side = island.side
+        let walkable = (0..<(side * side)).filter { island.isWalkable(TilePoint($0 % side, $0 / side)) }
+        guard !walkable.isEmpty else { return }
+        // Сектора: три навыка с наибольшим ростом за месяц, по углу от центра суши.
+        let skills = input.skillGains.map { ($0.title, $0.gain(from: input.first, through: input.last)) }
+            .sorted { ($0.1, $1.0) > ($1.1, $0.0) }.prefix(ExploreRules.sectorSkills)
+        island.sectorAt = [Int8](repeating: -1, count: side * side)
+        if !skills.isEmpty {
+            let cx = Double(walkable.map { $0 % side }.reduce(0, +)) / Double(walkable.count)
+            let cy = Double(walkable.map { $0 / side }.reduce(0, +)) / Double(walkable.count)
+            var members = [[Int]](repeating: [], count: skills.count)
+            for index in walkable {
+                let angle = atan2(Double(index / side) - cy, Double(index % side) - cx) + .pi
+                let part = min(2, Int(angle / (2 * .pi) * 3))
+                guard part < skills.count else { continue }
+                island.sectorAt[index] = Int8(part)
+                members[part].append(index)
+            }
+            for (k, skill) in skills.enumerated() where !members[k].isEmpty {
+                let mx = Double(members[k].map { $0 % side }.reduce(0, +)) / Double(members[k].count)
+                let my = Double(members[k].map { $0 / side }.reduce(0, +)) / Double(members[k].count)
+                let sign = members[k].min { hypot(Double($0 % side) - mx, Double($0 / side) - my) < hypot(Double($1 % side) - mx, Double($1 / side) - my) }!
+                island.sectors.append(IslandSector(id: k, region: 0, title: skill.0, gain: skill.1, sign: TilePoint(sign % side, sign / side)))
+            }
+        }
+        // Свободная клетка у города (или где угодно): не дорога, не занята.
+        var taken = Set((island.cities + island.villages).map(\.center) + island.chests.map(\.position) + island.campfires.map(\.position)
+                        + island.towers.map(\.position) + island.lighthouses.map(\.position))
+        func spot(near center: TilePoint?) -> TilePoint? {
+            if let center {
+                for radius in 4...7 { for _ in 0..<12 {
+                    let angle = random.unit() * 2 * .pi
+                    let point = TilePoint(center.x + Int((cos(angle) * Double(radius)).rounded()), center.y + Int((sin(angle) * Double(radius)).rounded()))
+                    if island.isWalkable(point), island.road(at: point) == nil, !taken.contains(point) { taken.insert(point); return point }
+                } }
+            }
+            for _ in 0..<200 {
+                let index = walkable[random.int(walkable.count)]
+                let point = TilePoint(index % side, index / side)
+                if island.road(at: point) == nil, !taken.contains(point) { taken.insert(point); return point }
+            }
+            return nil
+        }
+        func city() -> TilePoint? { island.cities.isEmpty ? nil : island.cities[random.int(island.cities.count)].center }
+        for epic in input.closedEpics {
+            guard let position = spot(near: city()) else { continue }
+            island.monuments.append(IslandMonument(id: island.monuments.count, epic: epic, position: position))
+        }
+        let counts = Dictionary(grouping: input.benefits, by: \.buff).mapValues(\.count)
+        for buff in ExploreBuff.allCases {
+            guard let marks = counts[buff], marks > 0, let position = spot(near: city()) else { continue }
+            island.shrines.append(IslandShrine(id: island.shrines.count, buff: buff, marks: marks, position: position))
+        }
+        // Болото: пятен = вредное − полезное, не больше 8; не у городов и не на дорогах.
+        island.swamp = [Bool](repeating: false, count: side * side)
+        let patches = min(ExploreRules.swampCap, max(0, input.harmDays.count - input.benefits.count))
+        let noise = valueNoise(side: side, cell: 3, random: &random)
+        var placed = 0, attempts = 0
+        while placed < patches && attempts < 400 {
+            attempts += 1
+            let index = walkable[random.int(walkable.count)]
+            let center = TilePoint(index % side, index / side)
+            guard island.cities.allSatisfy({ $0.center.distance(to: center) > Double(ExploreRules.citySafeRadius + 3) }),
+                  center.distance(to: island.start) > 6 else { continue }
+            let r = Int(ExploreRules.swampRadius.rounded(.up)) + 1
+            for dy in -r...r { for dx in -r...r {
+                let point = TilePoint(center.x + dx, center.y + dy)
+                guard point.x >= 0, point.y >= 0, point.x < side, point.y < side else { continue }
+                let i = point.y * side + point.x
+                let distance = hypot(Double(dx), Double(dy)) + (noise[i] - 0.5) * 2
+                guard distance <= ExploreRules.swampRadius, island.isWalkable(point), island.road(at: point) == nil, !taken.contains(point) else { continue }
+                island.swamp[i] = true
+            } }
+            placed += 1
+        }
     }
 
     /// Горы (15A): массивы там, где шум высоты выше порога, не ближе 4 клеток к морю; высота растёт к центру массива.
@@ -1329,6 +1624,9 @@ public struct Encounter: Sendable {
     private var nextHitBonus = 1.0
     private var companionHit = false
     private var random: ExploreRandom
+    /// Баффы монументов (15G.4): урон по герою и перезарядка — множители.
+    public var damageTakenFactor = 1.0
+    public var cooldownFactor = 1.0
     /// Страж Чёрной башни (14.5): своё HP и урон, вместо типа NPC.
     public let guardian: Guardian?
 
@@ -1397,7 +1695,7 @@ public struct Encounter: Sendable {
         case .ability(let skill):
             guard isReady(skill) else { return }
             heroMP -= cost(skill.ability)
-            cooldowns[skill.ability] = hero.cooldown
+            cooldowns[skill.ability] = max(1, Int((Double(hero.cooldown) * cooldownFactor).rounded()))
             use(skill)
         }
         if npcHP <= 0 { outcome = .won; log.append("\(opponentTitle) повержен"); return }
@@ -1450,7 +1748,7 @@ public struct Encounter: Sendable {
         }
         var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if guardTurns > 0 { damage *= 0.5; guardTurns -= 1 }
-        damage = damage.rounded()
+        damage = (damage * damageTakenFactor).rounded()
         heroHP = max(0, heroHP - damage)
         log.append("\(opponentTitle) ударил: −\(Int(damage)) HP")
         if heroHP <= 0 { outcome = .lost; log.append("Вы без сил — очнётесь в городе") }

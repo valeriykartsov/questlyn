@@ -231,7 +231,7 @@ public struct ChronicleService: Sendable {
                                        isCancelled: false, note: nil, isMilestone: false))
         }
         for grant in grants where grant.sourceType == .weeklyDiscipline {
-            items.append(ChronicleItem(id: "dis:\(grant.id)", at: grant.createdAt, category: .progress, title: "DIS за неделю",
+            items.append(ChronicleItem(id: "dis:\(grant.id)", at: grant.createdAt, category: .progress, title: DisciplineCalculator.isDaily(grant.sourceId) ? "DIS за день" : "DIS за неделю",
                                        detail: grant.reason.isEmpty ? nil : grant.reason, changes: [.xp(label: "DIS", amount: grant.amount)],
                                        isCancelled: false, note: nil, isMilestone: false))
         }

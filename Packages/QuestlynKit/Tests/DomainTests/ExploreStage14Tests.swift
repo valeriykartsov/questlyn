@@ -40,8 +40,8 @@ struct ExploreStage14Tests {
             #expect([(1, 0), (-1, 0), (0, 1), (0, -1)].contains { island.terrain(at: TilePoint(bottle.position.x + $0.0, bottle.position.y + $0.1)) == .sand })
         }
         // Башни — до 2 на остров, вдали от старта, страж по числу шагов.
-        #expect(island.towers.count == 2)
-        #expect(island.towers.allSatisfy { $0.position.distance(to: island.start) >= ExploreRules.towerMinDistanceFromStart && island.isLand($0.position) })
+        #expect(island.towers.filter { !$0.isFinal }.count == 2)
+        #expect(island.towers.filter { !$0.isFinal }.allSatisfy { $0.position.distance(to: island.start) >= ExploreRules.towerMinDistanceFromStart && island.isLand($0.position) })
         #expect(island.towers.first?.guardianHP == 85)
         // Маяк — только у серии от 7 дней.
         #expect(island.lighthouses.map(\.title) == ["Зарядка"])

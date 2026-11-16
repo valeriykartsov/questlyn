@@ -67,6 +67,9 @@ public struct ActiveFight: Sendable {
     private var scoutLeft = 0.0
     private var nextHitBonus = 1.0
     private var random: ExploreRandom
+    /// Баффы монументов (15G.4): урон по герою и перезарядка — множители.
+    public var damageTakenFactor = 1.0
+    public var cooldownFactor = 1.0
 
     public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64,
                 guardian: Encounter.Guardian? = nil, companion: NPCTier? = nil) {
@@ -86,7 +89,7 @@ public struct ActiveFight: Sendable {
     public var escapeDistance: Double { guardian == nil ? tier.chaseRadius : ExploreRules.guardianLeash }
     public func cost(_ ability: ExploreAbility) -> Double { (ability.mpShare * hero.maxMP).rounded() }
     /// Перезарядка способности: ходы × 1,2 с.
-    public var abilityCooldown: Double { Double(hero.cooldown) * ExploreRules.activeTurnSeconds }
+    public var abilityCooldown: Double { Double(hero.cooldown) * ExploreRules.activeTurnSeconds * cooldownFactor }
 
     public func isReady(_ skill: ExploreSkill) -> Bool {
         outcome == nil && (cooldowns[skill.ability] ?? 0) <= 0 && heroMP >= cost(skill.ability)
@@ -119,7 +122,7 @@ public struct ActiveFight: Sendable {
         guard distance <= ExploreRules.activeRange else { return }
         var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if focusLeft > 0 { damage *= 0.5 }
-        damage = damage.rounded()
+        damage = (damage * damageTakenFactor).rounded()
         heroHP = max(0, heroHP - damage)
         events.append(.heroDamaged(Int(damage)))
         if heroHP <= 0 { outcome = .lost; events.append(.note("Вы без сил — очнётесь в городе")) }

@@ -295,6 +295,88 @@ nonisolated enum ExploreSprites {
         return c
     }
 
+    // MARK: 15B, 15G: башня босса, памятники, монументы, флажок, засохшее дерево
+
+    /// Финальная Чёрная башня (15G.2): выше обычной, красная крыша и окна.
+    static func bossTower(conquered: Bool) -> RGBACanvas {
+        var c = RGBACanvas(width: 34, height: 64, fill: nil)
+        let wall: UInt32 = conquered ? 0x5C5C66 : 0x1B1B22, shadow: UInt32 = conquered ? 0x4A4A54 : 0x14141A
+        let roof: UInt32 = conquered ? 0xD9A441 : 0x7A2E2E, glow: UInt32 = conquered ? 0xF2D27A : 0xE5482B
+        for y in 14...60 { for x in 7...27 { c.set(x, y, x >= 17 ? shadow : wall) } }
+        for x in stride(from: 7, through: 25, by: 5) { for y in 8...14 { for dx in 0...2 { c.set(x + dx, y, wall) } } }
+        c.polygon([(5, 14), (17, 0), (29, 14)], roof)
+        for y in 46...60 { for x in 14...20 { c.set(x, y, 0x7A2E2E) } }
+        for (x, y) in [(11, 24), (21, 24), (16, 34)] { for dy in 0...3 { for dx in 0...2 { c.set(x + dx, y + dy, glow) } } }
+        return c
+    }
+
+    /// Памятник закрытого Epic (15B.2); в пустыне — руины.
+    static func epicMonument(ruin: Bool) -> RGBACanvas {
+        var c = RGBACanvas(width: 26, height: 40, fill: nil)
+        c.polygon([(1, 34), (13, 39), (25, 34), (13, 29)], 0x969084)
+        if ruin {
+            for y in 20...34 { for x in 5...9 { c.set(x, y, 0xC9A57A) } }
+            for y in 14...34 { for x in 17...21 { c.set(x, y, 0xB88E62) } }
+            for y in 12...14 { for x in 15...23 { c.set(x, y, 0xA8865E) } }
+            for y in 30...33 { for x in 9...15 { c.set(x, y, 0xB88E62) } }
+        } else {
+            for y in 8...33 { for x in 8...18 { c.set(x, y, x >= 13 ? 0xBAB4A8 : 0xD6D0C4) } }
+            c.polygon([(8, 8), (13, 2), (18, 8)], 0xD9A441)
+            for y in 18...20 { for x in 10...16 { c.set(x, y, 0x1F2A44) } }
+        }
+        return c
+    }
+
+    /// Монумент полезного (15G.4): постамент и символ вида.
+    static func shrine(_ buff: ExploreBuff) -> RGBACanvas {
+        var c = RGBACanvas(width: 20, height: 30, fill: nil)
+        c.polygon([(2, 24), (10, 28), (18, 24), (10, 20)], 0x969084)
+        for y in 12...24 { for x in 5...15 { c.set(x, y, x >= 10 ? 0xA8A296 : 0xC4BEB0) } }
+        for y in 10...12 { for x in 4...16 { c.set(x, y, 0x8C867A) } }
+        switch buff {
+        case .water: c.polygon([(10, 1), (14, 7), (10, 9), (6, 7)], 0x3E6FA3)
+        case .walk:
+            for y in 4...6 { for x in 7...13 { c.set(x, y, 0x2F6B4F) } }
+            for y in 1...9 { for x in 9...11 { c.set(x, y, 0x2F6B4F) } }
+        case .stretch:
+            for k in 0..<24 {
+                let a = Double(k) / 24 * 2 * .pi
+                c.set(10 + Int((cos(a) * 3.5).rounded()), 5 + Int((sin(a) * 3).rounded()), 0xB8651B)
+                c.set(10 + Int((cos(a) * 2.5).rounded()), 5 + Int((sin(a) * 2).rounded()), 0xB8651B)
+            }
+        case .vegetables:
+            for y in 3...10 { for x in 6...14 where hypot(Double(x) - 10, Double(y) - 6.5) <= 3.8 { c.set(x, y, 0xA8432F) } }
+            c.set(11, 2, 0x2F6B4F); c.set(12, 1, 0x2F6B4F)
+        case .nap:
+            for y in 2...9 { for x in 6...14 where hypot(Double(x) - 10, Double(y) - 5.5) <= 3.8 && hypot(Double(x) - 12.5, Double(y) - 4) > 3 { c.set(x, y, 0x6B4FA3) } }
+        case .custom:
+            c.polygon([(10, 1), (12, 5), (16, 5), (13, 8), (14, 11), (10, 9), (6, 11), (7, 8), (4, 5), (8, 5)], 0xD9A441)
+        }
+        return c
+    }
+
+    /// Флажок навыка на секторе с ростом (15B.1).
+    static func banner() -> RGBACanvas {
+        var c = RGBACanvas(width: 10, height: 16, fill: nil)
+        for y in 1...15 { c.set(1, y, 0x5C3A1E) }
+        c.polygon([(2, 1), (9, 4), (2, 7)], 0xB8651B)
+        return c
+    }
+
+    /// Засохшее дерево пустоши (15B.1): то же дерево зоны, серо-коричневое.
+    static func deadTree(_ zone: ClimateZone) -> RGBACanvas {
+        let tree = tree(zone, dark: false)
+        var c = RGBACanvas(width: tree.width, height: tree.height, fill: nil)
+        for y in 0..<tree.height { for x in 0..<tree.width {
+            guard let color = tree.color(x, y) else { continue }
+            let r = Double((color >> 16) & 0xFF), g = Double((color >> 8) & 0xFF), b = Double(color & 0xFF)
+            let grey = (r + g + b) / 3
+            if (y + x) % 3 == 0 && y < tree.height - 3 { continue } // поредевшая крона
+            c.set(x, y, UInt32(min(255, grey + 30)) << 16 | UInt32(min(255, grey + 14)) << 8 | UInt32(max(0, grey - 4)))
+        } }
+        return c
+    }
+
     // MARK: Корабль
 
     /// Изометрический корабль, идущий вправо-вниз; влево — зеркало. frame 0…3 — парус «дышит», флаг вьётся.

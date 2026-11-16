@@ -1,6 +1,6 @@
 import Foundation
 
-/// Недельный пересчёт DIS (07, раздел 5).
+/// DIS (07, раздел 5): с 17.11.2026 — по дням (день закрывается в 23:59), раньше — по неделям.
 public enum DisciplineCalculator {
     public static let maxDrop = 30.0
 
@@ -59,4 +59,34 @@ public enum DisciplineCalculator {
         let digits = String(format: "%04d%02d%02d", weekStart.year, weekStart.month, weekStart.day)
         return UUID(uuidString: "D15C0000-0000-4000-8000-0000\(digits)")!
     }
+
+    // MARK: По дням (15G.1, 17.11.2026)
+
+    public struct DayResult: Sendable, Equatable {
+        public var percent: Double
+        public var v: Double
+        public var delta: Double
+    }
+
+    /// ΔDIS за день = max(−30/7; 0,6 · (p_дня − 50) · v / 7), v = min(1,5; 0,5 + запланировано за день · 7 / 14).
+    /// В воскресенье в p входят и недельные квесты — долей `min(выполнено; цель) / цель`.
+    public static func evaluateDay(done: Int, scheduled: Int, weekly: [(done: Int, target: Int)] = []) -> DayResult {
+        let day = scheduled == 0 ? 0 : 100 * Double(min(done, scheduled)) / Double(scheduled)
+        let values = [day] + weekly.map { 100 * Double(min($0.done, $0.target)) / Double(max($0.target, 1)) }
+        let p = values.reduce(0, +) / Double(values.count)
+        let v = min(1.5, 0.5 + Double(scheduled) * 7 / 14)
+        let delta = max(-maxDrop / 7, 0.6 * (p - 50) * v / 7)
+        return DayResult(percent: p, v: v, delta: delta)
+    }
+
+    /// Первый день, за который считается DIS: первый полный день после создания героя.
+    public static func firstCountedDay(heroCreatedOn date: LocalDate) -> LocalDate { date.adding(days: 1) }
+
+    /// Детерминированный sourceId дня: один день — одно начисление.
+    public static func sourceId(day: LocalDate) -> UUID {
+        let digits = String(format: "%04d%02d%02d", day.year, day.month, day.day)
+        return UUID(uuidString: "D15D0000-0000-4000-8000-0000\(digits)")!
+    }
+
+    public static func isDaily(_ sourceId: UUID) -> Bool { sourceId.uuidString.hasPrefix("D15D") }
 }
