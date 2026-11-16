@@ -60,6 +60,9 @@ nonisolated final class ExploreGround: Sendable {
         let temples = sprites.count; for zone in ClimateZone.allCases { sprites.append(ExploreSprites.temple(zone)) }
         let board = sprites.count; sprites.append(ExploreSprites.boardPost())
         let stake = sprites.count; sprites.append(ExploreSprites.stake())
+        // 15B.1: засохшие деревья пустоши по зонам и флажки навыка.
+        let dead = sprites.count; for zone in ClimateZone.allCases { sprites.append(ExploreSprites.deadTree(zone)) }
+        let banner = sprites.count; sprites.append(ExploreSprites.banner())
         self.sprites = sprites
 
         var items: [Int: [(depth: Double, x: Int, y: Int, sprite: Int)]] = [:]
@@ -115,11 +118,20 @@ nonisolated final class ExploreGround: Sendable {
         let density: [ClimateZone: Double] = [.tundra: 0.35, .taiga: 0.75, .temperate: 0.6, .steppe: 0.18, .desert: 0.1]
         for y in 0..<side { for x in 0..<side where island.terrain[y * side + x] == .forest {
             let index = y * side + x
-            guard island.roadAt.isEmpty || island.roadAt[index] < 0, !plaza.contains(index), !built.contains(index) else { continue }
+            guard island.roadAt.isEmpty || island.roadAt[index] < 0, !plaza.contains(index), !built.contains(index),
+                  !island.isSwamp(TilePoint(x, y)) else { continue }
             let zone = island.zone(at: TilePoint(x, y))
             guard Pix.hash(x, y, 31) < density[zone] ?? 0.5 else { continue }
+            if island.sector(at: TilePoint(x, y))?.isWaste == true { add(TilePoint(x, y), dead + zone.rawValue, dy: 1); continue }
             add(TilePoint(x, y), zone.rawValue * 2 + (Pix.hash(x, y, 32) < 0.5 ? 1 : 0), dy: 1)
         } }
+        // Флажки навыка — по три у таблички сектора с ростом.
+        for sector in island.sectors where !sector.isWaste {
+            for (dx, dy) in [(-2, 1), (2, -1), (1, 2)] {
+                let tile = TilePoint(sector.sign.x + dx, sector.sign.y + dy)
+                if walkable(tile), island.road(at: tile) == nil { add(tile, banner, dy: 2) }
+            }
+        }
         for key in items.keys { items[key]?.sort { $0.depth < $1.depth } }
         self.items = items
         self.plaza = plaza
@@ -237,6 +249,8 @@ nonisolated final class ExploreGround: Sendable {
         }
         let road = island.road(at: TilePoint(x, y))
         let isPlaza = plaza.contains(y * side + x)
+        let swampTile = island.isSwamp(TilePoint(x, y))
+        let sectorHere = island.sector(at: TilePoint(x, y))
         for py in 0..<th {
             let half = py < th / 2 ? (py + 1) * 2 : (th - py) * 2
             for dx in -half..<half {
@@ -257,6 +271,26 @@ nonisolated final class ExploreGround: Sendable {
                     if snowy && desert { c = 0xB88E62 }
                 case .ground:
                     c = groundColor(x, y, wx: Double(x) + fx, wy: Double(y) + fy, sx: sx, sy: sy)
+                }
+                // 15B: болото, пустошь, цветы сектора с ростом.
+                if me == .ground || me == .sand {
+                    if swampTile {
+                        let hs = Pix.hash(sx, sy, 93)
+                        c = hs < 0.55 ? 0x3A4A34 : (hs > 0.93 ? 0x687A58 : 0x48563A)
+                        if Pix.hash(sx / 3, sy / 2, 94) < 0.18 { c = 0x2E3E46 }
+                        if Pix.hash(sx, sy, 98) < 0.02 { c = 0x606E3C }
+                    } else if let sector = sectorHere {
+                        if sector.isWaste {
+                            let r = Double((c >> 16) & 0xFF), g = Double((c >> 8) & 0xFF), b = Double(c & 0xFF)
+                            let grey = (r + g + b) / 3
+                            // Пустошь — выцветшая и сухая, но светлота зоны сохраняется (снег остаётся светлым).
+                            let dry = UInt32(min(255, grey * 0.92 + 18)) << 16 | UInt32(min(255, grey * 0.86 + 10)) << 8 | UInt32(min(255, grey * 0.7))
+                            c = Pix.mix(c, dry, 0.7)
+                            if Pix.hash(sx, sy, 91) < 0.04 { c = Pix.mix(c, 0x78684E, 0.6) }
+                        } else if Pix.hash(sx, sy, 95) < 0.035 {
+                            c = [0xE8B4C8, 0xF2D27A, 0xFFFCF6][Int(Pix.hash(sx, sy, 96) * 2.99)]
+                        }
+                    }
                 }
                 // Автотайлинг: у края с соседом другого типа (или другой зоны) — дизеринг в цвет соседа, пена у берега.
                 if me != .mountain {

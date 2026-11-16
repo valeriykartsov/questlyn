@@ -52,6 +52,7 @@ struct AttributeDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: QSpacing.l) {
                     summary
+                    if attribute == .discipline { DisciplineWeekCard(model: model) }
                     CapsHeader(title: "История", trailing: "новые сверху")
                     if entries.isEmpty {
                         Text("Начислений пока нет. \(hint)")
@@ -79,7 +80,7 @@ struct AttributeDetailView: View {
     private var hint: String {
         switch attribute {
         case .focus: "FOC растёт от выполненных квестов."
-        case .discipline: "DIS пересчитывается по понедельникам по доле выполненных привычек."
+        case .discipline: "DIS начисляется за каждый день в 23:59 по доле выполненных привычек."
         default: "Атрибут растёт от квестов, привычек и Activity профессий, где он есть."
         }
     }
@@ -108,7 +109,7 @@ struct AttributeDetailView: View {
     }
 
     private var decayStatus: String {
-        if attribute == .discipline { return "У DIS свой недельный механизм — общий спад к нему не применяется." }
+        if attribute == .discipline { return "У DIS свой механизм — начисление за каждый день, общий спад к нему не применяется." }
         guard let state, let last = state.lastGainDate else { return "Спад начнётся через 7 дней после первого XP." }
         let days = last.days(until: model.today)
         if days <= ProgressTimeline.graceDays {
@@ -138,7 +139,7 @@ struct AttributeDetailView: View {
         switch grant.sourceType {
         case .questCompletion: "Квест"
         case .habitOccurrence: "Привычка"
-        case .weeklyDiscipline: "Недельная дисциплина"
+        case .weeklyDiscipline: DisciplineCalculator.isDaily(grant.sourceId) ? "Дисциплина за день" : "Недельная дисциплина"
         case .onboardingBonus: "Стартовый бонус"
         case .activity: "Активность"
         }
@@ -311,5 +312,74 @@ struct MasteryPicker: View {
             Text(value == 0 ? "Не оценено" : "\(value) из 5 · \(labels[value - 1])")
                 .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
         }
+    }
+}
+
+/// DIS по дням текущей недели (15G.1, макет DisciplineDaily): закрытые дни — столбики, сегодня — «идёт» с прогнозом.
+struct DisciplineWeekCard: View {
+    let model: AppModel
+
+    private var today: LocalDate { model.today }
+    private var days: [(day: LocalDate, amount: CentiXP?)] {
+        let grants = model.progress.grants(for: .discipline).filter { DisciplineCalculator.isDaily($0.sourceId) }
+        return today.weekStart.weekDays.map { day in (day, grants.first { $0.effectiveDate == day }?.amount) }
+    }
+    /// Если сегодня так и останется — с каким ΔDIS закроется день.
+    private var forecast: (done: Int, scheduled: Int, delta: Double) {
+        let daily = model.habits.filter { $0.habit.kind == .daily && $0.habit.isScheduled(on: today) }
+        let done = daily.filter(\.doneToday).count
+        return (done, daily.count, DisciplineCalculator.evaluateDay(done: done, scheduled: daily.count).delta)
+    }
+
+    var body: some View {
+        let total = days.compactMap(\.amount).reduce(CentiXP.zero, +)
+        let scale = max(1, days.compactMap { $0.amount.map { abs(Double($0.value)) } }.max() ?? 1)
+        VStack(alignment: .leading, spacing: QSpacing.m) {
+            HStack {
+                Text("Эта неделя").font(QFont.text(15, weight: .bold))
+                Spacer()
+                Text("\(Format.signedXP(total)) DIS").font(QFont.text(13, weight: .bold))
+                    .foregroundStyle(total.value >= 0 ? QColor.forest : QColor.hp)
+            }
+            HStack(alignment: .center, spacing: 0) {
+                ForEach(days, id: \.day) { item in
+                    VStack(spacing: 4) {
+                        if let amount = item.amount {
+                            let up = amount.value >= 0
+                            Text(Format.signedXP(amount)).font(QFont.text(10, weight: .bold)).foregroundStyle(up ? QColor.forest : QColor.hp)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            VStack(spacing: 0) {
+                                Spacer(minLength: 0)
+                                if up { RoundedRectangle(cornerRadius: 3).fill(QColor.forest).frame(width: 20, height: 56 * abs(Double(amount.value)) / scale) }
+                            }
+                            .frame(height: 56)
+                            Rectangle().fill(QColor.ink).frame(width: 26, height: 1)
+                            VStack(spacing: 0) {
+                                if !up { RoundedRectangle(cornerRadius: 3).fill(QColor.hp).frame(width: 20, height: 20 * abs(Double(amount.value)) / scale) }
+                                Spacer(minLength: 0)
+                            }
+                            .frame(height: 20)
+                        } else {
+                            Text(item.day == today ? "идёт" : " ").font(QFont.text(10)).foregroundStyle(QColor.inkSecondary)
+                            Spacer().frame(height: 56)
+                            Rectangle().fill(QColor.line).frame(width: 26, height: 1)
+                            Spacer().frame(height: 20)
+                        }
+                        Text(item.day.weekday.shortTitle).font(QFont.text(11, weight: .bold))
+                            .foregroundStyle(item.day == today ? QColor.amberDeep : QColor.ink)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(item.day.weekday.shortTitle): \(item.amount.map { Format.signedXP($0) } ?? (item.day == today ? "идёт" : "нет"))")
+                }
+            }
+            let f = forecast
+            Text("День закрывается в 23:59: выполнено привычек / запланировано. Сегодня — \(f.done) из \(f.scheduled): если так и останется, день закроется с \(Format.signedXP(CentiXP(Int((f.delta * 100).rounded())))).")
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            Text("Недельные квесты — долей в воскресенье. Отметка «за вчера» пересчитывает вчерашний день.")
+                .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        }
+        .padding(QSpacing.xl)
+        .sheetCard()
     }
 }

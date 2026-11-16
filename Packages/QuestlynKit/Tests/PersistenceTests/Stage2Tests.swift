@@ -69,42 +69,57 @@ struct Stage2Tests {
         }
     }
 
-    @Test func disciplineSettlesWeeksSkipsCreationWeekAndClampsAtZero() async throws {
-        _ = try await setUp(createdAt: "2026-11-04") // среда: неделя 2–8 ноября не считается
+    /// 15G.1 (17.11.2026): DIS по дням — с первого полного дня после создания героя, не ниже 0.
+    @Test func disciplineSettlesDaysFromFirstFullDayAndClampsAtZero() async throws {
+        _ = try await setUp(createdAt: "2026-11-04") // среда: считается с четверга 5 ноября
         let habit = try await HabitService(store: store).create(HabitDraft(kind: .daily, title: "Чтение"), now: at("2026-11-04"), timeZone: utc)
         try await markHistory(habit, ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"])
         let service = DisciplineService(store: store)
 
         try await service.settle(now: at("2026-11-17"), timeZone: utc)
-        var dis = try await store.disciplineGrants()
-        // Неделя 9–15: 100%, запланировано 7 → v = 1,0 → +30.
-        #expect(dis.map(\.amount.value) == [3000])
+        var dis = try await store.disciplineGrants().sorted { $0.effectiveDate < $1.effectiveDate }
+        // 5–8 ноября: 0% → −4,29, но DIS не ниже 0; 9–15: 100%, v = 1 → +4,29 (429); 16-го пусто → −4,29.
+        #expect(dis.count == 12 && dis.first?.effectiveDate == day("2026-11-05"))
+        #expect(dis.map(\.amount.value) == [0, 0, 0, 0, 429, 429, 429, 429, 429, 429, 429, -429])
+        #expect(dis.allSatisfy { DisciplineCalculator.isDaily($0.sourceId) })
 
-        // Две пустые недели: −30, затем 0 (DIS не ниже 0).
+        // Две пустые недели: DIS опускается до 0 и дальше не уходит.
         try await service.settle(now: at("2026-12-01"), timeZone: utc)
         dis = try await store.disciplineGrants()
-        #expect(dis.map(\.amount.value).sorted() == [-3000, 0, 3000])
+        #expect(dis.count == 26)
         let progress = HeroProgress(grants: try await store.allGrants(), classAttributes: [])
         #expect(progress.xp(.discipline) == .zero)
 
         // Повторный пересчёт ничего не дублирует.
         try await service.settle(now: at("2026-12-01"), timeZone: utc)
-        #expect(try await store.disciplineGrants().count == 3)
+        #expect(try await store.disciplineGrants().count == 26)
     }
 
-    @Test func mondayMarkForSundayRecalculatesLastWeek() async throws {
-        _ = try await setUp(createdAt: "2026-11-02") // понедельник — неделя считается
+    @Test func mondayMarkForSundayRecalculatesYesterday() async throws {
+        _ = try await setUp(createdAt: "2026-11-02")
         let habit = try await HabitService(store: store).create(HabitDraft(kind: .daily, title: "Чтение"), now: at("2026-11-02"), timeZone: utc)
         try await markHistory(habit, ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07"])
         let monday = at("2026-11-09")
         try await DisciplineService(store: store).settle(now: monday, timeZone: utc)
-        let before = try #require(try await store.disciplineGrants().first)
-        // 6 из 7 дней: p = 85,71…, v = 1 → +21,43.
-        #expect(before.amount == CentiXP(2143))
+        let sunday = DisciplineCalculator.sourceId(day: day("2026-11-08"))
+        #expect(try await store.disciplineGrants().first { $0.sourceId == sunday }?.amount == CentiXP(-429))
 
         try await HabitMarkService(store: store).mark(habitId: habit.id, on: day("2026-11-08"), now: monday, timeZone: utc)
         let after = try await store.disciplineGrants()
-        #expect(after.count == 1 && after[0].amount == CentiXP(3000))
+        #expect(after.count == 6 && after.first { $0.sourceId == sunday }?.amount == CentiXP(429))
+    }
+
+    /// Недели со старым недельным начислением не пересчитываются по дням.
+    @Test func weeklyGrantsBeforeSwitchStay() async throws {
+        _ = try await setUp(createdAt: "2026-11-02")
+        let old = ProgressGrant(sourceType: .weeklyDiscipline, sourceId: DisciplineCalculator.sourceId(weekStart: day("2026-11-02")),
+                                ruleVersion: .current, target: .attribute(.discipline), amount: CentiXP(3000), reason: "",
+                                createdAt: at("2026-11-09"), effectiveDate: day("2026-11-09"))
+        try await store.replaceDisciplineGrant(sourceId: old.sourceId, with: old)
+        try await DisciplineService(store: store).settle(now: at("2026-11-11"), timeZone: utc)
+        let dis = try await store.disciplineGrants()
+        // Неделя 2–8 — одно старое начисление; 9 и 10 ноября — по дням.
+        #expect(dis.count == 3 && dis.contains { $0.sourceId == old.sourceId && $0.amount == CentiXP(3000) })
     }
 
     @Test func epicCompletesManuallyWhenAllStepsDone() async throws {

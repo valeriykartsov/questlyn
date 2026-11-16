@@ -123,7 +123,7 @@ struct HabitFormView: View {
                 Section {
                     Button("Удалить привычку", role: .destructive) { isConfirmingDelete = true }
                 } footer: {
-                    Text("Привычка пропадёт из «Сегодня» и журнала и с этой недели не войдёт в DIS. Прошлые отметки и начисления останутся в Летописи.")
+                    Text("Привычка пропадёт из «Сегодня» и журнала и с этого дня не войдёт в DIS. Прошлые отметки и начисления останутся в Летописи.")
                 }
                 .listRowBackground(QColor.sheet)
             }

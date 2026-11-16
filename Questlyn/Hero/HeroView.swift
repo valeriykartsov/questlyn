@@ -130,11 +130,11 @@ struct HeroView: View {
             .padding(QSpacing.xl)
             .sheetCard()
             if let dis = model.overview?.lastDiscipline {
-                Text("Дисциплина за прошлую неделю: \(Format.signedXP(dis.amount)) XP · \(dis.reason)")
+                Text("\(DisciplineCalculator.isDaily(dis.sourceId) ? "Дисциплина за вчера" : "Дисциплина за прошлую неделю"): \(Format.signedXP(dis.amount)) XP · \(dis.reason)")
                     .font(QFont.text(12))
                     .foregroundStyle(QColor.inkSecondary)
             }
-            Text("Тёмные полосы — атрибуты класса, они сильнее влияют на ранг. DIS пересчитывается по понедельникам.")
+            Text("Тёмные полосы — атрибуты класса, они сильнее влияют на ранг. DIS начисляется за каждый день в 23:59.")
                 .font(QFont.text(12))
                 .foregroundStyle(QColor.inkSecondary)
         }

@@ -478,8 +478,8 @@ public struct TodayService: Sendable {
             let r = rhs.element.epic.professionId.flatMap { slots[$0] } ?? 4
             return (l, lhs.offset) < (r, rhs.offset)
         }.map(\.element)
-        let lastWeek = date.weekStart.adding(days: -7)
-        let lastDiscipline = try await store.disciplineGrants().first { $0.sourceId == DisciplineCalculator.sourceId(weekStart: lastWeek) }
+        // Последнее начисление DIS: за вчера (по дням, 15G.1) или за прошлую неделю (до перехода).
+        let lastDiscipline = try await store.disciplineGrants().filter { $0.effectiveDate < date }.max { $0.effectiveDate < $1.effectiveDate }
         let settings = try await store.vitalSettings()
         let sleeps = try await store.sleepSessions()
         let moods = try await store.moodEntries().filter { $0.deletedAt == nil }

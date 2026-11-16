@@ -68,6 +68,12 @@ final class ExploreScene: SKScene {
     private var exploredTile = TilePoint(-1, -1)
     // Активный режим (16.11.2026): джойстик, бой на карте.
     private var stickMoving = false
+    // 15B, 15G.
+    private var shrineNodes: [Int: SKSpriteNode] = [:]
+    private var monumentNodes: [Int: SKSpriteNode] = [:]
+    /// Выпады (15G.3): узел → начало и направление.
+    private var lunges: [ObjectIdentifier: (start: TimeInterval, dx: CGFloat, dy: CGFloat)] = [:]
+    private var seenLog = 0
     /// Когда спутник последний раз ударил — короткий выпад.
     private var companionLunge: TimeInterval = -10
     private let fightBar = SKNode()
@@ -199,14 +205,14 @@ final class ExploreScene: SKScene {
             addChild(node)
         }
         for tower in island.towers {
-            let node = sprite(ExploreRenderer.tower(conquered: false))
+            let node = sprite(tower.isFinal ? ExploreSprites.bossTower(conquered: false).image : ExploreRenderer.tower(conquered: false))
             node.anchorPoint = CGPoint(x: 0.5, y: 0)
-            node.setScale(1.6)
+            node.setScale(tower.isFinal ? 1.1 : 1.6)
             node.position = point(Double(tower.position.x), Double(tower.position.y))
             node.zPosition = depth(Double(tower.position.x), Double(tower.position.y))
             towerNodes[tower.id] = node
             addChild(node)
-            addLabel("Чёрная башня · \(tower.title)", at: tower.position, lift: 30, dark: true)
+            addLabel(tower.isFinal ? "Финальная башня · босс" : "Чёрная башня · \(tower.title)", at: tower.position, lift: tower.isFinal ? 76 : 30, dark: true)
         }
         for light in island.lighthouses {
             let node = sprite(ExploreRenderer.lighthouse(lit: false))
@@ -217,6 +223,31 @@ final class ExploreScene: SKScene {
             lightNodes[light.id] = node
             addChild(node)
             addLabel("Маяк · \(light.title)", at: light.position, lift: 20, dark: false)
+        }
+        // 15B.2: памятники Epic — касание открывает карточку.
+        for monument in island.monuments {
+            let node = sprite(ExploreSprites.epicMonument(ruin: island.zone(at: monument.position) == .desert).image)
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.08)
+            node.position = point(Double(monument.position.x), Double(monument.position.y))
+            node.zPosition = depth(Double(monument.position.x), Double(monument.position.y))
+            monumentNodes[monument.id] = node
+            addChild(node)
+            addLabel("Epic · \(monument.epic.title)", at: monument.position, lift: 40, dark: false)
+        }
+        // 15G.4: монументы полезного.
+        for shrine in island.shrines {
+            let node = sprite(ExploreSprites.shrine(shrine.buff).image)
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.1)
+            node.position = point(Double(shrine.position.x), Double(shrine.position.y))
+            node.zPosition = depth(Double(shrine.position.x), Double(shrine.position.y))
+            shrineNodes[shrine.id] = node
+            addChild(node)
+            addLabel("\(shrine.buff.title) · \(shrine.marks)", at: shrine.position, lift: 32, dark: false)
+        }
+        // 15B.1: таблички секторов навыков.
+        for sector in island.sectors {
+            let gain = Int(sector.gain.rounded())
+            addLabel(sector.isWaste ? "\(sector.title) · без роста" : "\(sector.title) · +\(gain) XP", at: sector.sign, lift: 12, dark: sector.isWaste)
         }
         // Доски заданий нарисованы на площадях городов (15A.7).
         // NPC (15A.7): одежда по типу, добавки по зоне, 4 кадра шага; кадры общие для одинаковых NPC.
@@ -482,10 +513,17 @@ final class ExploreScene: SKScene {
         if distance > fight.escapeDistance { fight.escape() }
         for event in fight.drainEvents() {
             switch event {
-            case let .heroDamaged(value): floater("−\(value)", at: heroPosition, color: UIColor(red: 0.66, green: 0.26, blue: 0.18, alpha: 1))
-            case let .npcDamaged(value): floater("−\(value)", at: target, color: UIColor(red: 0.95, green: 0.82, blue: 0.48, alpha: 1))
+            case let .heroDamaged(value):
+                floater("−\(value)", at: heroPosition, color: UIColor(red: 0.66, green: 0.26, blue: 0.18, alpha: 1))
+                animateHit(by: opponentNode(), on: heroNode, from: target, to: heroPosition, color: .red)
+            case let .npcDamaged(value):
+                floater("−\(value)", at: target, color: UIColor(red: 0.95, green: 0.82, blue: 0.48, alpha: 1))
+                animateHit(by: heroNode, on: opponentNode(), from: heroPosition, to: target, color: .white)
             case let .companionHit(value):
                 companionLunge = now
+                if let id = session.companion?.id, npcNodes.indices.contains(id), npcs.indices.contains(id) {
+                    animateHit(by: npcNodes[id], on: opponentNode(), from: (npcs[id].x, npcs[id].y), to: target, color: .white, arc: false)
+                }
                 floater("−\(value) ♥", at: (target.x + 0.4, target.y - 0.4), color: UIColor(red: 0.55, green: 0.85, blue: 0.6, alpha: 1))
             case let .note(text): session.toast = text
             }
@@ -512,7 +550,8 @@ final class ExploreScene: SKScene {
         fightBar.isHidden = true
         if let towerId {
             if outcome == .won {
-                towerNodes[towerId]?.texture = texture(ExploreRenderer.tower(conquered: true))
+                towerNodes[towerId]?.texture = texture(session.island.towers.first { $0.id == towerId }?.isFinal == true
+                    ? ExploreSprites.bossTower(conquered: true).image : ExploreRenderer.tower(conquered: true))
                 if let node = towerNodes[towerId] { flash(node) }
             } else if outcome == .lost {
                 let home = session.lastCity; heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home
@@ -529,6 +568,72 @@ final class ExploreScene: SKScene {
             heroPosition = (Double(home.x), Double(home.y))
             session.heroTile = home
         case nil: break
+        }
+    }
+
+    // MARK: Анимация удара (15G.3)
+
+    /// Узел противника текущего боя (активного или пошагового).
+    private func opponentNode() -> SKSpriteNode? {
+        if let id = session.activeNPC ?? session.encounterNPC, npcNodes.indices.contains(id) { return npcNodes[id] }
+        if let id = session.activeTower ?? session.encounterTower { return towerNodes[id] }
+        return nil
+    }
+
+    /// Выпад атакующего к цели, дуга удара и вспышка цели. Без «Уменьшения движения» — только вспышка.
+    private func animateHit(by attacker: SKSpriteNode?, on target: SKSpriteNode?, from: (x: Double, y: Double), to: (x: Double, y: Double),
+                            color: UIColor, arc: Bool = true) {
+        let a = point(from.x, from.y), b = point(to.x, to.y)
+        let length = max(0.01, hypot(b.x - a.x, b.y - a.y))
+        if let attacker, !UIAccessibility.isReduceMotionEnabled, towerNodes.values.contains(attacker) == false {
+            lunges[ObjectIdentifier(attacker)] = (now, (b.x - a.x) / length, (b.y - a.y) / length)
+        }
+        if arc, let target {
+            let path = CGMutablePath()
+            path.addArc(center: .zero, radius: 7, startAngle: -.pi / 3, endAngle: .pi / 2.2, clockwise: false)
+            let slash = SKShapeNode(path: path)
+            slash.strokeColor = color == .red ? UIColor(red: 0.9, green: 0.3, blue: 0.2, alpha: 1) : UIColor(white: 1, alpha: 0.95)
+            slash.lineWidth = 1.6
+            slash.position = CGPoint(x: target.position.x, y: target.position.y + 9)
+            slash.zPosition = 9_850
+            if (b.x - a.x) < 0 { slash.xScale = -1 }
+            addChild(slash)
+            slash.run(.sequence([.group([.fadeOut(withDuration: 0.25), .scale(by: 1.3, duration: 0.25)]), .removeFromParent()]))
+        }
+        target?.run(.sequence([.colorize(with: color, colorBlendFactor: 0.85, duration: 0.05), .wait(forDuration: 0.08),
+                               .colorize(withColorBlendFactor: 0, duration: 0.15)]))
+    }
+
+    /// Смещение выпада: 6 точек к цели и обратно за 0,25 с.
+    private func lungeOffset(_ node: SKNode) -> CGPoint {
+        guard let lunge = lunges[ObjectIdentifier(node)] else { return .zero }
+        let t = (now - lunge.start) / 0.25
+        guard t < 1 else { lunges[ObjectIdentifier(node)] = nil; return .zero }
+        let k = CGFloat(sin(t * .pi)) * 6
+        return CGPoint(x: lunge.dx * k, y: lunge.dy * k)
+    }
+
+    /// Пошаговая встреча: новые строки журнала → анимация на карте.
+    private func watchEncounter(_ encounter: Encounter) {
+        if encounter.log.count < seenLog { seenLog = 0 }
+        let fresh = encounter.log.dropFirst(seenLog)
+        seenLog = encounter.log.count
+        let hero = (x: heroPosition.x, y: heroPosition.y)
+        let target: (x: Double, y: Double)
+        if let id = session.encounterNPC, npcs.indices.contains(id) { target = (npcs[id].x, npcs[id].y) }
+        else if let id = session.encounterTower, let tower = session.island.towers.first(where: { $0.id == id }) { target = (Double(tower.position.x), Double(tower.position.y)) }
+        else { return }
+        for line in fresh {
+            let number = line.split(separator: "−").last.map { String($0.prefix { $0.isNumber }) } ?? ""
+            if line.hasPrefix("Спутник ударил") {
+                floater("−\(number) ♥", at: (target.x + 0.4, target.y - 0.4), color: UIColor(red: 0.55, green: 0.85, blue: 0.6, alpha: 1))
+            } else if line.contains("ударил: −") {
+                floater("−\(number)", at: hero, color: UIColor(red: 0.66, green: 0.26, blue: 0.18, alpha: 1))
+                animateHit(by: opponentNode(), on: heroNode, from: target, to: hero, color: .red)
+            } else if line.contains(": −") {
+                floater("−\(number)", at: target, color: UIColor(red: 0.95, green: 0.82, blue: 0.48, alpha: 1))
+                animateHit(by: heroNode, on: opponentNode(), from: hero, to: target, color: .white)
+            }
         }
     }
 
@@ -644,6 +749,11 @@ final class ExploreScene: SKScene {
         let location = touch.location(in: self)
         let t = ExploreRenderer.tile(px: Double(location.x), py: Double(-location.y), side: side)
         var target = TilePoint(Int(t.x.rounded()), Int(t.y.rounded()))
+        // Касание памятника Epic — карточка (15B.2).
+        if let monument = session.island.monuments.first(where: { $0.position.distance(to: target) <= 1.5 }) {
+            session.monumentCard = monument
+            return
+        }
         // Активный режим: ходят джойстиком; касание дороги — только плашка.
         if session.mode == .active {
             if let road = session.island.road(at: target) { session.toast = road.caption }
@@ -683,7 +793,15 @@ final class ExploreScene: SKScene {
     override func update(_ currentTime: TimeInterval) {
         let dt = lastTime == 0 ? 0 : min(0.1, currentTime - lastTime)
         lastTime = currentTime
-        guard session.encounter == nil, !session.isFrozen else { return }
+        if let encounter = session.encounter {
+            // Пошаговая встреча: анимация ударов на карте позади окна (15G.3).
+            now += dt
+            watchEncounter(encounter)
+            layoutDynamic()
+            return
+        }
+        seenLog = 0
+        guard !session.isFrozen else { return }
         now += dt
         updateActiveFight(dt)
         chunkTicker += dt
@@ -871,6 +989,17 @@ final class ExploreScene: SKScene {
             session.letter = bottle
         }
         guard session.sailing == nil else { return }
+        // 15G.4: монументы полезного и восстановление от баффов; 15B.3: болото.
+        for shrine in island.shrines where near(shrine.position, 1.5) && (session.buffs[shrine.buff] ?? 0) < shrine.strength {
+            session.visit(shrine)
+            if let node = shrineNodes[shrine.id] { flash(node) }
+        }
+        let water = session.buff(.water), vegetables = session.buff(.vegetables)
+        let swampDamage = island.isSwamp(tile) ? ExploreRules.swampHPPerSecond : 0
+        if water > 0 || vegetables > 0 || swampDamage > 0 {
+            session.hp = max(1, min(session.hero.maxHP, session.hp + session.hero.maxHP * (water - swampDamage) * dt))
+            session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * vegetables * dt)
+        }
         if let region = island.region(at: tile) { session.visitedRegions.insert(region.id) }
         for village in island.villages where !session.visitedVillages.contains(village.id) && near(village.center, 1.5) {
             session.visitedVillages.insert(village.id)
@@ -950,6 +1079,7 @@ final class ExploreScene: SKScene {
         // На корабле герой стоит на палубе у кормы, корабль идёт вместе с ним.
         let sailing = session.sailing
         heroNode.position = point(heroPosition.x, heroPosition.y, lift: sailing == nil ? bob : 3)
+        heroNode.position += lungeOffset(heroNode)
         if sailing != nil { heroNode.position.x += 4 }
         heroNode.zPosition = depth(heroPosition.x, heroPosition.y) + (sailing == nil ? 0.5 : 0.7)
         for (index, node) in shipNodes.enumerated() {
@@ -977,6 +1107,7 @@ final class ExploreScene: SKScene {
             }
             let lunge = session.island.npcs[index].id == session.companion?.id && now - companionLunge < 0.3
             npcNodes[index].position = point(state.x, state.y, lift: lunge ? sin((now - companionLunge) / 0.3 * .pi) * 4 : 0)
+            npcNodes[index].position += lungeOffset(npcNodes[index])
             npcNodes[index].zPosition = depth(state.x, state.y) + 0.4
             npcBadges[index].fillColor = state.peaceful
                 ? UIColor(red: 0.18, green: 0.42, blue: 0.31, alpha: 1)
@@ -1023,7 +1154,8 @@ final class ExploreScene: SKScene {
     func resolveEncounter(_ outcome: EncounterOutcome?, npcId: Int?, towerId: Int? = nil) {
         if let towerId {
             if outcome == .won {
-                towerNodes[towerId]?.texture = texture(ExploreRenderer.tower(conquered: true))
+                towerNodes[towerId]?.texture = texture(session.island.towers.first { $0.id == towerId }?.isFinal == true
+                    ? ExploreSprites.bossTower(conquered: true).image : ExploreRenderer.tower(conquered: true))
                 if let node = towerNodes[towerId] { flash(node) }
             } else {
                 // Побег или поражение — отойти от башни, чтобы встреча не началась снова.
@@ -1061,4 +1193,8 @@ final class ExploreScene: SKScene {
         path = []
         layoutDynamic()
     }
+}
+
+private extension CGPoint {
+    static func += (lhs: inout CGPoint, rhs: CGPoint) { lhs = CGPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y) }
 }

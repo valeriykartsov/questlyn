@@ -67,7 +67,9 @@ struct ExploreTests {
             let data = input()
             let island = IslandGenerator.generate(data, seed: data.seed(attempt: attempt))
             #expect(island.isLand(island.start))
-            #expect(island.region(at: island.start)?.id == island.regions.count - 1)
+            #expect(island.region(at: island.start)?.id == 0)
+            // Финальная башня (15G.2) — на последнем острове.
+            #expect(island.towers.filter(\.isFinal).count == 1 && island.region(at: island.towers.first(where: \.isFinal)!.position)?.id == island.regions.count - 1)
             // Каждый остров: всё достижимо пешком от места высадки у его корабля; корабли связаны морем.
             for ship in island.ships {
                 #expect(!island.isLand(ship.position))
@@ -98,7 +100,7 @@ struct ExploreTests {
             #expect(apart)
         } }
         // Пешком между островами не дойти.
-        let otherCity = island.cities.first { island.region(at: $0.center)?.id == 0 }
+        let otherCity = island.cities.first { island.region(at: $0.center)?.id == island.regions.count - 1 }
         if let otherCity { #expect(island.path(from: island.start, to: otherCity.center) == nil) }
         // Мини-остров из короткого куска месяца — тоже отдельный.
         let short = input(days: 12)
@@ -120,7 +122,8 @@ struct ExploreTests {
         } }
         #expect(Set(island.cities.map(\.id)) == Set(island.cities.indices))
         #expect(island.npcs.map(\.id) == Array(island.npcs.indices))
-        #expect(island.region(at: island.start)?.id == 3)
+        // Старт (15G.2) — на северо-западном берегу первого острова.
+        #expect(island.region(at: island.start)?.id == 0)
         #expect(island.npcs.allSatisfy { $0.home.distance(to: island.start) >= Double(ExploreRules.npcMinDistanceFromStart) })
         #expect(island.npcs.allSatisfy { island.safeCity(at: $0.home) == nil })
         // Квесты по датам — на острове своего месяца.

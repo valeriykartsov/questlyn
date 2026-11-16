@@ -139,47 +139,83 @@ public struct HabitMarkService: Sendable {
     }
 }
 
-/// Недельный пересчёт DIS по понедельникам (BACKLOG 2.6, 07 раздел 5).
+/// Пересчёт DIS (07 раздел 5). С 17.11.2026 (15G.1) — по дням: день закрывается в 23:59.
+/// Недели, за которые уже есть недельное начисление (до перехода), не меняются.
 public struct DisciplineService: Sendable {
     private let store: any QuestlynStore
     public init(store: any QuestlynStore) { self.store = store }
 
-    /// Считает закрытые недели, за которые ещё нет начисления, и пересчитывает последнюю закрытую неделю
-    /// (её можно изменить отметкой за вчера в понедельник). Более ранние недели не меняются.
+    /// Считает закрытые дни, за которые ещё нет начисления, и пересчитывает вчера и дни текущей недели
+    /// (их можно изменить отметкой). Более ранние дни не меняются.
     public func settle(now: Date, timeZone: TimeZone) async throws {
         guard let hero = try await store.currentHero() else { return }
         let today = LocalDate(now, timeZone: timeZone)
-        let lastClosed = today.weekStart.adding(days: -7)
-        let first = DisciplineCalculator.firstCountedWeek(heroCreatedOn: LocalDate(hero.createdAt, timeZone: timeZone))
-        guard first <= lastClosed else { return }
+        let yesterday = today.adding(days: -1)
+        let first = DisciplineCalculator.firstCountedDay(heroCreatedOn: LocalDate(hero.createdAt, timeZone: timeZone))
+        guard first <= yesterday else { return }
 
         let habits = try await store.habits()
-        let occurrences = try await store.occurrences(from: first, through: lastClosed.adding(days: 6))
-        let existing = Dictionary(try await store.disciplineGrants().map { ($0.sourceId, $0) }, uniquingKeysWith: { a, _ in a })
+        let occurrences = try await store.occurrences(from: first.weekStart, through: yesterday)
+        let grants = try await store.disciplineGrants()
+        let existing = Dictionary(grants.map { ($0.sourceId, $0) }, uniquingKeysWith: { a, _ in a })
+        // Недели со старым недельным начислением — их дни не считаются по-новому.
+        var weekly: [LocalDate: ProgressGrant] = [:]
+        var week = first.weekStart
+        while week <= yesterday {
+            if let grant = existing[DisciplineCalculator.sourceId(weekStart: week)] { weekly[week] = grant }
+            week = week.adding(days: 7)
+        }
 
         var running = CentiXP.zero
-        var week = first
-        while week <= lastClosed {
-            let sourceId = DisciplineCalculator.sourceId(weekStart: week)
-            if let stored = existing[sourceId], week != lastClosed {
+        var day = first
+        while day <= yesterday {
+            if let grant = weekly[day.weekStart] {
+                if day == first || day.weekday == .monday { running += grant.amount }
+                day = day.adding(days: 1)
+                continue
+            }
+            let sourceId = DisciplineCalculator.sourceId(day: day)
+            let recompute = day >= today.weekStart || day == yesterday
+            if let stored = existing[sourceId], !recompute {
                 running += stored.amount
             } else {
-                let input = Self.input(week: week, habits: habits, occurrences: occurrences)
-                let result = DisciplineCalculator.evaluate(input)
+                let input = Self.dayInput(day: day, habits: habits, occurrences: occurrences)
+                let result = DisciplineCalculator.evaluateDay(done: input.done, scheduled: input.scheduled, weekly: input.weekly)
                 let amount = DisciplineCalculator.grantAmount(delta: result.delta, currentDIS: running)
                 if existing[sourceId]?.amount != amount || existing[sourceId] == nil {
                     let grant = ProgressGrant(
                         sourceType: .weeklyDiscipline, sourceId: sourceId, ruleVersion: .current,
                         target: .attribute(.discipline), amount: amount,
-                        reason: Self.reason(week: week, result: result), createdAt: now,
-                        effectiveDate: week.adding(days: 7)
+                        reason: Self.reason(day: day, result: result), createdAt: now, effectiveDate: day
                     )
                     try await store.replaceDisciplineGrant(sourceId: sourceId, with: grant)
                 }
                 running += amount
             }
-            week = week.adding(days: 7)
+            day = day.adding(days: 1)
         }
+    }
+
+    /// День: выполнено и запланировано по ежедневным; в воскресенье — и недельные квесты недели.
+    public static func dayInput(day: LocalDate, habits: [HabitDefinition], occurrences: [HabitOccurrence])
+        -> (done: Int, scheduled: Int, weekly: [(done: Int, target: Int)]) {
+        let scheduled = habits.filter { $0.isScheduled(on: day) }
+        let ids = Set(scheduled.map(\.id))
+        let done = Set(occurrences.filter { $0.localDate == day && ids.contains($0.habitId) }.map(\.habitId)).count
+        var weekly: [(done: Int, target: Int)] = []
+        if day.weekday == .sunday {
+            let week = day.weekStart
+            weekly = habits.filter { $0.countsForWeek(starting: week) }.map { habit in
+                (occurrences.filter { $0.habitId == habit.id && $0.localDate >= week && $0.localDate <= day }.count, habit.targetPerWeek)
+            }
+        }
+        return (done, scheduled.count, weekly)
+    }
+
+    static func reason(day: LocalDate, result: DisciplineCalculator.DayResult) -> String {
+        let percent = Int(result.percent.rounded())
+        let v = String(format: "%.2f", result.v).replacingOccurrences(of: ".", with: ",")
+        return "День \(day): выполнено \(percent)% · v \(v)"
     }
 
     public static func input(week: LocalDate, habits: [HabitDefinition], occurrences: [HabitOccurrence]) -> DisciplineCalculator.WeekInput {

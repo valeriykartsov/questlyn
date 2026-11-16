@@ -76,6 +76,18 @@ struct ExploreFlowView: View {
         if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
             if demo.contains("night") { session.clockHour = 22 }
             if demo.contains("map") { session.isWorldMapOpen = true }
+            // `boss` — у финальной башни; `shrine` — у монумента полезного; `swamp` — в болоте (15B, 15G).
+            if demo.contains("boss"), let tower = session.finalTower,
+               let spot = [(3, 0), (0, 3), (-3, 0), (0, -3)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
+                session.heroTile = spot
+            }
+            if demo.contains("shrine"), let shrine = session.island.shrines.first,
+               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(shrine.position.x + $0.0, shrine.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
+                session.heroTile = spot
+            }
+            if demo.contains("swamp"), let index = session.island.swamp.firstIndex(of: true) {
+                session.heroTile = TilePoint(index % session.island.side, index / session.island.side)
+            }
             // `fight` — герой в клетке от NPC: встреча начнётся сама (в активном режиме — бой на карте).
             if demo.contains("fight"), let npc = session.island.npcs.first(where: { session.island.isWalkable(TilePoint($0.home.x + 1, $0.home.y)) }) {
                 session.heroTile = TilePoint(npc.home.x + 1, npc.home.y)
@@ -372,6 +384,10 @@ struct ExploreGameView: View {
                     TaskListCard(session: session) { showsTasks = false }
                         .transition(.opacity)
                 }
+                if let monument = session.monumentCard {
+                    MonumentCard(monument: monument) { session.monumentCard = nil }
+                        .transition(.opacity)
+                }
                 if let letter = session.letter {
                     LetterCard(bottle: letter) { session.letter = nil }
                         .transition(.opacity)
@@ -480,6 +496,23 @@ struct ExploreGameView: View {
                 }
             }
             .font(QFont.text(11, weight: .semibold))
+            // Баффы монументов полезного (15G.4) и болото под ногами (15B.3).
+            if !session.buffs.isEmpty || session.island.isSwamp(session.heroTile) {
+                HStack(spacing: 4) {
+                    ForEach(ExploreBuff.allCases.filter { session.buffs[$0] != nil }, id: \.self) { buff in
+                        Text("\(Self.buffSymbol(buff)) \(buff.effect(session.buffs[buff] ?? 0))").lineLimit(1).fixedSize()
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(QColor.forest.opacity(0.18), in: Capsule())
+                            .accessibilityLabel("Бафф: \(buff.title), \(buff.effect(session.buffs[buff] ?? 0))")
+                    }
+                    if session.island.isSwamp(session.heroTile) {
+                        Text("Болото: −1% HP/с, шаг медленнее").lineLimit(1).fixedSize()
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(QColor.hp.opacity(0.18), in: Capsule())
+                    }
+                }
+                .font(QFont.text(10, weight: .semibold))
+            }
         }
         .foregroundStyle(QColor.ink)
         .padding(.horizontal, QSpacing.l).padding(.vertical, QSpacing.s)
@@ -504,6 +537,17 @@ struct ExploreGameView: View {
         .accessibilityLabel("Мини-карта")
         .accessibilityHint("Открыть карту мира")
         .accessibilityAddTraits(.isButton)
+    }
+
+    static func buffSymbol(_ buff: ExploreBuff) -> String {
+        switch buff {
+        case .water: "💧"
+        case .walk: "👟"
+        case .stretch: "🧘"
+        case .vegetables: "🍎"
+        case .nap: "🌙"
+        case .custom: "⭐"
+        }
     }
 
     /// Сумка (14.5, макет ExploreBag): четыре вида расходников, касание — использовать.
@@ -781,6 +825,17 @@ struct ExploreSummaryView: View {
                     if session.island.regions.count > 1 { row("Островов посещено", session.visitedRegions.count) }
                     if !session.island.bottles.isEmpty { row("Бутылок найдено", session.readBottles.count) }
                     if !session.island.towers.isEmpty { row("Башен взято", session.conqueredTowers.count) }
+                    if session.finalTower != nil {
+                        HStack {
+                            Text(session.isArchipelagoPassed ? "🏆 Архипелаг пройден" : "Финальная башня").font(QFont.text(15, weight: session.isArchipelagoPassed ? .bold : .regular))
+                            Spacer()
+                            Text(session.isArchipelagoPassed ? "босс повержен" : "не взята").font(QFont.text(15, weight: .bold))
+                                .foregroundStyle(session.isArchipelagoPassed ? QColor.forest : QColor.inkSecondary)
+                        }
+                        .padding(.horizontal, QSpacing.xl).frame(minHeight: 44)
+                        .overlay(alignment: .bottom) { Divider().overlay(QColor.line) }
+                    }
+                    if !session.buffs.isEmpty { row("Монументов полезного", session.buffs.count) }
                     if !session.island.lighthouses.isEmpty { row("Маяков зажжено", session.litLighthouses.count) }
                     if !session.island.tasks.isEmpty { row("Заданий выполнено", session.doneTasks.count) }
                     row("Побед", session.wins)
@@ -1275,5 +1330,30 @@ struct ActiveActionsView: View {
         case .teamMove: "Командный"
         default: ability.title
         }
+    }
+}
+
+/// Карточка памятника Epic (15B.2, макет ExploreLife).
+struct MonumentCard: View {
+    let monument: IslandMonument
+    let close: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                Text("Памятник Epic").font(QFont.text(11, weight: .bold)).textCase(.uppercase).tracking(0.6).foregroundStyle(QColor.amberDeep)
+                Text("«\(monument.epic.title)»").font(QFont.title(20)).fixedSize(horizontal: false, vertical: true)
+                Text("Начат \(Format.shortDay(monument.epic.started)) · \(monument.epic.steps) шагов · закрыт \(Format.shortDay(monument.epic.closed))")
+                    .font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
+                Button("Дальше", action: close).buttonStyle(PrimaryButtonStyle())
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(QSpacing.xl)
+            .frame(maxWidth: 420)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.xl)
+        }
+        .accessibilityAddTraits(.isModal)
     }
 }

@@ -429,13 +429,69 @@ final class AppModel {
             // Погода прогулки — случайная отметка настроения месяца (15A).
             .with(moods: (overview?.moods ?? []).filter { $0.localDate >= first && $0.localDate <= last }
                 .map { ExploreMood(date: $0.localDate, mood: $0.mood) })
+            // 15B и 15G.4: рост навыков, закрытые Epic, вредное и полезное.
+            .with(skillGains: exploreSkillGains, closedEpics: exploreClosedEpics,
+                  harmDays: sampleHarms(first, last) ?? exploreHarmDays.filter { $0 >= first && $0 <= last },
+                  benefits: sampleBenefits(first, last) ?? exploreBenefits.filter { $0.date >= first && $0.date <= last })
     }
+
+    /// Отладка: `-QuestlynSampleEvents YES` — отметки вредного и полезного для проверки болота и монументов.
+    private func sampleHarms(_ first: LocalDate, _ last: LocalDate) -> [LocalDate]? {
+        #if DEBUG
+        guard UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") else { return nil }
+        var days: [LocalDate] = [], day = first, index = 0
+        while day <= last { if index % 2 == 0 { days.append(day) }; day = day.adding(days: 1); index += 1 }
+        return days
+        #else
+        return nil
+        #endif
+    }
+
+    private func sampleBenefits(_ first: LocalDate, _ last: LocalDate) -> [(date: LocalDate, buff: ExploreBuff)]? {
+        #if DEBUG
+        guard UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") else { return nil }
+        var marks: [(date: LocalDate, buff: ExploreBuff)] = [], day = first, index = 0
+        while day <= last {
+            if index % 5 == 0 { marks.append((day, .water)) }
+            if index % 11 == 0 { marks.append((day, .walk)) }
+            if index % 13 == 0 { marks.append((day, .stretch)) }
+            day = day.adding(days: 1); index += 1
+        }
+        return marks
+        #else
+        return nil
+        #endif
+    }
+
+    /// Прирост XP навыков по дням (15B.1).
+    private var exploreSkillGains: [ExploreSkillGain] {
+        let active = skills.filter(\.isActive)
+        var gains: [UUID: [LocalDate: Double]] = [:]
+        for grant in progress.grants {
+            guard case let .skill(id) = grant.target, active.contains(where: { $0.id == id }) else { continue }
+            gains[id, default: [:]][grant.effectiveDate, default: 0] += Double(grant.amount.value) / 100
+        }
+        return active.map { ExploreSkillGain(title: $0.title, gains: gains[$0.id] ?? [:]) }
+    }
+
+    private(set) var exploreClosedEpics: [ExploreClosedEpic] = []
+    private(set) var exploreHarmDays: [LocalDate] = []
+    private(set) var exploreBenefits: [(date: LocalDate, buff: ExploreBuff)] = []
 
     /// Дни отметок ежедневных за последние ~3 месяца — для маяков «Побродить» (14.5).
     private(set) var exploreHabitDays: [ExploreHabitDays] = []
 
     func loadExploreHabits() async {
         let from = today.adding(days: -(ExploreRules.maxDays + 7))
+        // 15B.2, 15B.3, 15G.4: закрытые Epic, отметки вредного и полезного.
+        let quests = (try? await store.allQuests()) ?? []
+        exploreClosedEpics = ((try? await store.epics()) ?? []).compactMap { epic in
+            guard epic.deletedAt == nil, let closed = epic.completedAt else { return nil }
+            return ExploreClosedEpic(title: epic.title, steps: quests.filter { $0.epicId == epic.id }.count,
+                                     started: LocalDate(epic.createdAt, timeZone: timeZone), closed: LocalDate(closed, timeZone: timeZone))
+        }
+        exploreHarmDays = ((try? await store.harmEntries()) ?? []).filter(\.isActive).map(\.localDate)
+        exploreBenefits = ((try? await store.benefitEntries()) ?? []).filter(\.isActive).map { ($0.localDate, ExploreBuff($0.kind)) }
         let marks = (try? await store.occurrences(from: from, through: today)) ?? []
         exploreHabitDays = habits.filter { $0.habit.kind == .daily }.map { status in
             // Запланированные дни — для износа дорог (15A.2).
