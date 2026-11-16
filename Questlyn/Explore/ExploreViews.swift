@@ -15,8 +15,6 @@ struct ExploreFlowView: View {
     @State private var chosen: [UUID] = []
     @State private var attempt = 0
     @State private var session: ExploreSession?
-    @State private var season: Season = Season.of(LocalDate(.now, timeZone: .current))
-    @State private var precipitation = false
 
     init(model: AppModel) {
         self.model = model
@@ -30,8 +28,7 @@ struct ExploreFlowView: View {
             switch phase {
             case .setup:
                 NavigationStack {
-                    ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen, season: $season,
-                                     precipitation: $precipitation, start: start)
+                    ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen, start: start)
                 }
             case .game:
                 if let session { ExploreGameView(session: session) { phase = .summary } }
@@ -57,7 +54,7 @@ struct ExploreFlowView: View {
         let skills = model.exploreSkills.filter { chosen.contains($0.id) }
         session = ExploreSession(input: model.exploreInput(first: a, last: b), hero: model.exploreHero(skills: skills),
                                  attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
-                                 season: season, precipitation: precipitation)
+                                 mode: ExploreModeSetting.current)
         session?.ghostCount = model.ghosts.count
         session?.aura = model.auraTier
         session?.badge = model.heroBadge
@@ -69,8 +66,6 @@ struct ExploreFlowView: View {
         // `-QuestlynExploreAuto YES` — сразу на остров (проверка в симуляторе без нажатий).
         guard UserDefaults.standard.bool(forKey: "QuestlynExploreAuto"), phase == .setup else { return }
         first = Calendar.current.date(byAdding: .day, value: -60, to: last) ?? first
-        if let value = UserDefaults.standard.string(forKey: "QuestlynExploreSeason"), let chosenSeason = Season(rawValue: value) { season = chosenSeason }
-        precipitation = UserDefaults.standard.bool(forKey: "QuestlynExplorePrecipitation")
         chosen = Array(model.exploreSkills.prefix(2).map(\.id))
         start()
         if UserDefaults.standard.bool(forKey: "QuestlynExploreEncounter"), let session, let npc = session.island.npcs.last {
@@ -80,6 +75,22 @@ struct ExploreFlowView: View {
         // `-QuestlynExploreDemo night | bag | tower` — этап 14: ночь, сумка со спутником, герой у Чёрной башни.
         if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
             if demo.contains("night") { session.clockHour = 22 }
+            if demo.contains("map") { session.isWorldMapOpen = true }
+            // `fight` — герой в клетке от NPC: встреча начнётся сама (в активном режиме — бой на карте).
+            if demo.contains("fight"), let npc = session.island.npcs.first(where: { session.island.isWalkable(TilePoint($0.home.x + 1, $0.home.y)) }) {
+                session.heroTile = TilePoint(npc.home.x + 1, npc.home.y)
+            }
+            // `north` — герой на севере у гор (15A): самая северная клетка суши рядом с горой.
+            if demo.contains("north") {
+                let island = session.island, side = island.side
+                var best: TilePoint?
+                for y in 0..<side { for x in 0..<side where island.isWalkable(TilePoint(x, y)) && island.zone(at: TilePoint(x, y)).isCold {
+                    let point = TilePoint(x, y)
+                    let nearMountain = (-3...3).contains { dx in (-3...3).contains { dy in island.terrain(at: TilePoint(x + dx, y + dy)) == .mountain } }
+                    if nearMountain, best.map({ x + y < $0.x + $0.y }) ?? true { best = point }
+                } }
+                if let best { session.heroTile = best }
+            }
             if demo.contains("bag") {
                 for item in ExploreItem.allCases { _ = session.addItem(item) }
                 session.companion = session.island.npcs.first
@@ -88,7 +99,7 @@ struct ExploreFlowView: View {
                 }
             }
             if demo.contains("tower"), let tower = session.island.towers.first,
-               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isLand($0) }) {
+               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
                 session.heroTile = spot
             }
         }
@@ -128,8 +139,6 @@ struct ExploreSetupView: View {
     @Binding var first: Date
     @Binding var last: Date
     @Binding var chosen: [UUID]
-    @Binding var season: Season
-    @Binding var precipitation: Bool
     let start: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var preview: Island?
@@ -166,21 +175,14 @@ struct ExploreSetupView: View {
                     preset("3 месяца", days: ExploreRules.maxDays)
                 }
                 summary
-                CapsHeader(title: "Время года и погода")
-                VStack(spacing: QSpacing.m) {
-                    Picker("Время года", selection: $season) {
-                        Text("Осень").tag(Season.autumn)
-                        Text("Зима").tag(Season.winter)
-                        Text("Весна").tag(Season.spring)
-                        Text("Лето").tag(Season.summer)
-                    }
-                    .pickerStyle(.segmented)
-                    Picker("Погода", selection: $precipitation) {
-                        Text("Ясно").tag(false)
-                        Text(season == .winter ? "Снег" : "Дождь").tag(true)
-                    }
-                    .pickerStyle(.segmented)
+                // 15A: время года заменили климатические зоны, погода — из настроения.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Погода — из твоего настроения").font(QFont.text(14, weight: .semibold))
+                    Text("Случайная отметка месяца: плохо — дождь (на севере — снег), нормально — облачно, хорошо — ясно. Климат — от тундры на севере до пустыни на юге.")
+                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                 }
+                .padding(QSpacing.l).frame(maxWidth: .infinity, alignment: .leading)
+                .sheetCard()
                 skillsSection
                 Text("Песочница: XP, HP, MP и Летопись героя не меняются. HP и MP в игре стартуют с текущих.")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
@@ -235,7 +237,7 @@ struct ExploreSetupView: View {
                     count(island.npcs.count, "NPC")
                     count(island.chests.count, "сундуков")
                     count(island.campfires.count, "костров")
-                    if island.regions.count > 1 { count(island.regions.count, "островов-месяцев") } else { count(island.weatherBands.count, "недель погоды") }
+                    if island.regions.count > 1 { count(island.regions.count, "островов-месяцев") } else { count(island.roads.count, "дорог") }
                 }
                 if !model.isCalendarAuthorized && island.cities.isEmpty {
                     Text("Без доступа к календарю на острове не будет городов и NPC. Подключите Apple Calendar во вкладке «Календарь».")
@@ -312,6 +314,7 @@ struct ExploreGameView: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let wide = proxy.size.width > proxy.size.height
             ZStack(alignment: .top) {
                 if let scene {
                     SpriteView(scene: scene, preferredFramesPerSecond: 60)
@@ -321,13 +324,26 @@ struct ExploreGameView: View {
                     Color(hex: 0x3F6E9C).ignoresSafeArea()
                 }
                 VStack(spacing: QSpacing.s) {
-                    topBar
-                    HStack(alignment: .top) {
-                        goals
-                        Spacer()
-                        VStack(spacing: QSpacing.s) {
-                            minimap
-                            zoomButtons
+                    if wide {
+                        // Горизонтально: всё сверху в одну строку, панели снизу — по центру.
+                        HStack(alignment: .top, spacing: QSpacing.s) {
+                            topBar.frame(maxWidth: 380)
+                            goals
+                            Spacer()
+                            VStack(spacing: QSpacing.s) {
+                                minimap
+                                zoomButtons
+                            }
+                        }
+                    } else {
+                        topBar
+                        HStack(alignment: .top) {
+                            goals
+                            Spacer()
+                            VStack(spacing: QSpacing.s) {
+                                minimap
+                                zoomButtons
+                            }
                         }
                     }
                     if let toast = session.toast {
@@ -337,17 +353,31 @@ struct ExploreGameView: View {
                             .transition(.opacity)
                     }
                     Spacer()
-                    bagBar
-                    shipBar
-                    abilityBar
+                    VStack(spacing: QSpacing.s) {
+                        // Горизонтально в активном режиме сумка — в нижней строке между джойстиком и кнопками.
+                        if !(wide && session.mode == .active) { bagBar }
+                        shipBar
+                        if session.mode == .turnBased { abilityBar }
+                    }
+                    .frame(maxWidth: wide ? 560 : .infinity)
+                    // Джойстик и кнопки — по углам экрана, во всю ширину (и горизонтально).
+                    if session.mode == .active { activeControls(wide: wide) }
                 }
                 .padding(.horizontal, QSpacing.l)
+                if session.isPaused {
+                    PauseCard(session: session, exit: exit)
+                        .transition(.opacity)
+                }
                 if showsTasks {
                     TaskListCard(session: session) { showsTasks = false }
                         .transition(.opacity)
                 }
                 if let letter = session.letter {
                     LetterCard(bottle: letter) { session.letter = nil }
+                        .transition(.opacity)
+                }
+                if session.isWorldMapOpen {
+                    WorldMapView(session: session) { session.isWorldMapOpen = false }
                         .transition(.opacity)
                 }
                 if session.encounter != nil {
@@ -357,7 +387,9 @@ struct ExploreGameView: View {
             }
             .onAppear {
                 if scene == nil { scene = ExploreScene(session: session, size: proxy.size) }
+                OrientationLock.set(.allButUpsideDown)
             }
+            .onDisappear { OrientationLock.set(.portrait) }
         }
         .task(id: session.toast) {
             guard session.toast != nil else { return }
@@ -368,10 +400,13 @@ struct ExploreGameView: View {
 
     private var topBar: some View {
         HStack(spacing: QSpacing.s) {
-            Button("Выйти", action: exit)
-                .font(QFont.text(14, weight: .semibold)).foregroundStyle(QColor.ink)
-                .padding(.horizontal, QSpacing.xl).frame(height: 40)
-                .background(QColor.sheet.opacity(0.94), in: Capsule())
+            Button { withAnimation { session.isPaused = true } } label: {
+                Image(systemName: "pause.fill").font(.system(size: 15, weight: .bold)).foregroundStyle(QColor.ink)
+                    .frame(width: 44, height: 40)
+                    .background(QColor.sheet.opacity(0.94), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Пауза")
             VStack(spacing: 5) {
                 bar("HP", value: session.hp, max: session.hero.maxHP, color: QColor.hp)
                 bar("MP", value: session.mp, max: session.hero.maxMP, color: QColor.mp)
@@ -454,9 +489,8 @@ struct ExploreGameView: View {
     private var minimap: some View {
         let side = CGFloat(session.island.side)
         return ZStack(alignment: .topLeading) {
-            if let image = ExploreRenderer.minimap(session.island, opened: session.openedChests, lit: session.litCampfires,
-                                                    ships: session.ships.indices.filter { $0 != session.sailing }.map { session.ships[$0] }) {
-                Image(decorative: image, scale: 1).resizable().interpolation(.none)
+            if let image = session.minimapImage {
+                Image(decorative: image, scale: 1).resizable().interpolation(.medium)
             }
             Rectangle().fill(Color(hex: 0xE2A04A))
                 .frame(width: 6, height: 6)
@@ -465,7 +499,11 @@ struct ExploreGameView: View {
         .frame(width: 80, height: 80)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(QColor.sheet, lineWidth: 2))
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation { session.isWorldMapOpen = true } }
         .accessibilityLabel("Мини-карта")
+        .accessibilityHint("Открыть карту мира")
+        .accessibilityAddTraits(.isButton)
     }
 
     /// Сумка (14.5, макет ExploreBag): четыре вида расходников, касание — использовать.
@@ -531,6 +569,20 @@ struct ExploreGameView: View {
             .buttonStyle(.plain)
             .padding(.bottom, QSpacing.s)
         }
+    }
+
+    /// Активный режим (макет ExploreActive): джойстик слева, «Удар» и способности справа.
+    private func activeControls(wide: Bool) -> some View {
+        HStack(alignment: .bottom) {
+            JoystickView(session: session)
+            Spacer(minLength: QSpacing.l)
+            if wide {
+                bagBar.frame(maxWidth: 360)
+                Spacer(minLength: QSpacing.l)
+            }
+            ActiveActionsView(session: session)
+        }
+        .padding(.bottom, QSpacing.l)
     }
 
     @ViewBuilder private var abilityBar: some View {
@@ -603,6 +655,7 @@ struct EncounterView: View {
                 }
                 .foregroundStyle(QColor.ink)
                 .padding(QSpacing.xl)
+                .frame(maxWidth: 600)
                 .background(QColor.sheet)
                 .overlay(Rectangle().strokeBorder(QColor.ink, lineWidth: 3))
                 .background(Color.black.opacity(0.35).offset(x: 4, y: 4))
@@ -884,5 +937,343 @@ struct TaskListCard: View {
         .padding(QSpacing.m)
         .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Карта мира (15A.3, макет ExploreWorldMap)
+
+/// Весь мир в изометрии, как на экране: неоткрытое — под туманом; города, задания, корабли, герой. Игра на паузе.
+struct WorldMapView: View {
+    let session: ExploreSession
+    let close: () -> Void
+    @State private var showsCities = true
+    @State private var showsTasks = true
+    @State private var showsChests = false
+    @State private var showsShips = true
+    @State private var image: CGImage?
+    @State private var scale: CGFloat = 1
+    @State private var position = ScrollPosition()
+    @GestureState private var pinch: CGFloat = 1
+
+    var body: some View {
+        GeometryReader { outer in
+            let wide = outer.size.width > outer.size.height
+            Group {
+                if wide {
+                    HStack(alignment: .top, spacing: QSpacing.l) {
+                        mapArea
+                        VStack(alignment: .leading, spacing: QSpacing.m) {
+                            header
+                            filters
+                            legend
+                            Spacer(minLength: 0)
+                            Button("К герою", action: close).buttonStyle(PrimaryButtonStyle())
+                        }
+                        .frame(width: 280)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: QSpacing.m) {
+                        header
+                        filters
+                        mapArea
+                        legend
+                        Text("Неоткрытое — под туманом. Щипок или +/− — масштаб. Игра на паузе, пока открыта карта.")
+                            .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        Button("К герою", action: close).buttonStyle(PrimaryButtonStyle())
+                    }
+                }
+            }
+        }
+        .padding(QSpacing.screen)
+        .background(QColor.paper.ignoresSafeArea())
+        .task { image = ExploreRenderer.worldMap(session.island, explored: session.explored) }
+    }
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Карта мира").font(QFont.title(20))
+                Text(subtitle).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            }
+            Spacer()
+            Button(action: close) {
+                Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).frame(width: 44, height: 44)
+                    .background(QColor.sheet, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Закрыть")
+        }
+    }
+
+    private var filters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: QSpacing.s) {
+                chip("Города", $showsCities)
+                chip("Задания", $showsTasks)
+                chip("Сундуки", $showsChests)
+                if !session.island.ships.isEmpty { chip("Корабли", $showsShips) }
+            }
+        }
+    }
+
+    /// Карта: щипок и кнопки +/−; при смене масштаба герой — в центре.
+    private var mapArea: some View {
+        GeometryReader { proxy in
+            // Масштаб 1 — весь мир в окне; крупнее — прокрутка, герой в центре.
+            let width = min(proxy.size.width, proxy.size.height * 2) * scale * pinch, height = width / 2
+            let hero = ExploreRenderer.worldMapPoint(session.heroTile, side: session.island.side)
+            ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                ZStack(alignment: .topLeading) {
+                    if let image {
+                        Image(decorative: image, scale: 1).resizable().interpolation(scale * pinch > 2 ? .none : .medium)
+                            .frame(width: width, height: height)
+                    }
+                    markers(width: width, height: height)
+                }
+                .frame(width: width, height: height)
+                .frame(minWidth: proxy.size.width, minHeight: proxy.size.height)
+            }
+            .scrollPosition($position)
+            .task(id: scale) {
+                // Герой — в центре окна (с поправкой на края карты).
+                try? await Task.sleep(for: .milliseconds(60))
+                let x = min(max(0, hero.x * width - proxy.size.width / 2), max(0, width - proxy.size.width))
+                let y = min(max(0, hero.y * height - proxy.size.height / 2), max(0, height - proxy.size.height))
+                withAnimation { position.scrollTo(point: CGPoint(x: x, y: y)) }
+            }
+            .gesture(MagnifyGesture().updating($pinch) { value, state, _ in state = value.magnification }
+                .onEnded { scale = min(Self.maxScale, max(1, scale * $0.magnification)) })
+            .overlay(alignment: .bottomTrailing) { zoomButtons.padding(QSpacing.s) }
+        }
+        .background(Color(hex: 0x3F6E9C), in: RoundedRectangle(cornerRadius: QRadius.card))
+        .clipShape(RoundedRectangle(cornerRadius: QRadius.card))
+    }
+
+    static let maxScale: CGFloat = 6
+
+    private var zoomButtons: some View {
+        VStack(spacing: 0) {
+            Button { scale = min(Self.maxScale, scale * 1.5) } label: {
+                Image(systemName: "plus").frame(width: 44, height: 40)
+            }
+            .disabled(scale >= Self.maxScale)
+            .accessibilityLabel("Крупнее")
+            Divider().frame(width: 24)
+            Button { scale = max(1, scale / 1.5) } label: {
+                Image(systemName: "minus").frame(width: 44, height: 40)
+            }
+            .disabled(scale <= 1)
+            .accessibilityLabel("Мельче")
+        }
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(QColor.ink)
+        .buttonStyle(.plain)
+        .background(QColor.sheet.opacity(0.95), in: RoundedRectangle(cornerRadius: QRadius.control))
+    }
+
+    private var subtitle: String {
+        let regions = session.island.regions.count
+        let share = Int((session.exploredShare * 100).rounded())
+        return "Открыто \(share)%" + (regions > 1 ? " · \(regions) \(regions < 5 ? "острова" : "островов")" : "") + " · \(session.clockText)"
+    }
+
+    private func isOpen(_ point: TilePoint) -> Bool {
+        let index = point.y * session.island.side + point.x
+        return session.explored.indices.contains(index) && session.explored[index]
+    }
+
+    @ViewBuilder private func markers(width: CGFloat, height: CGFloat) -> some View {
+        let side = session.island.side
+        let place = { (point: TilePoint) -> CGPoint in
+            let p = ExploreRenderer.worldMapPoint(point, side: side)
+            return CGPoint(x: p.x * width, y: p.y * height)
+        }
+        if showsCities {
+            ForEach(session.island.cities.filter { isOpen($0.center) }) { city in
+                let p = place(city.center)
+                RoundedRectangle(cornerRadius: 2).fill(QColor.ink).frame(width: 9, height: 9)
+                    .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(QColor.sheet, lineWidth: 1.5))
+                    .position(p)
+                Text(city.name).font(QFont.text(10, weight: .bold)).lineLimit(1).fixedSize()
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(QColor.sheet.opacity(0.9), in: Capsule())
+                    .position(x: p.x, y: p.y - 12)
+            }
+        }
+        if showsTasks {
+            ForEach(session.island.tasks.filter { session.takenTasks.contains($0.id) && !session.doneTasks.contains($0.id) }) { task in
+                if let city = session.island.cities.first(where: { $0.id == task.cityId }) {
+                    Text("!").font(QFont.text(11, weight: .bold)).foregroundStyle(QColor.sheet)
+                        .frame(width: 16, height: 16).background(QColor.amberDeep, in: Circle())
+                        .position(x: place(city.center).x + 10, y: place(city.center).y - 24)
+                }
+            }
+        }
+        if showsChests {
+            ForEach(session.island.chests.filter { isOpen($0.position) && !session.openedChests.contains($0.id) }) { chest in
+                Rectangle().fill(QColor.amber).frame(width: 5, height: 5).position(place(chest.position))
+            }
+        }
+        if showsShips {
+            ForEach(Array(session.ships.enumerated()), id: \.offset) { index, ship in
+                if index != session.sailing {
+                    Image(systemName: "sailboat.fill").font(.system(size: 10)).foregroundStyle(Color(hex: 0x6B3F22)).position(place(ship))
+                }
+            }
+        }
+        ZStack {
+            Circle().fill(QColor.amber.opacity(0.3)).frame(width: 22, height: 22)
+            Circle().fill(QColor.amber).frame(width: 10, height: 10).overlay(Circle().strokeBorder(QColor.sheet, lineWidth: 2))
+        }
+        .position(place(session.heroTile))
+        .accessibilityLabel("Герой")
+    }
+
+    private var legend: some View {
+        HStack(spacing: QSpacing.m) {
+            HStack(spacing: 4) { Circle().fill(QColor.amber).frame(width: 9, height: 9); Text("Ты") }
+            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(QColor.ink).frame(width: 9, height: 9); Text("Город") }
+            HStack(spacing: 4) {
+                Text("!").font(QFont.text(9, weight: .bold)).foregroundStyle(QColor.sheet).frame(width: 13, height: 13).background(QColor.amberDeep, in: Circle())
+                Text("Задание")
+            }
+            HStack(spacing: 4) { Rectangle().fill(Color(hex: 0x9A7A4E)).frame(width: 14, height: 5); Text("Дорога") }
+        }
+        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+    }
+
+    private func chip(_ title: String, _ isOn: Binding<Bool>) -> some View {
+        Button { isOn.wrappedValue.toggle() } label: {
+            Text(title).font(QFont.text(12, weight: .semibold))
+                .foregroundStyle(isOn.wrappedValue ? QColor.sheet : QColor.ink)
+                .padding(.horizontal, QSpacing.l).frame(height: 32)
+                .background(isOn.wrappedValue ? QColor.ink : Color.clear, in: Capsule())
+                .overlay(Capsule().strokeBorder(isOn.wrappedValue ? .clear : QColor.lineStrong))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn.wrappedValue ? .isSelected : [])
+    }
+}
+
+// MARK: - Пауза (16.11.2026)
+
+/// Игра стоит: часы, NPC и восстановление не идут.
+struct PauseCard: View {
+    let session: ExploreSession
+    let exit: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea()
+            VStack(spacing: QSpacing.m) {
+                Text("Пауза").font(QFont.title(22))
+                Text("Время на острове стоит, NPC не двигаются.").font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
+                    .multilineTextAlignment(.center)
+                Button("Продолжить") { withAnimation { session.isPaused = false } }.buttonStyle(PrimaryButtonStyle())
+                Button("Карта мира") { session.isPaused = false; withAnimation { session.isWorldMapOpen = true } }
+                    .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.ink).frame(minHeight: 44)
+                Button("Выйти с острова", action: exit)
+                    .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.hp).frame(minHeight: 44)
+            }
+            .padding(QSpacing.xl)
+            .frame(maxWidth: 340)
+            .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.xl)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+}
+
+// MARK: - Активный режим: джойстик и кнопки (16.11.2026, макеты ExploreActive)
+
+/// Джойстик: тянуть от центра — герой идёт в эту сторону, отпустить — стоит.
+struct JoystickView: View {
+    let session: ExploreSession
+    @State private var knob = CGSize.zero
+    static let size: CGFloat = 120
+    private var radius: CGFloat { Self.size / 2 - 22 }
+
+    var body: some View {
+        ZStack {
+            Circle().fill(QColor.sheet.opacity(0.22))
+                .overlay(Circle().strokeBorder(QColor.sheet.opacity(0.75), lineWidth: 2))
+            Circle().fill(QColor.sheet.opacity(0.95)).frame(width: 50, height: 50)
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
+                .offset(knob)
+        }
+        .frame(width: Self.size, height: Self.size)
+        .contentShape(Circle())
+        .gesture(DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                var dx = value.location.x - Self.size / 2, dy = value.location.y - Self.size / 2
+                let length = hypot(dx, dy)
+                if length > radius { dx = dx / length * radius; dy = dy / length * radius }
+                knob = CGSize(width: dx, height: dy)
+                session.stick = CGVector(dx: dx / radius, dy: dy / radius)
+            }
+            .onEnded { _ in
+                withAnimation(.spring(duration: 0.2)) { knob = .zero }
+                session.stick = .zero
+            })
+        .accessibilityElement()
+        .accessibilityLabel("Джойстик")
+        .accessibilityHint("Перетащите, чтобы идти")
+    }
+}
+
+/// «Удар» и способности: в бою — по противнику, без боя — «Рывок» и «Разведка» как на карте.
+struct ActiveActionsView: View {
+    let session: ExploreSession
+
+    var body: some View {
+        let fight = session.activeFight
+        let canStrike = fight.map { $0.strikeCooldown <= 0 && session.activeDistance <= ExploreRules.activeRange } ?? false
+        HStack(alignment: .bottom, spacing: QSpacing.s) {
+            VStack(spacing: QSpacing.s) {
+                ForEach(session.hero.skills) { skill in
+                    let ready = fight.map { $0.isReady(skill) } ?? session.canUseOnMap(skill)
+                    let left = fight.map { ($0.cooldowns[skill.ability] ?? 0) / max(0.01, $0.abilityCooldown) } ?? 0
+                    Button { session.activeUse(skill) } label: {
+                        VStack(spacing: 0) {
+                            Text(Self.short(skill.ability)).font(QFont.text(11, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                            Text("−\(Int((skill.ability.mpShare * session.hero.maxMP).rounded())) MP").font(QFont.text(9))
+                        }
+                        .foregroundStyle(QColor.ink)
+                        .frame(width: 58, height: 58)
+                        .background(QColor.sheet.opacity(0.94), in: Circle())
+                        .overlay(Circle().trim(from: 0, to: left).stroke(Color(hex: 0xE2A04A), lineWidth: 3).rotationEffect(.degrees(-90)))
+                        .opacity(ready ? 1 : 0.55)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!ready)
+                    .accessibilityLabel(skill.ability.title)
+                }
+            }
+            Button { session.activeStrike() } label: {
+                VStack(spacing: 0) {
+                    Text("Удар").font(QFont.text(15, weight: .bold))
+                    Text(fight == nil ? "нет цели" : canStrike ? "1,2 с" : session.activeDistance > ExploreRules.activeRange ? "далеко" : "…")
+                        .font(QFont.text(11))
+                }
+                .foregroundStyle(QColor.sheet)
+                .frame(width: 88, height: 88)
+                .background(QColor.ink, in: Circle())
+                .overlay(Circle().trim(from: 0, to: (fight?.strikeCooldown ?? 0) / ExploreRules.activeTurnSeconds)
+                    .stroke(Color(hex: 0xE2A04A), lineWidth: 4).rotationEffect(.degrees(-90)))
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
+                .opacity(canStrike ? 1 : 0.6)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canStrike)
+            .accessibilityLabel("Удар")
+        }
+    }
+
+    static func short(_ ability: ExploreAbility) -> String {
+        switch ability {
+        case .powerStrike: "Мощный"
+        case .teamMove: "Командный"
+        default: ability.title
+        }
     }
 }

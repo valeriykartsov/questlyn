@@ -426,6 +426,9 @@ final class AppModel {
         return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
                             hasCalendar: calendar.isAuthorized || !events.isEmpty, timeZone: timeZone)
             .with(diary: diary, epics: epics, habits: exploreHabitDays)
+            // Погода прогулки — случайная отметка настроения месяца (15A).
+            .with(moods: (overview?.moods ?? []).filter { $0.localDate >= first && $0.localDate <= last }
+                .map { ExploreMood(date: $0.localDate, mood: $0.mood) })
     }
 
     /// Дни отметок ежедневных за последние ~3 месяца — для маяков «Побродить» (14.5).
@@ -435,7 +438,11 @@ final class AppModel {
         let from = today.adding(days: -(ExploreRules.maxDays + 7))
         let marks = (try? await store.occurrences(from: from, through: today)) ?? []
         exploreHabitDays = habits.filter { $0.habit.kind == .daily }.map { status in
-            ExploreHabitDays(title: status.habit.title, days: Set(marks.filter { $0.habitId == status.id && $0.isActive }.map(\.localDate)))
+            // Запланированные дни — для износа дорог (15A.2).
+            var planned = Set<LocalDate>(), day = from
+            while day <= today { if status.habit.isScheduled(on: day) { planned.insert(day) }; day = day.adding(days: 1) }
+            return ExploreHabitDays(title: status.habit.title, days: Set(marks.filter { $0.habitId == status.id && $0.isActive }.map(\.localDate)),
+                                    planned: planned)
         }
     }
 

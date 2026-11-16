@@ -1,0 +1,440 @@
+import CoreGraphics
+import Foundation
+import Domain
+
+// Этап 15A.7 (макеты ExploreTowns, ExploreCharacters): дома по климатическим зонам, постройки города, деревья,
+// корабль. Перенос прототипа Design/tools/explore15_sprites.py. Всё — свой пиксельный рисунок.
+
+/// Цвета без изоляции — для фоновой отрисовки земли.
+nonisolated enum Pix {
+    static func mix(_ a: UInt32, _ b: UInt32, _ t: Double) -> UInt32 {
+        var result: UInt32 = 0
+        for shift: UInt32 in [16, 8, 0] {
+            let ca = Double((a >> shift) & 0xFF), cb = Double((b >> shift) & 0xFF)
+            result |= UInt32(max(0, min(255, (ca + (cb - ca) * t).rounded()))) << shift
+        }
+        return result
+    }
+
+    static func shade(_ color: UInt32, _ factor: Double) -> UInt32 {
+        var result: UInt32 = 0
+        for shift: UInt32 in [16, 8, 0] {
+            result |= UInt32(max(0, min(255, (Double((color >> shift) & 0xFF) * factor).rounded()))) << shift
+        }
+        return result
+    }
+
+    /// Псевдослучайное 0..<1 по координатам — одинаковое при каждой отрисовке.
+    static func hash(_ x: Int, _ y: Int, _ k: Int = 0) -> Double {
+        var h = UInt32(truncatingIfNeeded: x &* 374_761_393 &+ y &* 668_265_263 &+ k &* 2_147_483_647)
+        h = (h ^ (h >> 13)) &* 1_274_126_177
+        return Double(h ^ (h >> 16)) / Double(UInt32.max)
+    }
+}
+
+extension RGBACanvas {
+    /// Цвет пикселя; nil — прозрачный.
+    nonisolated func color(_ x: Int, _ y: Int) -> UInt32? {
+        guard x >= 0, x < width, y >= 0, y < height else { return nil }
+        let i = (y * width + x) * 4
+        guard bytes[i + 3] > 0 else { return nil }
+        return UInt32(bytes[i]) << 16 | UInt32(bytes[i + 1]) << 8 | UInt32(bytes[i + 2])
+    }
+
+    /// Заливка многоугольника (точки — центры пикселей).
+    nonisolated mutating func polygon(_ points: [(Int, Int)], _ color: UInt32) {
+        guard points.count >= 3 else { return }
+        let top = points.map(\.1).min()!, bottom = points.map(\.1).max()!
+        for y in top...bottom {
+            var xs: [Double] = []
+            let sy = Double(y) + 0.5
+            for k in points.indices {
+                let (x1, y1) = points[k], (x2, y2) = points[(k + 1) % points.count]
+                let a = Double(y1) + 0.5, b = Double(y2) + 0.5
+                if (a <= sy && b > sy) || (b <= sy && a > sy) {
+                    xs.append(Double(x1) + (sy - a) / (b - a) * Double(x2 - x1))
+                }
+            }
+            xs.sort()
+            var k = 0
+            while k + 1 < xs.count {
+                let from = Int(xs[k].rounded(.down)), to = Int(xs[k + 1].rounded(.down))
+                if from <= to { for x in from...to { set(x, y, color) } }
+                k += 2
+            }
+            // Вершины и горизонтальные рёбра.
+            for (px, py) in points where py == y { set(px, py, color) }
+        }
+    }
+
+    /// Наложить другой холст (непрозрачные пиксели) с левым верхним углом в (x, y).
+    nonisolated mutating func draw(_ sprite: RGBACanvas, at x: Int, _ y: Int) {
+        for sy in 0..<sprite.height { for sx in 0..<sprite.width {
+            if let c = sprite.color(sx, sy) { set(x + sx, y + sy, c) }
+        } }
+    }
+
+    /// Зеркало по горизонтали.
+    nonisolated var mirrored: RGBACanvas {
+        var out = RGBACanvas(width: width, height: height, fill: nil)
+        for y in 0..<height { for x in 0..<width { if let c = color(x, y) { out.set(width - 1 - x, y, c) } } }
+        return out
+    }
+}
+
+nonisolated enum ExploreSprites {
+    // MARK: Дома
+
+    enum Roof { case hip, gable, flat }
+
+    /// Изометрический дом: основание — ромб полуширины a, стены высоты h; дверь — на левой стене, окна — на правой.
+    static func house(a: Int, h: Int, wallL: UInt32, wallR: UInt32, roof: UInt32, kind: Roof, rh: Int? = nil, logs: Bool = false,
+                      snow: Bool = false, chimney: Bool = false, trim: UInt32? = nil, door: UInt32 = 0x5C3A1E) -> RGBACanvas {
+        let rh = rh ?? a / 2 + 3
+        var c = RGBACanvas(width: 2 * a + 6, height: h + a + rh + 10, fill: nil)
+        let cx = a + 3, base = c.height - 2
+        let L = (cx - a, base - a / 2), R = (cx + a, base - a / 2), F = (cx, base)
+        func up(_ p: (Int, Int), _ k: Int) -> (Int, Int) { (p.0, p.1 - k) }
+        c.polygon([L, F, up(F, h), up(L, h)], wallL)
+        c.polygon([F, R, up(R, h), up(F, h)], wallR)
+        func wallY(_ x: Int) -> Int { x <= cx ? L.1 + (x - L.0) / 2 : F.1 - (x - cx) / 2 }
+        if logs {
+            for k in stride(from: 2, to: h, by: 3) { for x in L.0...R.0 {
+                c.set(x, wallY(x) - k, Pix.shade(x <= cx ? wallL : wallR, 0.78))
+            } }
+        }
+        for k in 0..<min(6, h - 2) { for dx in 0..<2 {
+            let x = cx - a / 2 - 1 + dx
+            c.set(x, wallY(x) - k, door)
+        } }
+        for wx in [cx + a / 3, cx + 2 * a / 3 + 1] { for k in (h / 2)..<(h / 2 + 3) { for dx in 0..<2 {
+            c.set(wx + dx, wallY(wx + dx) - k, 0x5C6B7A)
+        } } }
+        if let trim { for x in L.0...R.0 { c.set(x, wallY(x) - h, trim) } }
+        let T = up(F, h), TL = up(L, h), TR = up(R, h), TB = (cx, base - a - h)
+        let e = 2
+        let TLe = (TL.0 - e, TL.1), TRe = (TR.0 + e, TR.1), TFe = (T.0, T.1 + 1)
+        let roofDark = Pix.shade(roof, 0.78)
+        switch kind {
+        case .hip:
+            let apex = (cx, base - a / 2 - h - rh)
+            c.polygon([TLe, TFe, apex], roof)
+            c.polygon([TFe, TRe, apex], roofDark)
+            if snow {
+                let line = apex.1 + rh * 13 / 20
+                for y in 0..<line { for x in 0..<c.width {
+                    if let p = c.color(x, y), p == roof || p == roofDark { c.set(x, y, p == roof ? 0xF2F4F6 : 0xD5DCE2) }
+                } }
+            }
+        case .gable:
+            let r1 = (TL.0 + a / 2, TL.1 - a / 4 - rh), r2 = (T.0 + a / 2, T.1 - a / 4 - rh)
+            c.polygon([TLe, TFe, r2, r1], roof)
+            c.polygon([TFe, TRe, r2], Pix.shade(wallR, 0.95))
+            c.polygon([r1, r2, TRe, (TB.0 + e, TB.1)], Pix.shade(roof, 0.8))
+            if snow {
+                for y in 0..<c.height { for x in 0..<c.width where c.color(x, y) == roof && Pix.hash(x, y, 3) < 0.85 { c.set(x, y, 0xF2F4F6) } }
+            }
+        case .flat:
+            c.polygon([TL, T, TR, TB], Pix.shade(wallL, 1.08))
+            for x in TL.0...TR.0 {
+                let y = x <= cx ? TL.1 + (x - TL.0) / 2 : T.1 - (x - cx) / 2
+                c.set(x, y - 1, Pix.shade(x <= cx ? wallL : wallR, 0.9))
+                c.set(x, y - 2, Pix.shade(x <= cx ? wallL : wallR, 0.9))
+            }
+        }
+        if chimney {
+            let x0 = cx + a / 2, y0 = base - a / 2 - h - rh + 3
+            for y in (y0 - 5)...(y0 + 1) { for x in x0..<(x0 + 3) { c.set(x, y, x < x0 + 2 ? 0x8A7A6A : 0x6E6054) } }
+        }
+        return c
+    }
+
+    static func yurt() -> RGBACanvas {
+        let r = 9, h = 8, felt: UInt32 = 0xE9DCC0, band: UInt32 = 0xB8651B
+        var c = RGBACanvas(width: 2 * r + 6, height: h + r + 12, fill: nil)
+        let cx = r + 3, base = c.height - 3
+        for y in (base - h - r / 2)...(base - r / 4) { for x in (cx - r)...(cx + r) { c.set(x, y, felt) } }
+        for y in (base - r / 2)...(base + 1) { for x in (cx - r)...(cx + r) {
+            let dx = Double(x - cx) / Double(r), dy = Double(y - (base - r / 4)) / Double(r / 2 + 1)
+            if dx * dx + dy * dy <= 1 { c.set(x, y, felt) }
+        } }
+        c.polygon([(cx - r - 1, base - h - r / 3), (cx + r + 1, base - h - r / 3), (cx, base - h - r - 2)], Pix.shade(felt, 0.9))
+        for y in 0..<c.height { for x in (cx + 1)...(cx + r + 1) { if let p = c.color(x, y) { c.set(x, y, Pix.shade(p, 0.86)) } } }
+        for x in (cx - r)...(cx + r) {
+            c.set(x, base - h + 1 - abs(x - cx) / 4, band)
+            c.set(x, base - h + 2 - abs(x - cx) / 4, band)
+        }
+        for k in 0..<5 { c.set(cx - 2, base - k, 0x5C3A1E); c.set(cx - 1, base - k, 0x5C3A1E) }
+        c.set(cx, base - h - r - 2, 0x6B4A2E)
+        return c
+    }
+
+    static func domeHouse() -> RGBACanvas {
+        let a = 8, h = 9
+        var c = house(a: a, h: h, wallL: 0xE2C69A, wallR: 0xC9A97A, roof: 0xE2C69A, kind: .flat, door: 0x6E4529)
+        let cx = a + 3, top = c.height - 2 - a / 2 - h
+        let rx = Double(a / 2 + 1), ry = Double(a / 2 + 2)
+        for y in (top - a / 2 - 3)...(top + 2) { for x in (cx - a / 2 - 1)...(cx + a / 2 + 1) {
+            let dx = Double(x - cx) / rx, dy = Double(y - (top - 1)) / ry
+            if dx * dx + dy * dy <= 1 { c.set(x, y, x > cx ? 0xD9C49E : 0xF0E2C4) }
+        } }
+        return c
+    }
+
+    /// Два вида дома для зоны.
+    static func houses(_ zone: ClimateZone) -> [RGBACanvas] {
+        switch zone {
+        case .tundra:
+            [house(a: 8, h: 9, wallL: 0x8A6A4A, wallR: 0x6E5238, roof: 0x6E4529, kind: .hip, logs: true, snow: true, chimney: true),
+             house(a: 7, h: 8, wallL: 0x8A6A4A, wallR: 0x6E5238, roof: 0x6E4529, kind: .gable, logs: true, snow: true)]
+        case .taiga:
+            [house(a: 8, h: 10, wallL: 0x9A7450, wallR: 0x7A5A3E, roof: 0x4E5A3A, kind: .gable, logs: true, chimney: true),
+             house(a: 7, h: 8, wallL: 0x9A7450, wallR: 0x7A5A3E, roof: 0x6E4529, kind: .hip, logs: true)]
+        case .temperate:
+            [house(a: 8, h: 11, wallL: 0xEDE3CC, wallR: 0xD3C6A8, roof: 0xB8651B, kind: .gable, chimney: true, trim: 0x6E4529),
+             house(a: 7, h: 9, wallL: 0xEDE3CC, wallR: 0xD3C6A8, roof: 0x3E5C8A, kind: .hip, trim: 0x6E4529)]
+        case .steppe:
+            [yurt(), house(a: 7, h: 8, wallL: 0xD9C7A0, wallR: 0xBDA982, roof: 0x9C8E4E, kind: .hip)]
+        case .desert:
+            [domeHouse(), house(a: 7, h: 8, wallL: 0xE2C69A, wallR: 0xC9A97A, roof: 0xE2C69A, kind: .flat, door: 0x6E4529)]
+        }
+    }
+
+    // MARK: Город
+
+    static func well() -> RGBACanvas {
+        var c = RGBACanvas(width: 14, height: 18, fill: nil)
+        for y in 9...16 { for x in 1...12 {
+            let dx = (Double(x) - 6.5) / 5.5, dy = (Double(y) - 12.5) / 3.5
+            if dx * dx + dy * dy <= 1 { c.set(x, y, 0x8E8574) }
+        } }
+        for y in 10...14 { for x in 3...10 {
+            let dx = (Double(x) - 6.5) / 3.5, dy = (Double(y) - 12) / 2
+            if dx * dx + dy * dy <= 1 { c.set(x, y, 0x2B5884) }
+        } }
+        for y in 4...12 { c.set(1, y, 0x6E4529); c.set(2, y, 0x6E4529); c.set(11, y, 0x6E4529); c.set(12, y, 0x6E4529) }
+        c.polygon([(0, 5), (7, 0), (13, 5)], 0xB8651B)
+        return c
+    }
+
+    static func stall(_ color: UInt32) -> RGBACanvas {
+        var c = RGBACanvas(width: 18, height: 18, fill: nil)
+        for y in 10...16 { for x in 2...15 { c.set(x, y, 0x9A7450) } }
+        for x in 2...15 { c.set(x, 9, 0xD9A441); c.set(x, 10, 0xD9A441) }
+        for y in 3..<8 { for x in 1..<17 { c.set(x, y, (x / 3) % 2 == 1 ? color : 0xF4EFE4) } }
+        for y in 7...16 { c.set(2, y, 0x5C3A1E); c.set(15, y, 0x5C3A1E) }
+        return c
+    }
+
+    static func temple(_ zone: ClimateZone) -> RGBACanvas {
+        let roof: UInt32 = zone == .tundra ? 0x6E4529 : zone == .desert ? 0xF0E2C4 : 0x3E5C8A
+        var c = house(a: 7, h: 22, wallL: 0xD8D0C0, wallR: 0xB8AE9C, roof: roof, kind: .hip, rh: 12, snow: zone == .tundra, door: 0x4E3A2A)
+        c.set(c.width / 2, 1, 0xD9A441)
+        c.set(c.width / 2, 2, 0xD9A441)
+        return c
+    }
+
+    static func boardPost() -> RGBACanvas {
+        var c = RGBACanvas(width: 12, height: 16, fill: nil)
+        for y in 7...15 { for x in [2, 3, 8, 9] { c.set(x, y, 0x5C3A1E) } }
+        for y in 1...9 { for x in 0...11 { c.set(x, y, 0x9A7450) } }
+        for y in 3...6 { for x in 2...5 { c.set(x, y, 0xF4EFE4) } }
+        for y in 2...5 { for x in 7...9 { c.set(x, y, 0xF4EFE4) } }
+        c.set(3, 4, 0x1F2A44)
+        c.set(8, 3, 0x1F2A44)
+        return c
+    }
+
+    static func stake() -> RGBACanvas {
+        var c = RGBACanvas(width: 3, height: 12, fill: nil)
+        for y in 2..<12 { c.set(0, y, 0x8A6A4A); c.set(1, y, 0x6E5238) }
+        c.set(0, 1, 0x8A6A4A)
+        return c
+    }
+
+    // MARK: Деревья по зонам
+
+    static func tree(_ zone: ClimateZone, dark: Bool) -> RGBACanvas {
+        var c = RGBACanvas(width: 11, height: 14, fill: nil)
+        let x = 5, y = 13
+        let trunk: UInt32 = 0x5C3A1E
+        switch zone {
+        case .tundra, .taiga:
+            let leaf: UInt32 = zone == .tundra ? (dark ? 0x27403A : 0x2F4A3E) : (dark ? 0x264E36 : 0x2E5A3E)
+            for k in 0..<2 { c.set(x, y - k, trunk) }
+            for dy in 0..<9 {
+                let half = dy / 2
+                for dx in -half...half {
+                    var col = dx > 0 ? Pix.shade(leaf, 0.88) : leaf
+                    if zone == .tundra && (dy % 3 == 0 || (dx == -half && Pix.hash(x + dx, dy, 41) < 0.5)) { col = 0xF2F4F6 }
+                    c.set(x + dx, y - 11 + dy, col)
+                }
+            }
+        case .temperate:
+            let leaf: UInt32 = dark ? 0x335C26 : 0x3E6B2E
+            for k in 0..<3 { c.set(x, y - k, trunk) }
+            for dy in 0..<5 {
+                let half = dy < 3 ? dy + 1 : 5 - dy
+                for dx in -half...half {
+                    var col = leaf
+                    if dx < 0 && dy < 2 { col = Pix.mix(leaf, 0xFFFFFF, 0.18) }
+                    if dx > 0 && dy > 2 { col = Pix.shade(leaf, 0.85) }
+                    c.set(x + dx, y - 7 + dy, col)
+                }
+            }
+        case .steppe:
+            let leaf: UInt32 = dark ? 0x6E7A3C : 0x7E8A46
+            for dy in 0..<3 { for dx in (-2 + (dy == 0 ? 1 : 0))...(2 - (dy == 0 ? 1 : 0)) { c.set(x + dx, y - dy, leaf) } }
+        case .desert:
+            let leaf: UInt32 = dark ? 0x4E7A3E : 0x5E8A4A
+            for dy in 0..<7 { c.set(x, y - dy, leaf) }
+            for dy in 0..<3 { c.set(x - 2, y - 3 - dy, leaf); c.set(x + 2, y - 2 - dy, leaf) }
+            c.set(x - 1, y - 3, leaf)
+            c.set(x + 1, y - 2, leaf)
+        }
+        return c
+    }
+
+    // MARK: Корабль
+
+    /// Изометрический корабль, идущий вправо-вниз; влево — зеркало. frame 0…3 — парус «дышит», флаг вьётся.
+    static func ship(frame: Int, sails: Int = 2) -> RGBACanvas {
+        var c = RGBACanvas(width: 72, height: 64, fill: nil)
+        let hull: UInt32 = 0x6B3F22, hullDark: UInt32 = 0x4E2E18, deck: UInt32 = 0xA87A4E, line: UInt32 = 0x3B2414
+        let cx = 34, cy = 46
+        let bow = (cx + 22, cy + 11), stern = (cx - 20, cy - 10)
+        let half = 4
+        let s1 = (stern.0 - half, stern.1 + half / 2), s2 = (stern.0 + half, stern.1 - half / 2)
+        let m1 = (cx - half - 2, cy + half / 2 + 1), m2 = (cx + half + 2, cy - half / 2 - 1)
+        let drop = 10
+        let bottom = [(bow.0 - 6, bow.1 + drop - 3), (m1.0 + 2, m1.1 + drop), (s1.0 + 1, s1.1 + drop - 1)]
+        c.polygon([s1, m1, bow] + bottom, hull)
+        c.polygon([(s1.0, s1.1 + drop - 3), (m1.0, m1.1 + drop - 3), (bow.0 - 5, bow.1 + drop - 4)] + bottom, hullDark)
+        let deckPoly = [s2, m2, bow, m1, s1]
+        c.polygon(deckPoly, deck)
+        // Доски палубы.
+        for k in stride(from: -4, through: 4, by: 2) { for t in 0..<40 {
+            let x = stern.0 + t - k, y = stern.1 + t / 2 + k / 2
+            if c.color(x, y) == deck { c.set(x, y, Pix.shade(deck, 0.88)) }
+        } }
+        // Фальшборт.
+        for k in deckPoly.indices { line2(&c, deckPoly[k], deckPoly[(k + 1) % deckPoly.count], line) }
+        // Полоса с портами.
+        for t in 0..<44 {
+            let x = s1.0 + t, y = s1.1 + 2 + t / 2 - (t > 30 ? 1 : 0)
+            if c.color(x, y) != nil { c.set(x, y, t % 5 == 0 ? 0x2A1A0E : 0xE3CF9A) }
+        }
+        // Надстройка на корме.
+        for y in (stern.1 - 6)..<(stern.1 + 3) { for x in (stern.0 - 4)..<(stern.0 + 6) { c.set(x, y, x < stern.0 + 1 ? 0x7A4A2A : 0x5E3820) } }
+        c.set(stern.0 - 2, stern.1 - 3, 0xF2B35B)
+        let masts = [(cx + 6, cy + 1, 30)] + (sails > 1 ? [(cx - 9, cy - 6, 24)] : [])
+        let bulge = [0, 1, 2, 1][frame % 4]
+        for (mx, my, mh) in masts {
+            for y in (my - mh)...my { c.set(mx, y, line) }
+            for (y0, y1, w) in [(my - mh + 4, my - mh + 13, 9), (my - mh + 15, my - mh + 24, 11)] {
+                for y in y0...min(y1, my - 2) {
+                    let t = Double(y - y0) / Double(max(1, y1 - y0))
+                    let b = Int((Double(bulge) * (1 - pow(2 * t - 1, 2))).rounded())
+                    for x in (mx - w + b)...(mx + w + b) {
+                        let yy = y + Int((Double(x - mx) / 5).rounded(.down))
+                        let edge = x == mx - w + b || x == mx + w + b || y == y0
+                        c.set(x, yy, edge ? 0xE3DCCB : (x < mx + b ? 0xFFFCF6 : 0xEDE6D6))
+                    }
+                }
+            }
+        }
+        let (fx, fy, fh) = masts[0]
+        for k in 0..<6 { for j in 0..<3 { c.set(fx + 1 + k, fy - fh + j + ((k + frame) % 4 == 0 ? 1 : 0), 0xA8432F) } }
+        for k in 0..<8 { c.set(bow.0 + k, bow.1 - 2 - k / 2, line) }
+        return c
+    }
+
+    private static func line2(_ c: inout RGBACanvas, _ a: (Int, Int), _ b: (Int, Int), _ color: UInt32) {
+        let steps = max(abs(b.0 - a.0), abs(b.1 - a.1), 1)
+        for k in 0...steps {
+            let t = Double(k) / Double(steps)
+            c.set(Int((Double(a.0) + Double(b.0 - a.0) * t).rounded()), Int((Double(a.1) + Double(b.1 - a.1) * t).rounded()), color)
+        }
+    }
+}
+
+// MARK: - Персонажи (на главном потоке: палитры героя)
+
+enum ExploreCharacters {
+    /// Размер кадра персонажа: рисунок 32×56 + тень и запас на шаг.
+    static let frameSize = (width: 36, height: 61)
+    /// Ноги на кадре — от низа, пикселей (для anchorPoint).
+    static let feetFromBottom = 3
+
+    enum Wear { case plain, fur, scarf }
+
+    /// Сетка цветов героя (образ E со всеми деталями) или NPC.
+    static func pixels(_ appearance: HeroAppearance, accent: UInt32, wear: Wear = .plain) -> [[UInt32?]] {
+        var rows = HeroComposer.colors(appearance, accent: accent)
+        guard wear != .plain else { return rows }
+        let hair = appearance.hair.hex, hairDark = HeroPalette.shade(hair, 0.76), outline: UInt32 = 0x2A2320
+        for y in 0..<rows.count { for x in 0..<rows[y].count {
+            guard let c = rows[y][x] else {
+                if wear == .scarf, (20...25).contains(y), [8, 9, 22, 23].contains(x) { rows[y][x] = 0xC8AE7E }
+                continue
+            }
+            switch wear {
+            case .fur:
+                if (9...13).contains(y), c == hair || c == hairDark || ((12...13).contains(y) && c == outline && (8...23).contains(x)) {
+                    rows[y][x] = (x + y) % 3 == 0 ? 0xC9C0B0 : 0xEDE7DC
+                }
+                if (24...25).contains(y), (9...22).contains(x), c != outline { rows[y][x] = (x + y) % 2 == 0 ? 0xC9C0B0 : 0xEDE7DC }
+            case .scarf:
+                if (8...22).contains(y), c == hair || c == hairDark { rows[y][x] = (x + y) % 4 == 0 ? 0xC8AE7E : 0xE9D7B0 }
+            case .plain: break
+            }
+        } }
+        return rows
+    }
+
+    /// 4 кадра шага: ноги по очереди, корпус качается на 1 px; контур (для NPC) и тень под ногами.
+    static func frames(_ pixels: [[UInt32?]], outline: Bool) -> [CGImage] {
+        (0..<4).compactMap { frame in
+            var c = RGBACanvas(width: frameSize.width, height: frameSize.height, fill: nil)
+            // Тень.
+            for y in 54...59 { for x in 3...33 {
+                let dx = (Double(x) - 18) / 15, dy = (Double(y) - 57) / 2.6
+                if dx * dx + dy * dy <= 1 { c.setAlpha(x, y, 0x141828, alpha: 0.28) }
+            } }
+            let bob = frame % 2 == 1 ? 1 : 0
+            var body = RGBACanvas(width: frameSize.width, height: frameSize.height, fill: nil)
+            for y in 0..<pixels.count { for x in 0..<pixels[y].count {
+                guard let color = pixels[y][x] else { continue }
+                var ny = y + 2 - bob
+                if y >= 52 {
+                    let left = x < 16
+                    if frame == 1 { ny += left ? -1 : 1 } else if frame == 3 { ny += left ? 1 : -1 }
+                }
+                body.set(x + 2, ny, color)
+            } }
+            if outline {
+                let source = body
+                for y in 0..<source.height { for x in 0..<source.width where source.color(x, y) == nil {
+                    if [(1, 0), (-1, 0), (0, 1), (0, -1)].contains(where: { source.color(x + $0.0, y + $0.1) != nil }) { body.set(x, y, 0x1F1C1A) }
+                } }
+            }
+            c.draw(body, at: 0, 0)
+            return c.image
+        }
+    }
+
+    /// NPC: одежда по типу, добавки по зоне.
+    static func npc(tier: NPCTier, zone: ClimateZone, variant: Int) -> [CGImage] {
+        let outfit: HeroAppearance.Outfit = switch tier {
+        case .acquaintance: .coder
+        case .colleague: .archer
+        case .regular: .warrior
+        }
+        let hairs: [HeroAppearance.Hair] = [.dark, .red, .black, .blond]
+        let skins: [HeroAppearance.Skin] = [.light, .medium, .tan, .deep]
+        let accents: [UInt32] = [0x7A8A6A, 0x3E5C8A, 0x8A4B3A, 0x6B4FA3]
+        let look = HeroAppearance(hair: hairs[variant % hairs.count], skin: skins[(variant / 2) % skins.count], outfit: outfit)
+        let wear: Wear = zone.isCold ? .fur : zone == .desert || zone == .steppe ? .scarf : .plain
+        return frames(pixels(look, accent: accents[variant % accents.count], wear: wear), outline: true)
+    }
+}
