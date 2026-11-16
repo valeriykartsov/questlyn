@@ -74,6 +74,10 @@ final class ExploreScene: SKScene {
     /// Выпады (15G.3): узел → начало и направление.
     private var lunges: [ObjectIdentifier: (start: TimeInterval, dx: CGFloat, dy: CGFloat)] = [:]
     private var seenLog = 0
+    // 15C.
+    private var lookoutNodes: [Int: SKSpriteNode] = [:]
+    private let treasureNode = SKSpriteNode()
+    private var treasureShown = false
     /// Когда спутник последний раз ударил — короткий выпад.
     private var companionLunge: TimeInterval = -10
     private let fightBar = SKNode()
@@ -244,6 +248,29 @@ final class ExploreScene: SKScene {
             addChild(node)
             addLabel("\(shrine.buff.title) · \(shrine.marks)", at: shrine.position, lift: 32, dark: false)
         }
+        // 15C: смотровые площадки, входы в пещеры.
+        for lookout in island.lookouts {
+            let node = sprite(ExploreSprites.lookout(used: false).image)
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.08)
+            node.position = point(Double(lookout.position.x), Double(lookout.position.y))
+            node.zPosition = depth(Double(lookout.position.x), Double(lookout.position.y))
+            lookoutNodes[lookout.id] = node
+            addChild(node)
+            addLabel("Смотровая площадка", at: lookout.position, lift: 34, dark: false)
+        }
+        for cave in island.caves {
+            for end in [cave.entrance, cave.exit] {
+                let node = sprite(ExploreSprites.caveEntrance().image)
+                node.anchorPoint = CGPoint(x: 0.5, y: 0.1)
+                node.position = point(Double(end.x), Double(end.y))
+                node.zPosition = depth(Double(end.x), Double(end.y))
+                addChild(node)
+                addLabel("Пещера", at: end, lift: 30, dark: true)
+            }
+        }
+        treasureNode.anchorPoint = CGPoint(x: 0.5, y: 0.2)
+        treasureNode.isHidden = true
+        addChild(treasureNode)
         // 15B.1: таблички секторов навыков.
         for sector in island.sectors {
             let gain = Int(sector.gain.rounded())
@@ -994,6 +1021,28 @@ final class ExploreScene: SKScene {
             session.visit(shrine)
             if let node = shrineNodes[shrine.id] { flash(node) }
         }
+        // 15C: смотровая площадка и клад.
+        for lookout in island.lookouts where !session.usedLookouts.contains(lookout.id) && near(lookout.position, 1.5) {
+            session.useLookout(lookout)
+            lookoutNodes[lookout.id]?.texture = texture(ExploreSprites.lookout(used: true).image)
+            if let node = lookoutNodes[lookout.id] { flash(node) }
+        }
+        if let spot = session.treasureSpot {
+            if !treasureShown {
+                treasureShown = true
+                treasureNode.texture = texture(ExploreSprites.treasureMark().image)
+                treasureNode.size = CGSize(width: 12, height: 8)
+                treasureNode.position = point(Double(spot.x), Double(spot.y))
+                treasureNode.zPosition = depth(Double(spot.x), Double(spot.y))
+                treasureNode.isHidden = false
+            }
+            if !session.treasureFound && near(spot, 1.2) {
+                session.openTreasure()
+                treasureNode.texture = texture(ExploreSprites.treasureChest(opened: true).image)
+                treasureNode.size = CGSize(width: 22, height: 18)
+                flash(treasureNode)
+            }
+        }
         let water = session.buff(.water), vegetables = session.buff(.vegetables)
         let swampDamage = island.isSwamp(tile) ? ExploreRules.swampHPPerSecond : 0
         if water > 0 || vegetables > 0 || swampDamage > 0 {
@@ -1039,6 +1088,7 @@ final class ExploreScene: SKScene {
             chestNodes[chest.id]?.texture = texture(ExploreRenderer.chest(opened: true))
             if let node = chestNodes[chest.id] { flash(node) }
             session.toast = "Сундук: \(chest.title)" + (session.addItem(chest.item) ? " · \(chest.item.title)" : " · сумка полна")
+            if let fragment = chest.fragment { session.findFragment(fragment, in: chest) }
         }
         for fire in island.campfires where !session.litCampfires.contains(fire.id) && fire.position.distance(to: tile) <= 1 {
             session.litCampfires.insert(fire.id)
@@ -1123,6 +1173,15 @@ final class ExploreScene: SKScene {
             fogNode.texture = SKTexture(cgImage: image)
             fogNode.size = CGSize(width: 1024, height: 1024)
         }
+    }
+
+    /// Вернуться на остров из пещеры — на другом её конце (15C.2).
+    func placeHero(at tile: TilePoint) {
+        path = []
+        heroPosition = (Double(tile.x), Double(tile.y))
+        session.heroTile = tile
+        lastTime = 0
+        layoutDynamic()
     }
 
     // MARK: Корабль (12B)

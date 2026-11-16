@@ -73,6 +73,17 @@ public enum ExploreRules {
     public static let nightVisionFactor = 0.7
     public static func isNight(hour: Double) -> Bool { hour >= 21 || hour < 6 }
 
+    // Этап 15C (17.11.2026, 09 раздел 1.5, Рабочая гипотеза).
+    public static let treasureFragments = 3
+    public static let treasureItems = 2
+    public static let treasureRestoreShare = 0.5
+    public static let caveSide = 24
+    public static let caveMinSpan = 15.0
+    public static let caveVision = 3.0
+    public static let caveTorchVision = 9.0
+    public static let caveChests = 2
+    public static let lookoutRadius = 30.0
+
     // Этапы 15B и 15G (17.11.2026, 09 раздел 1.4, Рабочая гипотеза).
     /// Финальная Чёрная башня: HP 150 + 2 × дни диапазона, урон 15% макс. HP.
     public static func finalTowerHP(days: Int) -> Double { 150 + 2 * Double(days) }
@@ -290,6 +301,14 @@ public struct ExploreEpic: Hashable, Sendable {
     public init(title: String, steps: Int, dates: [LocalDate]) { self.title = title; self.steps = steps; self.dates = dates }
 }
 
+/// Выполненный квест — кандидат в клад (15C.1).
+public struct ExploreDoneQuest: Hashable, Sendable {
+    public var title: String
+    public var priority: QuestPriority
+    public var minutes: Int
+    public init(title: String, priority: QuestPriority, minutes: Int) { self.title = title; self.priority = priority; self.minutes = minutes }
+}
+
 /// Навык и его прирост XP по дням (15B.1): сектора острова.
 public struct ExploreSkillGain: Hashable, Sendable {
     public var title: String
@@ -432,6 +451,8 @@ public struct ExploreInput: Sendable {
     public var harmDays: [LocalDate] = []
     /// Отметки полезного: дата и вид.
     public var benefits: [(date: LocalDate, buff: ExploreBuff)] = []
+    /// Выполненные квесты диапазона (15C.1).
+    public var doneQuests: [ExploreDoneQuest] = []
 
     public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
                 nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
@@ -479,6 +500,18 @@ public struct ExploreInput: Sendable {
             .with(skillGains: skillGains, closedEpics: closedEpics.filter { $0.closed >= first && $0.closed <= last },
                   harmDays: harmDays.filter { $0 >= first && $0 <= last },
                   benefits: benefits.filter { $0.date >= first && $0.date <= last })
+    }
+
+    public func with(doneQuests: [ExploreDoneQuest]) -> ExploreInput {
+        var copy = self
+        copy.doneQuests = doneQuests
+        return copy
+    }
+
+    /// Клад — главный выполненный квест: высокий приоритет, при равенстве — самый длинный.
+    public var treasureQuest: ExploreDoneQuest? {
+        let rank: [QuestPriority: Int] = [.high: 3, .medium: 2, .low: 1]
+        return doneQuests.max { (rank[$0.priority] ?? 0, $0.minutes, $1.title) < (rank[$1.priority] ?? 0, $1.minutes, $0.title) }
     }
 
     public func with(skillGains: [ExploreSkillGain], closedEpics: [ExploreClosedEpic], harmDays: [LocalDate],
@@ -611,6 +644,64 @@ public struct IslandChest: Hashable, Sendable, Identifiable {
     public var position: TilePoint
     /// Предмет внутри (14.5): каждый сундук даёт один.
     public var item: ExploreItem = .potionHP
+    /// Обрывок карты сокровищ (15C.1): номер 0…2 или nil.
+    public var fragment: Int?
+}
+
+/// Клад (15C.1): место — на острове последнего найденного обрывка.
+public struct IslandTreasure: Hashable, Sendable {
+    public var title: String
+    /// Место клада на каждом острове-месяце (по номеру региона).
+    public var spots: [Int: TilePoint]
+}
+
+/// Пещера (15C.2): вход и выход на острове, внутри — тёмная подкарта.
+public struct IslandCave: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var region: Int
+    public var entrance: TilePoint
+    public var exit: TilePoint
+    /// Подкарта side×side: true — стена.
+    public var walls: [Bool]
+    public var side: Int
+    public var start: TilePoint
+    public var inner: TilePoint
+    public var chests: [TilePoint]
+    public var items: [ExploreItem]
+
+    public func isFloor(_ point: TilePoint) -> Bool {
+        point.x >= 0 && point.y >= 0 && point.x < side && point.y < side && !walls[point.y * side + point.x]
+    }
+
+    /// Путь внутри пещеры (4 направления, BFS).
+    public func path(from: TilePoint, to: TilePoint) -> [TilePoint]? {
+        guard isFloor(from), isFloor(to) else { return nil }
+        var previous = [Int](repeating: -1, count: side * side)
+        let start = from.y * side + from.x, goal = to.y * side + to.x
+        previous[start] = start
+        var queue = [start], head = 0
+        while head < queue.count {
+            let current = queue[head]; head += 1
+            if current == goal { break }
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let next = TilePoint(current % side + dx, current / side + dy)
+                guard isFloor(next), previous[next.y * side + next.x] == -1 else { continue }
+                previous[next.y * side + next.x] = current
+                queue.append(next.y * side + next.x)
+            }
+        }
+        guard previous[goal] != -1 else { return nil }
+        var result: [TilePoint] = [], index = goal
+        while index != start { result.append(TilePoint(index % side, index / side)); index = previous[index] }
+        return result.reversed()
+    }
+}
+
+/// Смотровая площадка с подзорной трубой (15C.3).
+public struct IslandLookout: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var region: Int
+    public var position: TilePoint
 }
 
 /// Расходники из сундуков (14.5) — только в прогулке.
@@ -773,6 +864,10 @@ public struct Island: Sendable {
     public var shrines: [IslandShrine] = []
     /// Болото на клетке.
     public var swamp: [Bool] = []
+    // 15C.
+    public var treasure: IslandTreasure?
+    public var caves: [IslandCave] = []
+    public var lookouts: [IslandLookout] = []
 
     init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
          chests: [IslandChest], campfires: [IslandCampfire], start: TilePoint) {
@@ -927,7 +1022,7 @@ public enum IslandGenerator {
         guard parts.count > 1 else {
             var island = parts[0]
             island.regions = [IslandRegion(id: 0, first: input.first, last: input.last, size: island.size, origin: TilePoint(0, 0), side: island.side)]
-            finish(&island, seed: seed, days: input.days)
+            finish(&island, seed: seed, days: input.days, treasure: input.treasureQuest)
             return island
         }
 
@@ -989,6 +1084,12 @@ public enum IslandGenerator {
             }
             for var monument in part.monuments { monument.id = world.monuments.count; monument.position = moved(monument.position, origin); world.monuments.append(monument) }
             for var shrine in part.shrines { shrine.id = world.shrines.count; shrine.position = moved(shrine.position, origin); world.shrines.append(shrine) }
+            for var cave in part.caves {
+                cave.id = world.caves.count; cave.region = index
+                cave.entrance = moved(cave.entrance, origin); cave.exit = moved(cave.exit, origin)
+                world.caves.append(cave)
+            }
+            for var lookout in part.lookouts { lookout.id = world.lookouts.count; lookout.region = index; lookout.position = moved(lookout.position, origin); world.lookouts.append(lookout) }
             for y in 0..<part.side { for x in 0..<part.side {
                 let source = y * part.side + x, target = (y + origin.y) * side + x + origin.x
                 if !part.sectorAt.isEmpty, part.sectorAt[source] >= 0 { sectorAt[target] = Int8(sectorBase + Int(part.sectorAt[source])) }
@@ -1009,13 +1110,14 @@ public enum IslandGenerator {
             world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
         }
         for index in world.npcs.indices { world.npcs[index].id = index }
-        finish(&world, seed: seed, days: input.days)
+        finish(&world, seed: seed, days: input.days, treasure: input.treasureQuest)
         return world
     }
 
     /// Общее для острова и архипелага (15A): зоны климата по всему миру и клетки дорог.
-    static func finish(_ island: inout Island, seed: UInt64, days: Int = 0) {
+    static func finish(_ island: inout Island, seed: UInt64, days: Int = 0, treasure: ExploreDoneQuest? = nil) {
         finalTower(&island, days: days)
+        if let treasure { hideTreasure(&island, title: treasure.title, seed: seed) }
         island.zones = climate(side: island.side, seed: seed)
         island.roadAt = [Int32](repeating: -1, count: island.side * island.side)
         for road in island.roads {
@@ -1027,6 +1129,38 @@ public enum IslandGenerator {
                 }
             }
         }
+    }
+
+    /// Клад (15C.1): три обрывка в сундуках разных островов (не у старта), место клада — на каждом острове.
+    static func hideTreasure(_ island: inout Island, title: String, seed: UInt64) {
+        var random = ExploreRandom(seed ^ 0x7EA5_0000)
+        let candidates = island.chests.indices.filter { island.chests[$0].position.distance(to: island.start) > 8 }
+        guard !candidates.isEmpty else { return }
+        var chosen: [Int] = []
+        // Сначала — по одному сундуку с каждого острова, затем любые.
+        let byRegion = Dictionary(grouping: candidates) { island.region(at: island.chests[$0].position)?.id ?? 0 }
+        for region in byRegion.keys.sorted() where chosen.count < ExploreRules.treasureFragments {
+            let pool = byRegion[region]!
+            chosen.append(pool[random.int(pool.count)])
+        }
+        while chosen.count < min(ExploreRules.treasureFragments, candidates.count) {
+            let pick = candidates[random.int(candidates.count)]
+            if !chosen.contains(pick) { chosen.append(pick) }
+        }
+        for (k, index) in chosen.enumerated() { island.chests[index].fragment = k }
+        var spots: [Int: TilePoint] = [:]
+        for region in island.regions {
+            var best: TilePoint?
+            for _ in 0..<300 {
+                let point = TilePoint(region.origin.x + random.int(region.side), region.origin.y + random.int(region.side))
+                guard island.isWalkable(point), island.road(at: point) == nil,
+                      island.cities.allSatisfy({ $0.center.distance(to: point) >= 10 }) else { continue }
+                best = point
+                break
+            }
+            if let best { spots[region.id] = best }
+        }
+        island.treasure = IslandTreasure(title: title, spots: spots)
     }
 
     /// Финальная Чёрная башня (15G.2): на острове последнего месяца, в самой дальней от старта точке суши (не у городов).
@@ -1244,7 +1378,92 @@ public enum IslandGenerator {
         }
         island.regionWeather = [weather(input, random: &random)]
         lifeOnMap(&island, input: input, random: &random)
+        exploration(&island, random: &random)
         return island
+    }
+
+    /// 15C на острове месяца: пещера (вход и выход у подножия гор) и смотровая площадка.
+    static func exploration(_ island: inout Island, random: inout ExploreRandom) {
+        let side = island.side
+        // Клетки у подножия: можно стоять, рядом гора, не дорога и не город.
+        var foot: [TilePoint] = []
+        for y in 0..<side { for x in 0..<side {
+            let point = TilePoint(x, y)
+            guard island.isWalkable(point), island.road(at: point) == nil, island.safeCity(at: point) == nil,
+                  [(1, 0), (-1, 0), (0, 1), (0, -1)].contains(where: { island.terrain(at: TilePoint(x + $0.0, y + $0.1)) == .mountain }) else { continue }
+            foot.append(point)
+        } }
+        if foot.count >= 2 {
+            let entrance = foot[random.int(foot.count)]
+            let far = foot.filter { $0.distance(to: entrance) >= ExploreRules.caveMinSpan }
+            if let exit = far.isEmpty ? nil : far[random.int(far.count)] {
+                var cave = caveInterior(random: &random)
+                cave.entrance = entrance
+                cave.exit = exit
+                island.caves.append(cave)
+            }
+        }
+        // Площадка: у самой высокой горы; без гор — самый дальний от центра берег.
+        if let best = foot.max(by: { a, b in
+            func height(_ p: TilePoint) -> Int { [(1, 0), (-1, 0), (0, 1), (0, -1)].map { island.height(at: TilePoint(p.x + $0.0, p.y + $0.1)) }.max() ?? 0 }
+            return (height(a), b.x + b.y) < (height(b), a.x + a.y)
+        }) {
+            island.lookouts.append(IslandLookout(id: 0, region: 0, position: best))
+        } else {
+            let center = TilePoint(side / 2, side / 2)
+            let shore = (0..<(side * side)).map { TilePoint($0 % side, $0 / side) }.filter { island.terrain(at: $0) == .sand && island.isWalkable($0) }
+            if let cape = shore.max(by: { $0.distance(to: center) < $1.distance(to: center) }) {
+                island.lookouts.append(IslandLookout(id: 0, region: 0, position: cape))
+            }
+        }
+    }
+
+    /// Подкарта пещеры: клеточный автомат, самая большая связная часть; старт и выход — в дальних концах, тайники — вдали от старта.
+    static func caveInterior(random: inout ExploreRandom) -> IslandCave {
+        let n = ExploreRules.caveSide
+        var walls = (0..<(n * n)).map { i in i % n == 0 || i / n == 0 || i % n == n - 1 || i / n == n - 1 || random.unit() < 0.45 }
+        for _ in 0..<4 {
+            walls = (0..<(n * n)).map { i in
+                let x = i % n, y = i / n
+                var count = 0
+                for dy in -1...1 { for dx in -1...1 {
+                    let nx = x + dx, ny = y + dy
+                    count += (nx < 0 || ny < 0 || nx >= n || ny >= n || walls[ny * n + nx]) ? 1 : 0
+                } }
+                return count >= 5 || x == 0 || y == 0 || x == n - 1 || y == n - 1
+            }
+        }
+        // Самая большая связная часть пола.
+        var component = [Int](repeating: -1, count: n * n), best = (id: -1, count: 0), id = 0
+        for start in 0..<(n * n) where !walls[start] && component[start] == -1 {
+            var stack = [start], count = 0
+            component[start] = id
+            while let current = stack.popLast() {
+                count += 1
+                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let nx = current % n + dx, ny = current / n + dy
+                    guard nx >= 0, ny >= 0, nx < n, ny < n else { continue }
+                    let next = ny * n + nx
+                    if !walls[next], component[next] == -1 { component[next] = id; stack.append(next) }
+                }
+            }
+            if count > best.count { best = (id, count) }
+            id += 1
+        }
+        walls = walls.indices.map { walls[$0] || component[$0] != best.id }
+        let floor = walls.indices.filter { !walls[$0] }.map { TilePoint($0 % n, $0 / n) }
+        let start = floor.min { $0.x + $0.y < $1.x + $1.y } ?? TilePoint(1, 1)
+        var cave = IslandCave(id: 0, region: 0, entrance: start, exit: start, walls: walls, side: n, start: start, inner: start, chests: [], items: [])
+        let distance = floor.map { (point: $0, steps: cave.path(from: start, to: $0)?.count ?? 0) }
+        cave.inner = distance.max { $0.steps < $1.steps }?.point ?? start
+        let candidates = distance.filter { $0.steps >= 8 && $0.point != cave.inner }.map(\.point)
+        for _ in 0..<ExploreRules.caveChests where !candidates.isEmpty {
+            let options = candidates.filter { point in cave.chests.allSatisfy { $0.distance(to: point) >= 5 } }
+            let pool = options.isEmpty ? candidates : options
+            cave.chests.append(pool[random.int(pool.count)])
+            cave.items.append(ExploreItem.allCases[random.int(ExploreItem.allCases.count)])
+        }
+        return cave
     }
 
     /// Самая северо-западная клетка берега: суша, где можно стоять, рядом с водой.
