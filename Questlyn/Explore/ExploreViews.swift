@@ -76,6 +76,9 @@ struct ExploreFlowView: View {
         if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
             if demo.contains("night") { session.clockHour = 22 }
             if demo.contains("map") { session.isWorldMapOpen = true }
+            // `talk` / `legend` (15H) — открыт диалог с мирным NPC или легендой.
+            if demo.contains("talk") { session.talkNPC = session.island.npcs.first { $0.isPeaceful && $0.legend == nil && !$0.meetingTitle.isEmpty } }
+            if demo.contains("legend") { session.talkNPC = session.island.npcs.first { $0.legend != nil } }
             // `boss` — у финальной башни; `shrine` — у монумента полезного; `swamp` — в болоте (15B, 15G).
             if demo.contains("boss"), let tower = session.finalTower,
                let spot = [(3, 0), (0, 3), (-3, 0), (0, -3)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
@@ -403,6 +406,10 @@ struct ExploreGameView: View {
                     MerchantView(session: session, merchant: merchant) { withAnimation { session.merchantOpen = nil } }
                         .transition(.opacity)
                 }
+                if let npc = session.talkNPC {
+                    TalkView(session: session, npc: npc)
+                        .transition(.opacity)
+                }
                 if session.showsAtlas {
                     AtlasView(session: session) { session.showsAtlas = false }
                         .transition(.opacity)
@@ -455,8 +462,8 @@ struct ExploreGameView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Пауза")
             VStack(spacing: 5) {
-                bar("HP", value: session.hp, max: session.hero.maxHP, color: QColor.hp)
-                bar("MP", value: session.mp, max: session.hero.maxMP, color: QColor.mp)
+                bar("HP", value: session.hp, max: session.maxHP, color: QColor.hp)
+                bar("MP", value: session.mp, max: session.maxMP, color: QColor.mp)
             }
             .padding(.horizontal, QSpacing.l).padding(.vertical, QSpacing.s)
             .background(QColor.sheet.opacity(0.94), in: RoundedRectangle(cornerRadius: QRadius.card))
@@ -500,14 +507,14 @@ struct ExploreGameView: View {
 
     private var goals: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: QSpacing.l) {
+            WrapRow(spacing: QSpacing.l) {
                 if session.island.regions.count > 1 { Text("Острова \(session.visitedRegions.count)/\(session.island.regions.count)") }
                 if !session.island.cities.isEmpty { Text("Города \(session.visitedCities.count)/\(session.island.cities.count)") }
                 if !session.island.chests.isEmpty { Text("Сундуки \(session.openedChests.count)/\(session.island.chests.count)") }
             }
             .font(QFont.text(12, weight: .semibold))
             // Этап 14: часы острова, башни, задания, спутник.
-            HStack(spacing: QSpacing.m) {
+            WrapRow(spacing: QSpacing.m) {
                 Text("\(session.isNight ? "☾" : "☀") \(session.clockText)").monospacedDigit().lineLimit(1).fixedSize()
                 if !session.island.towers.isEmpty { Text("Башни \(session.conqueredTowers.count)/\(session.island.towers.count)").lineLimit(1).fixedSize() }
                 if !session.island.tasks.isEmpty {
@@ -535,7 +542,7 @@ struct ExploreGameView: View {
             .font(QFont.text(11, weight: .semibold))
             // Баффы монументов полезного (15G.4) и болото под ногами (15B.3).
             if !session.buffs.isEmpty || session.island.isSwamp(session.heroTile) {
-                HStack(spacing: 4) {
+                WrapRow(spacing: 4) {
                     ForEach(ExploreBuff.allCases.filter { session.buffs[$0] != nil }, id: \.self) { buff in
                         Text("\(Self.buffSymbol(buff)) \(buff.effect(session.buffs[buff] ?? 0))").lineLimit(1).fixedSize()
                             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -556,17 +563,28 @@ struct ExploreGameView: View {
         .background(QColor.sheet.opacity(0.94), in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 
+    /// Мини-карта (15H): изометрия, как на экране, герой — в центре окна; север и стороны совпадают с картой мира.
     private var minimap: some View {
-        let side = CGFloat(session.island.side)
-        return ZStack(alignment: .topLeading) {
-            if let image = session.minimapImage {
-                Image(decorative: image, scale: 1).resizable().interpolation(.medium)
+        let side = session.island.side
+        // 1 px картинки = 0,75 pt: в окне ~53 клетки по ширине.
+        let k: CGFloat = 0.75
+        let hero = ExploreRenderer.worldMapPoint(session.heroTile, side: side)
+        let width = CGFloat(side * 2) * k, height = CGFloat(side + 1) * k
+        // Окно фиксированного размера; картинка мира сдвинута так, чтобы герой был в центре.
+        return Color(hex: 0x3F6E9C)
+            .frame(width: 80, height: 80)
+            .overlay(alignment: .topLeading) {
+                if let image = session.minimapImage {
+                    Image(decorative: image, scale: 1).resizable().interpolation(.none)
+                        .frame(width: width, height: height)
+                        .offset(x: 40 - hero.x * width, y: 40 - hero.y * height)
+                }
             }
-            Rectangle().fill(Color(hex: 0xE2A04A))
-                .frame(width: 6, height: 6)
-                .offset(x: CGFloat(session.heroTile.x) / side * 80 - 3, y: CGFloat(session.heroTile.y) / side * 80 - 3)
-        }
-        .frame(width: 80, height: 80)
+            .overlay {
+                Rectangle().fill(Color(hex: 0xE2A04A))
+                    .frame(width: 6, height: 6)
+                    .overlay(Rectangle().strokeBorder(Color(hex: 0x1F2A44), lineWidth: 1))
+            }
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(QColor.sheet, lineWidth: 2))
         .contentShape(Rectangle())
@@ -636,6 +654,20 @@ struct ExploreGameView: View {
     }
 
     @ViewBuilder private var shipBar: some View {
+        if let id = session.talkCandidate, session.talkNPC == nil, let npc = session.island.npcs.first(where: { $0.id == id }) {
+            // 15H: мирный NPC рядом — поговорить, чтобы позвать в спутники.
+            Button { withAnimation { session.talkNPC = npc } } label: {
+                VStack(spacing: 2) {
+                    Text("Поговорить").font(QFont.text(15, weight: .bold))
+                    Text(npc.title + (npc.meetings > 0 ? " · \(Format.meetings(npc.meetings))" : "")).font(QFont.text(11))
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(QColor.sheet)
+                .background(QColor.forest, in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, QSpacing.s)
+        }
         if let merchant = session.nearbyMerchant {
             Button { withAnimation { session.merchantOpen = merchant } } label: {
                 VStack(spacing: 2) {
@@ -714,7 +746,7 @@ struct ExploreGameView: View {
                     Button { session.useOnMap(skill) } label: {
                         VStack(spacing: 2) {
                             Text(skill.ability.title).font(QFont.text(14, weight: .bold))
-                            Text(session.sailing != nil ? "на корабле — нет" : onMap ? "\(skill.title) · −\(Int((skill.ability.mpShare * session.hero.maxMP).rounded())) MP" : "только во встрече")
+                            Text(session.sailing != nil ? "на корабле — нет" : onMap ? "\(skill.title) · −\(Int((skill.ability.mpShare * session.maxMP).rounded())) MP" : "только во встрече")
                                 .font(QFont.text(11)).lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, minHeight: 52)
@@ -754,7 +786,7 @@ struct EncounterView: View {
                     }
                     Text(title(encounter)).font(QFont.title(18, weight: .bold))
                     HStack(spacing: QSpacing.l) {
-                        meter("Вы", value: encounter.heroHP, max: session.hero.maxHP, color: QColor.hp)
+                        meter("Вы", value: encounter.heroHP, max: session.maxHP, color: QColor.hp)
                         meter(encounter.opponentTitle, value: encounter.npcHP, max: encounter.npcMaxHP, color: QColor.hp)
                     }
                     VStack(alignment: .leading, spacing: 2) {
@@ -823,17 +855,17 @@ struct EncounterView: View {
             actionButton("Сражаться", note: "удар \(encounter.strikeRange.lowerBound)–\(encounter.strikeRange.upperBound)", filled: true) {
                 session.encounter?.perform(.fight)
             }
-            actionButton("Навык", note: "\(session.hero.skills.filter { encounter.isReady($0) }.count) готовы", filled: false, accent: true) {
+            actionButton("Навык", note: "\(session.fightSkills.filter { encounter.isReady($0) }.count) готовы", filled: false, accent: true) {
                 showsSkills.toggle()
             }
-            .disabled(session.hero.skills.isEmpty)
+            .disabled(session.fightSkills.isEmpty)
             actionButton("Бежать", note: "шанс \(Int((encounter.escapeChance * 100).rounded()))%", filled: false) {
                 session.encounter?.perform(.flee)
             }
         }
-        if showsSkills, !session.hero.skills.isEmpty {
+        if showsSkills, !session.fightSkills.isEmpty {
             VStack(spacing: 0) {
-                ForEach(session.hero.skills) { skill in
+                ForEach(session.fightSkills) { skill in
                     Button { session.encounter?.perform(.ability(skill)) } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
@@ -923,6 +955,7 @@ struct ExploreSummaryView: View {
                     if !session.island.tasks.isEmpty { row("Заданий выполнено", session.doneTasks.count) }
                     row("Побед", session.wins)
                     row("Уговорено", session.persuaded)
+                    if !session.recruitedLegends.isEmpty { row("Легенды-спутники", session.recruitedLegends.count) }
                     row("Убежал", session.escapes)
                     row("Поражений", session.defeats)
                     row("Костров зажжено", session.litCampfires.count)
@@ -1103,6 +1136,13 @@ struct WorldMapView: View {
     @State private var position = ScrollPosition()
     @GestureState private var pinch: CGFloat = 1
 
+    init(session: ExploreSession, close: @escaping () -> Void) {
+        self.session = session
+        self.close = close
+        // Картинка готова до первого кадра — окно открывается без пустой вспышки.
+        _image = State(initialValue: session.worldMapImage)
+    }
+
     var body: some View {
         GeometryReader { outer in
             let wide = outer.size.width > outer.size.height
@@ -1134,7 +1174,6 @@ struct WorldMapView: View {
         }
         .padding(QSpacing.screen)
         .background(QColor.paper.ignoresSafeArea())
-        .task { image = ExploreRenderer.worldMap(session.island, explored: session.explored) }
     }
 
     private var header: some View {
@@ -1173,7 +1212,7 @@ struct WorldMapView: View {
             ScrollView([.horizontal, .vertical], showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
                     if let image {
-                        Image(decorative: image, scale: 1).resizable().interpolation(scale * pinch > 2 ? .none : .medium)
+                        Image(decorative: image, scale: 1).resizable().interpolation(scale > 2 ? .none : .medium)
                             .frame(width: width, height: height)
                     }
                     markers(width: width, height: height)
@@ -1384,13 +1423,13 @@ struct ActiveActionsView: View {
         let canStrike = fight.map { $0.strikeCooldown <= 0 && session.activeDistance <= ExploreRules.activeRange } ?? false
         HStack(alignment: .bottom, spacing: QSpacing.s) {
             VStack(spacing: QSpacing.s) {
-                ForEach(session.hero.skills) { skill in
+                ForEach(session.fightSkills) { skill in
                     let ready = fight.map { $0.isReady(skill) } ?? session.canUseOnMap(skill)
                     let left = fight.map { ($0.cooldowns[skill.ability] ?? 0) / max(0.01, $0.abilityCooldown) } ?? 0
                     Button { session.activeUse(skill) } label: {
                         VStack(spacing: 0) {
                             Text(Self.short(skill.ability)).font(QFont.text(11, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
-                            Text("−\(Int((skill.ability.mpShare * session.hero.maxMP).rounded())) MP").font(QFont.text(9))
+                            Text("−\(Int((skill.ability.mpShare * session.maxMP).rounded())) MP").font(QFont.text(9))
                         }
                         .foregroundStyle(QColor.ink)
                         .frame(width: 58, height: 58)
@@ -1492,7 +1531,7 @@ struct AtlasView: View {
             if let lookout = island.lookouts.first(where: { $0.region == region.id }) { parts.append("Площадка \(session.usedLookouts.contains(lookout.id) ? "✓" : "—")") }
             let fragments = island.chests.filter { $0.fragment != nil && region.contains($0.position) }
             if !fragments.isEmpty { parts.append("Обрывки \(fragments.filter { session.fragmentsFound.contains($0.fragment!) }.count)/\(fragments.count)") }
-            return Line(id: region.id, title: island.regions.count > 1 ? region.monthTitle : "Остров",
+            return Line(id: region.id, title: island.regions.count > 1 ? region.title : "Остров",
                         share: land == 0 ? 0 : Double(open) / Double(land), details: parts.joined(separator: " · "))
         }
     }
@@ -1645,5 +1684,112 @@ struct MerchantView: View {
         .overlay(alignment: .topTrailing) {
             if let mark { Text(mark).font(QFont.text(10, weight: .bold)).foregroundStyle(color).padding(4) }
         }
+    }
+}
+
+
+/// Строка, которая переносится, если не помещается по ширине (15H: в портрете счётчики, спутник и баффы
+/// больше не выталкивают мини-карту за правый край экрана).
+struct WrapRow: Layout {
+    var spacing: CGFloat = 8
+    var lineSpacing: CGFloat = 2
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { $0.width }.max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + lineSpacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + lineSpacing
+        }
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
+        var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
+        var current: (indices: [Int], width: CGFloat, height: CGFloat) = ([], 0, 0)
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            if needed > width, !current.indices.isEmpty {
+                rows.append(current)
+                current = ([index], size.width, size.height)
+            } else {
+                current = (current.indices + [index], needed, max(current.height, size.height))
+            }
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
+    }
+}
+
+
+/// Диалог с мирным NPC (15H, макет ExploreMonsters): реплика про общую встречу и два ответа с шансом.
+struct TalkView: View {
+    let session: ExploreSession
+    let npc: IslandNPC
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { session.talkNPC = nil }
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(npc.title).font(QFont.title(20))
+                    Text(subtitle).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+                Text(line)
+                    .font(QFont.text(15)).foregroundStyle(QColor.ink)
+                    .padding(QSpacing.m).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+                answer(npc.meetingTitle.isEmpty ? "Позвать с собой" : "Вспомнить встречу", help: false, filled: true)
+                answer("Предложить помощь · −\(Int(npc.talkHelpMP)) MP", help: true, filled: false)
+                    .disabled(session.mp < npc.talkHelpMP)
+                Button("Уйти") { session.talkNPC = nil }
+                    .font(QFont.text(15)).foregroundStyle(QColor.inkSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                Text("Удалось — \(npc.legend == nil ? "идёт" : "легенда идёт") с тобой спутником (\(CompanionSkill.of(npc).summary)). Не удалось — снова можно через минуту.")
+                    .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+            }
+            .padding(QSpacing.l)
+            .frame(maxWidth: 380)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.screen)
+        }
+    }
+
+    private var subtitle: String {
+        var parts = [Format.meetings(npc.meetings)]
+        if let id = npc.cityId, session.island.cities.indices.contains(id) { parts.append("город «\(session.island.cities[id].name)»") }
+        return parts.joined(separator: " · ")
+    }
+
+    private var line: String {
+        if npc.legend != nil { return "«Слышал о тебе. Докажи, что достоин идти рядом с легендой.»" }
+        return npc.meetingTitle.isEmpty ? "«Давно не виделись!»" : "«Помнишь „\(npc.meetingTitle)“? Давно не виделись!»"
+    }
+
+    private func answer(_ title: String, help: Bool, filled: Bool) -> some View {
+        Button { withAnimation { session.talk(npc, help: help) } } label: {
+            HStack {
+                Text(title).font(QFont.text(15, weight: .bold))
+                Spacer()
+                Text("\(Int((session.talkChance(npc, help: help) * 100).rounded()))%").font(QFont.text(14, weight: .semibold)).monospacedDigit()
+            }
+            .padding(.horizontal, QSpacing.l)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .foregroundStyle(filled ? QColor.sheet : QColor.ink)
+            .background(filled ? QColor.ink : Color.clear, in: RoundedRectangle(cornerRadius: QRadius.control))
+            .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.ink, lineWidth: filled ? 0 : 1.5))
+        }
+        .buttonStyle(.plain)
     }
 }

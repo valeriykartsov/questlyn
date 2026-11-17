@@ -88,20 +88,25 @@ nonisolated final class ExploreGround: Sendable {
             add(TilePoint(c.x - 1, c.y - 1), board, dy: 2)
             let templeTile = TilePoint(c.x - 3, c.y - 3)
             if walkable(templeTile) { add(templeTile, temples + zone.rawValue, dy: 3); built.insert(templeTile.y * side + templeTile.x) }
-            let count = city.houses >= 10 ? 8 : city.houses >= 6 ? 6 : 4
-            let offsets = [(-3, 0), (0, -3), (3, -1), (-1, 3), (3, 2), (2, 3), (-3, 2), (2, -3)]
-            for (k, offset) in offsets.prefix(count).enumerated() {
-                let tile = TilePoint(c.x + offset.0, c.y + offset.1)
-                guard walkable(tile) else { continue }
+            // 15H: город — территория с мостовой, дома на участках, частокол по границе.
+            let r = city.radius
+            var area = Set<Int>()
+            for dy in -r...r { for dx in -r...r {
+                let tile = TilePoint(c.x + dx, c.y + dy)
+                if city.contains(tile), walkable(tile) { area.insert(tile.y * side + tile.x) }
+            } }
+            plaza.formUnion(area)
+            for (k, tile) in city.plots.enumerated() where walkable(tile) {
                 add(tile, 10 + zone.rawValue * 2 + k % 2, dy: 3)
                 built.insert(tile.y * side + tile.x)
             }
-            for k in -4...4 where abs(k) > 1 {
-                let left = TilePoint(c.x - 4, c.y + k), back = TilePoint(c.x + k, c.y - 4)
-                // Частокол сплошной: по 4 кола на клетку вдоль края.
-                for step in 0..<4 {
-                    if walkable(left) { add(left, stake, dx: -4 - step * 2, dy: -2 + step, depthShift: -0.6) }
-                    if walkable(back) { add(back, stake, dx: 4 + step * 2, dy: -2 + step, depthShift: -0.6) }
+            for index in area {
+                let x = index % side, y = index / side
+                let outside = [(1, 0), (-1, 0), (0, 1), (0, -1)].filter { !area.contains((y + $0.1) * side + x + $0.0) }
+                guard !outside.isEmpty, island.roadAt.isEmpty || island.roadAt[index] < 0 else { continue }
+                // Кол на каждую сторону, выходящую наружу; ворота — там, где дорога.
+                for (k, side) in outside.enumerated() {
+                    add(TilePoint(x, y), stake, dx: side.0 * 4 - side.1 * 4 + k, dy: side.0 * 2 + side.1 * 2 - 2, depthShift: -0.6)
                 }
             }
         }

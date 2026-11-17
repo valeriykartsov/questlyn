@@ -57,10 +57,15 @@ struct ExploreStage14Tests {
     @Test func archipelagoKeepsObjectsOnTheirMonth() {
         let data = input(days: 40)
         let island = IslandGenerator.generate(data, seed: 9)
-        #expect(island.regions.count == 2)
-        // Epic с шагами в ноябре — башни только на ноябрьском острове.
-        let november = island.regions[1]
-        #expect(!island.towers.isEmpty && island.towers.allSatisfy { november.contains($0.position) })
+        #expect(island.regions.count == ExploreRules.chapterCount(days: 40))
+        // 15H: башня Epic — на острове главы, где у Epic есть шаг.
+        let ordinary = island.towers.filter { !$0.isFinal }
+        #expect(!ordinary.isEmpty)
+        for tower in ordinary {
+            let region = island.regions.first { $0.contains(tower.position) }!
+            let epic = data.epics.first { $0.title == tower.title }!
+            #expect(epic.dates.contains { $0 >= region.first && $0 <= region.last })
+        }
         for task in island.tasks {
             #expect(island.cities.contains { $0.id == task.cityId })
             if case let .reachVillage(id) = task.kind { #expect(island.villages.contains { $0.id == id }) }

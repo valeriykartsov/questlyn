@@ -26,6 +26,47 @@ public enum ExploreRules {
     public static let maxDays = 92
     public static let maxSkills = 3
 
+    // 15H (17.11.2026): главы, столица, города-территории, мирные NPC, монстры, легенды.
+    // Рабочие гипотезы, утверждены пользователем по макетам ExploreCities15H, ExploreMonsters, ExploreLegends.
+    /// Число глав (островов) по длине диапазона: до 21 дня — 1, до 42 — 2–3, дольше — 4–5.
+    public static func chapterCount(days: Int) -> Int {
+        switch days { case ...21: 1; case ...31: 2; case ...42: 3; case ...63: 4; default: 5 }
+    }
+    /// Размер острова главы — по объёму её данных (события, квесты, отметки).
+    public static func islandSize(weight: Int) -> IslandSize { weight < 30 ? .small : weight < 90 ? .medium : .large }
+    /// Городов на остров, кроме столицы.
+    public static let cityCap = 3
+    /// Радиус территории города: 6–9 клеток по числу событий.
+    public static func cityRadius(events: Int) -> Int { events >= 10 ? 9 : events >= 5 ? 7 : 6 }
+    public static let capitalFactor = 1.6
+    /// Доля мирных NPC на улицах городов; остальные ходят по дорогам.
+    public static let npcCityShare = 0.7
+    /// Шанс уговорить в диалоге.
+    public static func talkChance(_ tier: NPCTier) -> Double { [0.30, 0.45, 0.60][tier.rawValue - 1] }
+    public static let legendTalkChance = 0.20
+    public static let talkHelpBonus = 0.15
+    public static let talkHelpMP = 10.0
+    public static let legendTalkHelpMP = 20.0
+    public static let talkCharismaStep = 0.005
+    public static let talkCharismaCap = 0.15
+    public static let talkRetrySeconds: TimeInterval = 60
+    /// Звери зон: один на столько клеток суши вне городов.
+    public static let beastTiles = 400
+    /// «Лень» — одна на столько пропущенных запланированных дней привычек.
+    public static let slothMisses = 3
+    /// Потолок монстров-долгов каждого вида на остров.
+    public static let monsterCap = 8
+    public static let legendCount = 9
+    // Умения легенд-спутников (по образу).
+    public static let mageMPPerSecond = 0.005
+    public static let warriorDamageFactor = 1.15
+    public static let archerVision = 3.0
+    public static let assassinFirstStrike = 2.0
+    public static let ballerSpeedFactor = 1.15
+    public static let sageCampfireFactor = 1.5
+    public static let illusionistChaseMinus = 1.0
+    public static let masterVitalsFactor = 1.10
+
     // Остров (09, раздел 1–2).
     public static func islandSize(days: Int) -> IslandSize {
         switch days {
@@ -468,6 +509,61 @@ public struct ExploreInput: Sendable {
     public var benefits: [(date: LocalDate, buff: ExploreBuff)] = []
     /// Выполненные квесты диапазона (15C.1).
     public var doneQuests: [ExploreDoneQuest] = []
+    /// 15H: просроченные квесты диапазона (срок прошёл, не выполнены в срок) — «Тени дедлайна».
+    public var overdue: [(title: String, priority: QuestPriority, due: LocalDate)] = []
+    /// 15H: люди топа за всё время — легенды (до 9, по убыванию встреч).
+    public var legends: [ExploreLegendPerson] = []
+
+    public func with(overdue: [(title: String, priority: QuestPriority, due: LocalDate)], legends: [ExploreLegendPerson]) -> ExploreInput {
+        var copy = self
+        copy.overdue = overdue
+        copy.legends = Array(legends.prefix(ExploreRules.legendCount))
+        return copy
+    }
+
+    /// Объём данных по дням (15H): события, квесты, заметки, отметки настроения, привычек, вредного и полезного, просрочки.
+    public var dayWeights: [LocalDate: Int] {
+        var weights: [LocalDate: Int] = [:]
+        func add(_ day: LocalDate, _ value: Int = 1) { if day >= first && day <= last { weights[day, default: 0] += value } }
+        for event in events { add(LocalDate(event.start, timeZone: timeZone)) }
+        for quest in quests { if let date = quest.date { add(date) } }
+        for note in diary { add(note.date) }
+        for mood in moods { add(mood.date) }
+        for habit in habits { for day in habit.days { add(day) } }
+        for day in harmDays { add(day) }
+        for mark in benefits { add(mark.date) }
+        for quest in overdue { add(quest.due) }
+        return weights
+    }
+
+    /// Главы (15H): диапазон делится на части с равной долей данных; порядок дат сохраняется.
+    public var chapters: [(first: LocalDate, last: LocalDate)] {
+        let count = min(days, ExploreRules.chapterCount(days: days))
+        guard count > 1 else { return [(first, last)] }
+        let weights = dayWeights
+        let total = weights.values.reduce(0, +)
+        var result: [(first: LocalDate, last: LocalDate)] = []
+        var start = first, day = first, accumulated = 0
+        while day <= last {
+            accumulated += total == 0 ? 1 : weights[day] ?? 0
+            let remainingDays = day.days(until: last)
+            let chaptersLeft = count - result.count - 1
+            let target = Double(total == 0 ? days : total) * Double(result.count + 1) / Double(count)
+            // Граница — когда набрана доля главы; но каждой следующей главе остаётся хотя бы день.
+            if chaptersLeft > 0 && (Double(accumulated) >= target || remainingDays <= chaptersLeft) && remainingDays >= chaptersLeft {
+                result.append((start, day))
+                start = day.adding(days: 1)
+            }
+            day = day.adding(days: 1)
+        }
+        result.append((start, last))
+        return result
+    }
+
+    /// Объём данных главы.
+    public func weight(from first: LocalDate, through last: LocalDate) -> Int {
+        dayWeights.filter { $0.key >= first && $0.key <= last }.values.reduce(0, +)
+    }
 
     public init(first: LocalDate, last: LocalDate, events: [ExploreEvent], quests: [(title: String, priority: QuestPriority, date: LocalDate?)],
                 nights: [LocalDate: Double], weekMoods: [LocalDate: Mood], hasCalendar: Bool, timeZone: TimeZone = .current) {
@@ -512,6 +608,7 @@ public struct ExploreInput: Sendable {
                   epics: epics.filter { epic in epic.dates.contains { $0 >= first && $0 <= last } },
                   habits: habits)
             .with(moods: moods.filter { $0.date >= first && $0.date <= last })
+            .with(overdue: overdue.filter { $0.due >= first && $0.due <= last }, legends: legends)
             .with(skillGains: skillGains, closedEpics: closedEpics.filter { $0.closed >= first && $0.closed <= last },
                   harmDays: harmDays.filter { $0 >= first && $0 <= last },
                   benefits: benefits.filter { $0.date >= first && $0.date <= last })
@@ -644,6 +741,72 @@ public struct IslandCity: Hashable, Sendable, Identifiable {
     /// 3, 6 или 10 домов; у деревни — 1.
     public var houses: Int
     public var isCity: Bool
+    /// 15H: радиус территории (у деревни — 0), столица, участки домов внутри территории.
+    public var radius = 0
+    public var isCapital = false
+    public var plots: [TilePoint] = []
+
+    public init(id: Int, name: String, center: TilePoint, events: Int, houses: Int, isCity: Bool, radius: Int = 0, isCapital: Bool = false) {
+        self.id = id; self.name = name; self.center = center; self.events = events; self.houses = houses; self.isCity = isCity
+        self.radius = radius; self.isCapital = isCapital
+    }
+
+    /// Территория города (15H): неровное пятно вокруг центра — граница «дышит» по углу, форма постоянна для названия.
+    public func contains(_ point: TilePoint) -> Bool {
+        guard radius > 0 else { return false }
+        let dx = Double(point.x - center.x), dy = Double(point.y - center.y)
+        let distance = (dx * dx + dy * dy).squareRoot()
+        if distance <= Double(radius) * 0.72 { return true }
+        if distance > Double(radius) * 1.1 { return false }
+        let angle = atan2(dy, dx), phase = Double(Self.nameHash(name) % 628) / 100
+        let edge = Double(radius) * (0.88 + 0.12 * sin(3 * angle + phase) + 0.06 * sin(5 * angle + 2 * phase))
+        return distance <= edge
+    }
+
+    /// Стабильный хеш названия (FNV-1a) — не зависит от запуска.
+    static func nameHash(_ name: String) -> UInt64 {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100_0000_01b3 }
+        return hash
+    }
+}
+
+/// Монстр (15H): звери климатических зон и «долги» главы. NPC-люди — мирные.
+public enum MonsterKind: String, Sendable, CaseIterable, Hashable {
+    case wolf, bear, boar, jackal, scorpion, deadline, sloth, lure
+
+    public var title: String {
+        switch self {
+        case .wolf: "Волк"
+        case .bear: "Медведь"
+        case .boar: "Кабан"
+        case .jackal: "Шакал"
+        case .scorpion: "Скорпион"
+        case .deadline: "Тень дедлайна"
+        case .sloth: "Лень"
+        case .lure: "Соблазн"
+        }
+    }
+
+    public var isBeast: Bool { [.wolf, .bear, .boar, .jackal, .scorpion].contains(self) }
+
+    /// Зверь по климату.
+    public static func beast(_ zone: ClimateZone) -> MonsterKind {
+        switch zone {
+        case .tundra: .wolf
+        case .taiga: .bear
+        case .temperate: .boar
+        case .steppe: .jackal
+        case .desert: .scorpion
+        }
+    }
+}
+
+/// Человек топа за всё время (15H, легенды): ключ участника и число встреч.
+public struct ExploreLegendPerson: Hashable, Sendable {
+    public var key: String
+    public var meetings: Int
+    public init(key: String, meetings: Int) { self.key = key; self.meetings = meetings }
 }
 
 public struct IslandNPC: Hashable, Sendable, Identifiable {
@@ -651,14 +814,50 @@ public struct IslandNPC: Hashable, Sendable, Identifiable {
     public var tier: NPCTier
     public var home: TilePoint
     public var meetings: Int
-    /// Ночной NPC (15D.3): выходит с 21:00 до 6:00, сильнее, за победу — предмет.
+    /// ~~Ночной NPC (15D.3)~~ — с 15H ночью сильнее монстры; поле всегда false.
     public var isNight = false
     public var chaseRadius: Double { tier.chaseRadius + (isNight ? ExploreRules.nightChaseBonus : 0) }
+    // 15H.
+    /// Монстр — дерётся; nil — мирный человек из календаря.
+    public var monster: MonsterKind?
+    /// Город, по улицам которого гуляет; nil — ходит по дороге `route` или монстр.
+    public var cityId: Int?
+    /// Дорога, по которой ходит туда и обратно.
+    public var route: [TilePoint] = []
+    /// Легенда: место в топе 0…8 — образ по порядку `HeroAppearance.Outfit.allCases`.
+    public var legend: Int?
+    /// Ключ участника (для легенд — исключить его из обычных NPC).
+    public var key = ""
+    /// Самое частое событие с этим человеком — для реплики в диалоге.
+    public var meetingTitle = ""
+
+    public var isPeaceful: Bool { monster == nil }
+    /// Кто это в бою и на экране.
+    public var title: String {
+        if let monster { return monster.title }
+        if let legend { return "Легенда · \(HeroAppearance.Outfit.allCases[legend].title)" }
+        return tier.title
+    }
+
+    /// Шанс уговорить в диалоге (15H): по типу, у легенды — ниже; помощь и CHR героя добавляют.
+    public func talkChance(charisma: Int, help: Bool) -> Double {
+        let base = legend == nil ? ExploreRules.talkChance(tier) : ExploreRules.legendTalkChance
+        let bonus = min(ExploreRules.talkCharismaCap, ExploreRules.talkCharismaStep * Double(charisma))
+        return min(1, base + bonus + (help ? ExploreRules.talkHelpBonus : 0))
+    }
+
+    public var talkHelpMP: Double { legend == nil ? ExploreRules.talkHelpMP : ExploreRules.legendTalkHelpMP }
 }
 
 /// Умение спутника по его типу (15D.4).
 public enum CompanionSkill: Sendable, Equatable {
     case scout, guide, healer
+    /// Легенда (15H): умение по образу.
+    case legend(HeroAppearance.Outfit)
+
+    public static func of(_ npc: IslandNPC) -> CompanionSkill {
+        npc.legend.map { .legend(HeroAppearance.Outfit.allCases[$0 % HeroAppearance.Outfit.allCases.count]) } ?? CompanionSkill(npc.tier)
+    }
 
     public init(_ tier: NPCTier) {
         switch tier {
@@ -673,6 +872,7 @@ public enum CompanionSkill: Sendable, Equatable {
         case .scout: "Разведчик"
         case .guide: "Проводник"
         case .healer: "Лекарь"
+        case let .legend(outfit): "Легенда · \(outfit.title)"
         }
     }
 
@@ -681,6 +881,18 @@ public enum CompanionSkill: Sendable, Equatable {
         case .scout: "обзор +2"
         case .guide: "стрелка к заданию"
         case .healer: "+0,2% HP/с"
+        case let .legend(outfit):
+            switch outfit {
+            case .mage: "+0,5% MP/с"
+            case .warrior: "урон +15%"
+            case .archer: "обзор +3"
+            case .assassin: "первый удар ×2"
+            case .baller: "скорость +15%"
+            case .coder: "стрелка к сундуку"
+            case .sage: "костры ×1,5"
+            case .illusionist: "монстры замечают позже"
+            case .master: "HP и MP +10%"
+            }
         }
     }
 }
@@ -871,6 +1083,11 @@ public struct IslandRegion: Hashable, Sendable, Identifiable {
     public var monthTitle: String {
         ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"][first.month - 1]
     }
+    /// Глава (15H): «10 сен – 2 окт».
+    public var title: String {
+        let months = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+        return first == last ? "\(first.day) \(months[first.month - 1])" : "\(first.day) \(months[first.month - 1]) – \(last.day) \(months[last.month - 1])"
+    }
 }
 
 /// Корабль (12B): стоит на воде у берега; одна модель — фрегат.
@@ -1029,9 +1246,14 @@ public struct Island: Sendable {
     }
     public func isLand(_ point: TilePoint) -> Bool { terrain(at: point) != .water }
 
-    /// Безопасная зона: в радиусе от центра города (деревни — не безопасны).
+    /// Безопасная зона (15H): вся территория города (деревни — не безопасны).
     public func safeCity(at point: TilePoint) -> IslandCity? {
-        cities.first { $0.center.distance(to: point) <= Double(ExploreRules.citySafeRadius) }
+        cities.first { $0.contains(point) }
+    }
+
+    /// Не ближе `margin` клеток к территории любого города.
+    func clearOfCities(_ point: TilePoint, margin: Double) -> Bool {
+        cities.allSatisfy { $0.center.distance(to: point) > Double($0.radius) + margin }
     }
 
     /// Путь по суше (8 направлений, BFS). nil — недостижимо.
@@ -1071,14 +1293,20 @@ public enum IslandGenerator {
     /// Архипелаг (12B): остров на каждый месяц диапазона, по порядку месяцев сверху вниз со сдвигом; старт — на острове
     /// последнего месяца. Один месяц — один остров, как раньше, без кораблей.
     public static func generate(_ input: ExploreInput, seed: UInt64) -> Island {
-        let months = input.months
+        // 15H: остров = глава с равной долей данных (было — месяц).
+        let months = input.chapters
+        let capital = capitalTitle(input, chapters: months)
+        let legendKeys = Set(input.legends.map(\.key))
         let parts = months.enumerated().map { index, month in
             single(input.slice(first: month.first, last: month.last, isLastMonth: index == months.count - 1),
-                   seed: index == 0 ? seed : seed &+ UInt64(index) &* 0x9E37_79B9_7F4A_7C15)
+                   seed: index == 0 ? seed : seed &+ UInt64(index) &* 0x9E37_79B9_7F4A_7C15,
+                   weight: input.weight(from: month.first, through: month.last),
+                   capital: capital?.chapter == index ? capital?.title : nil, excludeCity: capital?.title, excludeKeys: legendKeys)
         }
         guard parts.count > 1 else {
             var island = parts[0]
             island.regions = [IslandRegion(id: 0, first: input.first, last: input.last, size: island.size, origin: TilePoint(0, 0), side: island.side)]
+            placeLegends(&island, input.legends, seed: seed)
             finish(&island, seed: seed, days: input.days, treasure: input.treasureQuest)
             return island
         }
@@ -1109,12 +1337,17 @@ public enum IslandGenerator {
                 elevation[(y + origin.y) * side + x + origin.x] = part.elevation[y * part.side + x]
             } }
             for var city in part.cities {
-                city.id = world.cities.count; city.center = moved(city.center, origin); world.cities.append(city)
+                city.id = world.cities.count; city.center = moved(city.center, origin); city.plots = city.plots.map { moved($0, origin) }
+                world.cities.append(city)
             }
             for var village in part.villages {
                 village.id = 1000 + world.villages.count; village.center = moved(village.center, origin); world.villages.append(village)
             }
-            for var npc in part.npcs { npc.id = world.npcs.count; npc.home = moved(npc.home, origin); world.npcs.append(npc) }
+            for var npc in part.npcs {
+                npc.id = world.npcs.count; npc.home = moved(npc.home, origin); npc.route = npc.route.map { moved($0, origin) }
+                npc.cityId = npc.cityId.map { $0 + world.cities.count - part.cities.count }
+                world.npcs.append(npc)
+            }
             for var chest in part.chests { chest.id = world.chests.count; chest.position = moved(chest.position, origin); world.chests.append(chest) }
             let villageBase = world.villages.count - part.villages.count, cityBase = world.cities.count - part.cities.count
             for var fire in part.campfires { fire.id = world.campfires.count; fire.position = moved(fire.position, origin); world.campfires.append(fire) }
@@ -1166,13 +1399,80 @@ public enum IslandGenerator {
         // Старт (15G.2) — на северо-западном берегу первого (самого раннего) острова.
         world.start = moved(parts[0].start, origins[0])
         world.ships = ships(in: world)
-        // У корабля, как у старта, NPC не стоят — высадка не начинается со встречи.
+        // Островки — после кораблей: не мешают ни стоянке, ни высадке.
+        islets(&world.terrain, side: side, count: parts.count * 3, seed: seed)
+        // У корабля, как у старта, монстры не стоят — высадка не начинается с боя.
         world.npcs = world.npcs.filter { npc in
-            world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
+            npc.isPeaceful || world.ships.allSatisfy { $0.position.distance(to: npc.home) >= ExploreRules.harbourRadius }
         }
         for index in world.npcs.indices { world.npcs[index].id = index }
+        placeLegends(&world, input.legends, seed: seed)
         finish(&world, seed: seed, days: input.days, treasure: input.treasureQuest)
         return world
+    }
+
+    /// Столица (15H): событие с наибольшим числом повторов (по названию; не меньше 2); при равенстве — первое по алфавиту.
+    /// Стоит на острове главы, где у события больше всего встреч (при равенстве — более ранней).
+    static func capitalTitle(_ input: ExploreInput, chapters: [(first: LocalDate, last: LocalDate)]) -> (title: String, chapter: Int)? {
+        let groups = Dictionary(grouping: input.events) { $0.title.trimmingCharacters(in: .whitespaces).lowercased() }
+        guard let best = groups.filter({ $0.value.count >= 2 })
+            .min(by: { ($1.value.count, $0.key) < ($0.value.count, $1.key) }) else { return nil }
+        var counts = [Int](repeating: 0, count: chapters.count)
+        for event in best.value {
+            let day = LocalDate(event.start, timeZone: input.timeZone)
+            if let index = chapters.firstIndex(where: { day >= $0.first && day <= $0.last }) { counts[index] += 1 }
+        }
+        let chapter = counts.indices.max { (counts[$0], -$0) < (counts[$1], -$1) } ?? 0
+        return (best.value[0].title.trimmingCharacters(in: .whitespaces), chapter)
+    }
+
+    /// Легенды (15H): по одной в самом большом городе каждой главы, остальные — в столице (или в самом большом городе мира).
+    static func placeLegends(_ island: inout Island, _ people: [ExploreLegendPerson], seed: UInt64) {
+        guard !island.cities.isEmpty else { return }
+        var random = ExploreRandom(seed ^ 0x1E6E_4D00)
+        let byRegion = island.regions.map { region in
+            island.cities.filter { region.contains($0.center) }.max { ($0.events, $1.id) < ($1.events, $0.id) }
+        }
+        let main = island.cities.first(where: \.isCapital) ?? island.cities.max { ($0.events, $1.id) < ($1.events, $0.id) }!
+        for (rank, person) in people.prefix(ExploreRules.legendCount).enumerated() {
+            let city = (rank < byRegion.count ? byRegion[rank] : nil) ?? main
+            let tiles = city.plots.isEmpty ? [city.center] : city.plots
+            var home = city.center
+            for _ in 0..<40 {
+                let base = tiles[random.int(tiles.count)]
+                let point = TilePoint(base.x + random.int(3) - 1, base.y + random.int(3) - 1)
+                if island.isWalkable(point) && city.contains(point) { home = point; break }
+            }
+            var npc = IslandNPC(id: island.npcs.count, tier: .regular, home: home, meetings: person.meetings)
+            npc.legend = rank
+            npc.key = person.key
+            npc.cityId = city.id
+            npc.meetingTitle = city.name
+            island.npcs.append(npc)
+        }
+    }
+
+    /// Островки (15H, вид карты 15A): мелкие клочки суши в открытом море, не ближе 6 клеток к берегу.
+    static func islets(_ terrain: inout [Terrain], side: Int, count: Int, seed: UInt64) {
+        var random = ExploreRandom(seed ^ 0x15_1E75)
+        var placed = 0, attempts = 0
+        while placed < count && attempts < count * 60 {
+            attempts += 1
+            let cx = 8 + random.int(max(1, side - 16)), cy = 8 + random.int(max(1, side - 16))
+            var clear = true
+            for dy in -7...7 where clear { for dx in -7...7 {
+                let x = cx + dx, y = cy + dy
+                if x < 0 || y < 0 || x >= side || y >= side || terrain[y * side + x] != .water { clear = false; break }
+            } }
+            guard clear else { continue }
+            let r = 1 + random.int(3)
+            for dy in -r...r { for dx in -r...r {
+                let d = hypot(Double(dx), Double(dy)) + random.unit() * 0.8
+                guard d <= Double(r) else { continue }
+                terrain[(cy + dy) * side + cx + dx] = d <= Double(r) - 1.2 ? .grass : .sand
+            } }
+            placed += 1
+        }
     }
 
     /// Общее для острова и архипелага (15A): зоны климата по всему миру и клетки дорог.
@@ -1180,6 +1480,10 @@ public enum IslandGenerator {
         finalTower(&island, days: days)
         if let treasure { hideTreasure(&island, title: treasure.title, seed: seed) }
         island.zones = climate(side: island.side, seed: seed)
+        // Звери (15H) — по климату места.
+        for index in island.npcs.indices where island.npcs[index].monster?.isBeast == true {
+            island.npcs[index].monster = .beast(island.zone(at: island.npcs[index].home))
+        }
         island.roadAt = [Int32](repeating: -1, count: island.side * island.side)
         for road in island.roads {
             for tile in road.tiles where tile.x >= 0 && tile.y >= 0 && tile.x < island.side && tile.y < island.side {
@@ -1215,7 +1519,7 @@ public enum IslandGenerator {
             for _ in 0..<300 {
                 let point = TilePoint(region.origin.x + random.int(region.side), region.origin.y + random.int(region.side))
                 guard island.isWalkable(point), island.road(at: point) == nil,
-                      island.cities.allSatisfy({ $0.center.distance(to: point) >= 10 }) else { continue }
+                      island.clearOfCities(point, margin: 4) else { continue }
                 best = point
                 break
             }
@@ -1232,7 +1536,7 @@ public enum IslandGenerator {
             for x in region.origin.x..<min(island.side, region.origin.x + region.side) {
                 let point = TilePoint(x, y)
                 guard island.isWalkable(point), island.road(at: point) == nil,
-                      island.cities.allSatisfy({ $0.center.distance(to: point) > Double(ExploreRules.citySafeRadius + 2) }),
+                      island.clearOfCities(point, margin: 2),
                       island.towers.allSatisfy({ $0.position.distance(to: point) > 3 }) else { continue }
                 // Рядом должна быть ещё суша — чтобы к башне можно было подойти.
                 guard [(1, 0), (-1, 0), (0, 1), (0, -1)].filter({ island.isWalkable(TilePoint(x + $0.0, y + $0.1)) }).count >= 2 else { continue }
@@ -1313,9 +1617,11 @@ public enum IslandGenerator {
     }
 
     /// Один остров по данным одного месяца (или всего диапазона).
-    static func single(_ input: ExploreInput, seed: UInt64) -> Island {
+    static func single(_ input: ExploreInput, seed: UInt64, weight: Int? = nil, capital: String? = nil, excludeCity: String? = nil,
+                       excludeKeys: Set<String> = []) -> Island {
         var random = ExploreRandom(seed)
-        let size = ExploreRules.islandSize(days: input.days)
+        // 15H: размер — по объёму данных главы; без него (один остров из тестов) — по дням, как раньше.
+        let size = weight.map { ExploreRules.islandSize(weight: $0) } ?? ExploreRules.islandSize(days: input.days)
         let side = size.tiles
         var terrain = landMask(side: side, random: &random)
         let elevation = mountains(&terrain, side: side, random: &random)
@@ -1345,54 +1651,139 @@ public enum IslandGenerator {
             return nil
         }
 
-        // Города и деревни: события по названию (02, ответ 9).
+        // Города (15H): меньше, но больше — до 3 на остров (плюс столица), территория радиусом 6–9 клеток; деревни — как раньше.
         let groups = Dictionary(grouping: input.events) { $0.title.trimmingCharacters(in: .whitespaces).lowercased() }
             .map { (name: $0.value[0].title.trimmingCharacters(in: .whitespaces), count: $0.value.count) }
             .sorted { ($0.count, $1.name) > ($1.count, $0.name) }
+        let excluded = excludeCity?.lowercased()
         var cityCenters: [TilePoint] = []
-        for group in groups.filter({ $0.count >= 2 }).prefix(size.cityCap) {
-            guard let spot = freeSpot(minDistance: Double(ExploreRules.cityMinDistance), from: cityCenters) else { continue }
+        // Территория помещается: центр на суше, по кругу радиуса — в основном суша, до других городов — с запасом.
+        func fits(_ center: TilePoint, _ radius: Int) -> Bool {
+            guard island.isWalkable(center) else { return false }
+            var inside = 0
+            for k in 0..<16 {
+                let angle = Double(k) / 16 * 2 * .pi
+                let point = TilePoint(center.x + Int((cos(angle) * Double(radius) * 0.9).rounded()),
+                                      center.y + Int((sin(angle) * Double(radius) * 0.9).rounded()))
+                if island.isWalkable(point) { inside += 1 }
+            }
+            return inside >= 13 && island.cities.allSatisfy { $0.center.distance(to: center) >= Double($0.radius + radius + 6) }
+        }
+        func citySpot(_ radius: Int, central: Bool) -> TilePoint? {
+            var best: TilePoint?, bestDistance = Double.infinity
+            let middle = TilePoint(side / 2, side / 2)
+            for _ in 0..<(central ? 900 : 500) {
+                let point = TilePoint(random.int(side), random.int(side))
+                guard fits(point, radius) else { continue }
+                if !central { return point }
+                let distance = point.distance(to: middle)
+                if distance < bestDistance { bestDistance = distance; best = point }
+            }
+            return best
+        }
+        var cityGroups = groups.filter { $0.count >= 2 && $0.name.lowercased() != excluded }.prefix(ExploreRules.cityCap).map { ($0, false) }
+        if let capital, let group = groups.first(where: { $0.name.lowercased() == capital.lowercased() }) {
+            cityGroups.insert((group, true), at: 0)
+        }
+        for (group, isCapital) in cityGroups {
+            let base = ExploreRules.cityRadius(events: group.count)
+            var radius = isCapital ? Int((Double(base) * ExploreRules.capitalFactor).rounded()) : base
+            var spot = citySpot(radius, central: isCapital)
+            // Остров мал для такой территории — город поменьше.
+            while spot == nil && radius > 4 { radius -= 1; spot = citySpot(radius, central: isCapital) }
+            guard let spot else { continue }
             cityCenters.append(spot)
             occupied.append(spot)
             let houses = group.count >= 10 ? 10 : group.count >= 5 ? 6 : 3
-            island.cities.append(IslandCity(id: island.cities.count, name: group.name, center: spot, events: group.count, houses: houses, isCity: true))
+            island.cities.append(IslandCity(id: island.cities.count, name: group.name, center: spot, events: group.count, houses: houses,
+                                            isCity: true, radius: radius, isCapital: isCapital))
         }
+        let territory = island.cities.map { ($0.center, Double($0.radius) + 3) }
         for group in groups.filter({ $0.count == 1 }).prefix(size.villageCap) {
-            guard let spot = freeSpot(minDistance: Double(ExploreRules.villageMinDistance), from: occupied) else { continue }
+            guard let spot = freeSpot(minDistance: Double(ExploreRules.villageMinDistance), from: occupied, avoid: territory) else { continue }
             occupied.append(spot)
             island.villages.append(IslandCity(id: 1000 + island.villages.count, name: group.name, center: spot, events: 1, houses: 1, isCity: false))
         }
         // Старт (15G.2) — на берегу в самой северо-западной части острова: на экране изометрии это наименьший x.
         island.start = northWestShore(island) ?? island.cities.first?.center ?? nearestLand(to: TilePoint(side / 2, side / 2), in: island)
         roads(&island, input: input)
+        // Участки домов — сеткой по территории, не на дороге и не в самом центре (площадь).
+        for index in island.cities.indices {
+            let city = island.cities[index], r = city.radius
+            for dy in stride(from: -r, through: r, by: 3) { for dx in stride(from: -r, through: r, by: 3) {
+                let point = TilePoint(city.center.x + dx + (abs(dy / 3) % 2), city.center.y + dy)
+                guard point.distance(to: city.center) > 2.5, city.contains(point), island.isWalkable(point), island.road(at: point) == nil else { continue }
+                island.cities[index].plots.append(point)
+            } }
+        }
+        let cityTiles: [[TilePoint]] = island.cities.map { city in
+            var tiles: [TilePoint] = []
+            for dy in -city.radius...city.radius { for dx in -city.radius...city.radius {
+                let point = TilePoint(city.center.x + dx, city.center.y + dy)
+                if city.contains(point), island.isWalkable(point), !city.plots.contains(point) { tiles.append(point) }
+            } }
+            return tiles
+        }
 
-        // NPC: уникальные участники, потолок по размеру — самые частые остаются.
+        // Мирные NPC (15H): уникальные участники, потолок по размеру; ~70% гуляют по улицам городов, остальные — по дорогам.
         var meetings: [String: Int] = [:]
-        for event in input.events { for key in Set(event.attendeeKeys) { meetings[key, default: 0] += 1 } }
+        var titles: [String: [String: Int]] = [:]
+        for event in input.events { for key in Set(event.attendeeKeys) where !excludeKeys.contains(key) {
+            meetings[key, default: 0] += 1
+            titles[key, default: [:]][event.title.trimmingCharacters(in: .whitespaces), default: 0] += 1
+        } }
         let people = meetings.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(size.npcCap)
-        let safe = island.cities.map { ($0.center, Double(ExploreRules.citySafeRadius + 2)) }
-        // Ночные NPC (15D.3): не меньше половины встреч — вечерние (с 19:00); до 6 на остров.
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = input.timeZone
-        var evening: [String: Int] = [:]
-        for event in input.events where calendar.component(.hour, from: event.start) >= ExploreRules.eveningHour {
-            for key in Set(event.attendeeKeys) { evening[key, default: 0] += 1 }
-        }
-        let nightKeys = Set(people.filter { (evening[$0.key] ?? 0) * 2 >= $0.value }.prefix(ExploreRules.nightNPCCap).map(\.key))
-        for person in people where !nightKeys.contains(person.key) {
-            guard let spot = freeSpot(minDistance: 2, from: island.npcs.map(\.home),
-                                      avoid: safe + [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]) else { continue }
-            island.npcs.append(IslandNPC(id: island.npcs.count, tier: NPCTier.of(meetings: person.value), home: spot, meetings: person.value))
-        }
-        for person in people where nightKeys.contains(person.key) {
-            guard let spot = freeSpot(minDistance: 2, from: island.npcs.map(\.home),
-                                      avoid: safe + [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]) else { continue }
-            var npc = IslandNPC(id: island.npcs.count, tier: NPCTier.of(meetings: person.value), home: spot, meetings: person.value)
-            npc.isNight = true
+        let roadsList = island.roads.filter { $0.tiles.count >= 4 }
+        for (index, person) in people.enumerated() {
+            var npc = IslandNPC(id: island.npcs.count, tier: NPCTier.of(meetings: person.value), home: island.start, meetings: person.value)
+            npc.key = person.key
+            npc.meetingTitle = titles[person.key]?.max { ($0.value, $1.key) < ($1.value, $0.key) }?.key ?? ""
+            let onRoad = !roadsList.isEmpty && (island.cities.isEmpty || Double(index % 10) >= ExploreRules.npcCityShare * 10)
+            if onRoad {
+                let road = roadsList[index % roadsList.count]
+                npc.route = road.tiles.filter { island.isWalkable($0) }
+                npc.home = npc.route[random.int(npc.route.count)]
+            } else if !island.cities.isEmpty {
+                let city = index % island.cities.count
+                guard !cityTiles[city].isEmpty else { continue }
+                npc.cityId = island.cities[city].id
+                npc.home = cityTiles[city][random.int(cityTiles[city].count)]
+            } else {
+                guard let spot = freeSpot(minDistance: 2, from: island.npcs.map(\.home),
+                                          avoid: [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]) else { continue }
+                npc.home = spot
+            }
+            npc.id = island.npcs.count
             island.npcs.append(npc)
         }
-        // Торговец (15D.2) — у города с наибольшим числом событий, в безопасной зоне.
-        if let city = island.cities.max(by: { ($0.events, $1.id) < ($1.events, $0.id) }) {
+
+        // Монстры (15H): звери — по площади дикой суши; долги главы — просрочки, пропуски привычек, вредное.
+        let wild = island.terrain.indices.filter { index in
+            let point = TilePoint(index % side, index / side)
+            return island.isWalkable(point) && island.safeCity(at: point) == nil
+        }.count
+        var monsters: [(MonsterKind, NPCTier)] = Array(repeating: (.boar, .acquaintance), count: max(wild > 0 ? 1 : 0, wild / ExploreRules.beastTiles))
+        let tierOf: [QuestPriority: NPCTier] = [.low: .acquaintance, .medium: .colleague, .high: .regular]
+        monsters += input.overdue.prefix(ExploreRules.monsterCap).map { (.deadline, tierOf[$0.priority] ?? .colleague) }
+        var missed = 0
+        for habit in input.habits {
+            var day = input.first
+            while day <= input.last {
+                if habit.planned?.contains(day) ?? true, !habit.days.contains(day) { missed += 1 }
+                day = day.adding(days: 1)
+            }
+        }
+        monsters += Array(repeating: (.sloth, .colleague), count: min(ExploreRules.monsterCap, missed / ExploreRules.slothMisses))
+        monsters += Array(repeating: (.lure, .acquaintance), count: min(ExploreRules.monsterCap, input.harmDays.count))
+        let wildAvoid = island.cities.map { ($0.center, Double($0.radius) + 2) } + [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]
+        for (kind, tier) in monsters {
+            guard let spot = freeSpot(minDistance: 3, from: island.npcs.filter { !$0.isPeaceful }.map(\.home), avoid: wildAvoid) else { continue }
+            var npc = IslandNPC(id: island.npcs.count, tier: tier, home: spot, meetings: 0)
+            npc.monster = kind
+            island.npcs.append(npc)
+        }
+        // Торговец (15D.2) — в столице, иначе у города с наибольшим числом событий, в безопасной зоне.
+        if let city = island.cities.first(where: \.isCapital) ?? island.cities.max(by: { ($0.events, $1.id) < ($1.events, $0.id) }) {
             let spot = [(2, 1), (1, 2), (-2, 1), (1, -2), (2, -1)].map { TilePoint(city.center.x + $0.0, city.center.y + $0.1) }
                 .first { island.isWalkable($0) } ?? city.center
             island.merchants.append(IslandMerchant(id: 0, region: 0, cityId: city.id, position: spot))
@@ -1625,7 +2016,7 @@ public enum IslandGenerator {
             attempts += 1
             let index = walkable[random.int(walkable.count)]
             let center = TilePoint(index % side, index / side)
-            guard island.cities.allSatisfy({ $0.center.distance(to: center) > Double(ExploreRules.citySafeRadius + 3) }),
+            guard island.clearOfCities(center, margin: 3),
                   center.distance(to: island.start) > 6 else { continue }
             let r = Int(ExploreRules.swampRadius.rounded(.up)) + 1
             for dy in -r...r { for dx in -r...r {
@@ -1811,13 +2202,16 @@ public enum IslandGenerator {
 
     /// Суша — «капля»: расстояние до центра плюс шум; остаётся самая большая связная часть.
     static func landMask(side: Int, random: inout ExploreRandom) -> [Terrain] {
+        // 15H: берег изрезаннее — два слоя шума (крупные мысы и заливы, мелкие бухты), как на карте 15A.
         let noise = valueNoise(side: side, cell: max(6, side / 6), random: &random)
+        let fine = valueNoise(side: side, cell: max(3, side / 16), random: &random)
         var land = [Terrain](repeating: .water, count: side * side)
         let center = Double(side - 1) / 2
         for y in 0..<side { for x in 0..<side {
             let dx = (Double(x) - center) / center, dy = (Double(y) - center) / center
             let distance = (dx * dx + dy * dy).squareRoot()
-            if distance + (noise[y * side + x] - 0.5) * 0.45 < 0.78 { land[y * side + x] = .grass }
+            let index = y * side + x
+            if distance + (noise[index] - 0.5) * 0.70 + (fine[index] - 0.5) * 0.22 < 0.74 { land[index] = .grass }
         } }
         // Самая большая связная суша.
         var component = [Int](repeating: -1, count: side * side)
@@ -1955,7 +2349,12 @@ public struct Encounter: Sendable {
     /// Ночной NPC (15D.3): HP ×1,5, урон ×1,25.
     public let isNight: Bool
     /// Кто противник: «Страж башни» или тип NPC.
-    public var opponentTitle: String { guardian == nil ? tier.title : "Страж башни" }
+    public var opponentTitle: String { opponentName ?? (guardian == nil ? tier.title : "Страж башни") }
+    /// 15H: имя противника (монстр) и бонусы спутника-легенды: урон героя и первый удар.
+    public var opponentName: String?
+    public var heroDamageFactor = 1.0
+    public var firstStrikeFactor = 1.0
+    private var struckOnce = false
 
     /// Спутник бьёт один раз в начале встречи (14.5).
     public mutating func companionAssist(tier companion: NPCTier) {
@@ -2009,7 +2408,8 @@ public struct Encounter: Sendable {
     }
 
     private mutating func hit(factor: Double, label: String) {
-        let damage = (ExploreRules.strike(strength: hero.level(.strength)) * factor * nextHitBonus * random.spread(ExploreRules.hitSpread)).rounded()
+        let damage = (ExploreRules.strike(strength: hero.level(.strength)) * factor * nextHitBonus * heroDamageFactor * (struckOnce ? 1 : firstStrikeFactor) * random.spread(ExploreRules.hitSpread)).rounded()
+        struckOnce = true
         nextHitBonus = 1
         npcHP = max(0, npcHP - damage)
         log.append("\(label): −\(Int(damage))")
