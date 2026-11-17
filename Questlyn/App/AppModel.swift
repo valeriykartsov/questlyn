@@ -429,7 +429,8 @@ final class AppModel {
         }.sorted { $0.date < $1.date }
         let epics = self.epics.map { status in
             ExploreEpic(title: status.epic.title, steps: status.steps.count,
-                        dates: status.steps.compactMap { $0.completion?.localDate ?? $0.quest.dueDate })
+                        dates: status.steps.compactMap { $0.completion?.localDate ?? $0.quest.dueDate },
+                        stepTitles: status.steps.map(\.quest.title))
         }
         return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
                             hasCalendar: calendar.isAuthorized || !events.isEmpty, timeZone: timeZone)

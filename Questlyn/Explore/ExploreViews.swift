@@ -538,6 +538,12 @@ struct ExploreGameView: View {
             // Этап 14: часы острова, башни, задания, спутник.
             WrapRow(spacing: QSpacing.m) {
                 Text("\(session.isNight ? "☾" : "☀") \(session.clockText)").monospacedDigit().lineLimit(1).fixedSize()
+                // 15F.2: текущий шаг главного квеста.
+                if let current = session.mainCurrent, !(current.title == "Корабль") {
+                    Text("★ \(current.title): \(current.detail)").lineLimit(1).fixedSize()
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color(hex: 0xF2D9A8), in: Capsule())
+                }
                 // 15E: квест «Корабль» и доски.
                 if session.hasShipQuest && !session.shipReady {
                     Text("⛵ Корабль: монстры \(session.shipQuestKills)/\(ExploreRules.shipQuestKills)").lineLimit(1).fixedSize()
@@ -1028,6 +1034,8 @@ struct ExploreSummaryView: View {
                     if !session.recruitedLegends.isEmpty { row("Легенды-спутники", session.recruitedLegends.count) }
                     if session.shipReady { row("Улучшений корабля", session.upgrades.count) }
                     if session.serpentDefeated { row("Морской змей повержен", 1) }
+                    if !session.errandsDone.isEmpty { row("Поручений Epic выполнено", session.errandsDone.count) }
+                    if session.walkCompleted { row("🏆 Прогулка пройдена", 1) }
                     row("Убежал", session.escapes)
                     row("Поражений", session.defeats)
                     row("Костров зажжено", session.litCampfires.count)
@@ -1141,6 +1149,10 @@ struct TaskListCard: View {
                     Spacer()
                     Text("\(session.doneTasks.count) из \(taken.count)").font(QFont.text(13, weight: .semibold)).monospacedDigit()
                 }
+                // 15F.1: взятые поручения Epic — шаги по порядку.
+                ForEach(session.island.errands.filter { session.errandStep[$0.id] != nil }) { errand in
+                    errandCard(errand)
+                }
                 if taken.isEmpty {
                     Text("Пока ни одного. Задание берётся при первом входе в город с доской.")
                         .font(QFont.text(14)).foregroundStyle(QColor.inkSecondary)
@@ -1168,6 +1180,32 @@ struct TaskListCard: View {
             .padding(QSpacing.l)
         }
         .accessibilityAddTraits(.isModal)
+    }
+
+    private func errandCard(_ errand: IslandErrand) -> some View {
+        let current = session.errandStep[errand.id] ?? 0
+        let finished = session.errandsDone.contains(errand.id)
+        let city = session.island.cities.indices.contains(errand.cityId) ? session.island.cities[errand.cityId].name : ""
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Поручение Epic «\(errand.epicTitle)» · доска «\(city)»").font(QFont.text(13, weight: .bold))
+            ForEach(Array(errand.steps.enumerated()), id: \.offset) { index, step in
+                let done = finished || index < current
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: done ? "checkmark.circle.fill" : index == current ? "circle" : "lock.circle")
+                        .foregroundStyle(done ? QColor.forest : index == current ? QColor.amberDeep : QColor.inkSecondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(index == errand.steps.count - 1 ? "Финал · \(step.title)" : "Шаг \(index + 1) · «\(step.title)»")
+                            .font(QFont.text(13, weight: .semibold))
+                        let progress = index == current && !finished ? session.errandProgress(errand) : nil
+                        Text(session.errandText(step) + (progress.map { $0.total > 1 ? " · \($0.done)/\($0.total)" : "" } ?? ""))
+                            .font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                    }
+                }
+            }
+        }
+        .padding(QSpacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
     }
 
     private func row(_ task: CityTask) -> some View {
@@ -1432,6 +1470,25 @@ struct PauseCard: View {
                 Text("Пауза").font(QFont.title(22))
                 Text("Время на острове стоит, NPC не двигаются.").font(QFont.text(13)).foregroundStyle(QColor.inkSecondary)
                     .multilineTextAlignment(.center)
+                // 15F.2: главный квест — по шагам (длинный — прокрутка, чтобы пауза помещалась и горизонтально).
+                ScrollView { VStack(alignment: .leading, spacing: 6) {
+                    Text("Главный квест · \(session.mainSteps.filter(\.done).count) из \(session.mainSteps.count)").font(QFont.text(13, weight: .bold))
+                    ForEach(session.mainSteps) { step in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: step.done ? "checkmark.circle.fill" : step.id == session.mainCurrent?.id ? "circle" : "lock.circle")
+                                .foregroundStyle(step.done ? QColor.forest : step.id == session.mainCurrent?.id ? QColor.amberDeep : QColor.inkSecondary)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(step.title).font(QFont.text(13, weight: .semibold))
+                                Text(step.detail).font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(QSpacing.m) }
+                .frame(maxHeight: 230)
+                .fixedSize(horizontal: false, vertical: session.mainSteps.count <= 4)
+                .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.control))
                 Button("Продолжить") { withAnimation { session.isPaused = false } }.buttonStyle(PrimaryButtonStyle())
                 Button("Карта мира") { session.isPaused = false; withAnimation { session.isWorldMapOpen = true } }
                     .font(QFont.text(15, weight: .semibold)).foregroundStyle(QColor.ink).frame(minHeight: 44)

@@ -103,6 +103,130 @@ final class ExploreSession {
     }
     var companionSkill: CompanionSkill? { companion.map { CompanionSkill.of($0) } }
 
+    // MARK: 15F (17.11.2026): поручения Epic и главный квест «Путь по главам»
+
+    var monsterWins = 0
+    /// Взятые поручения: id → номер текущего шага; базовое число побед на начало шага.
+    var errandStep: [Int: Int] = [:]
+    var errandBaseline: [Int: Int] = [:]
+    var errandsDone: Set<Int> = []
+    var chaptersRewarded: Set<Int> = []
+    var walkCompleted = false
+
+    /// Взять поручение доски при входе в город.
+    func takeErrand(cityId: Int) {
+        guard let errand = island.errands.first(where: { $0.cityId == cityId }), errandStep[errand.id] == nil else { return }
+        errandStep[errand.id] = 0
+        errandBaseline[errand.id] = monsterWins
+        toast = "Поручение Epic «\(errand.epicTitle)» · шаг 1: \(errandText(errand.steps[0]))"
+    }
+
+    func errandText(_ step: IslandErrand.Step) -> String {
+        switch step.kind {
+        case let .reachVillage(id): "дойти до деревни «\(island.villages.first { $0.id == id }?.name ?? "")»"
+        case let .defeat(count): "победить \(count) монстров"
+        case let .bring(chest): "принести к доске предмет из сундука «\(island.chests.first { $0.id == chest }?.title ?? "")»"
+        case .tower: "взять Чёрную башню"
+        }
+    }
+
+    /// Прогресс шага: сделано / нужно.
+    func errandProgress(_ errand: IslandErrand) -> (done: Int, total: Int) {
+        guard let index = errandStep[errand.id], errand.steps.indices.contains(index) else { return (1, 1) }
+        switch errand.steps[index].kind {
+        case let .reachVillage(id): return (visitedVillages.contains(id) ? 1 : 0, 1)
+        case let .defeat(count): return (min(count, monsterWins - (errandBaseline[errand.id] ?? 0)), count)
+        case let .bring(chest): return ((openedChests.contains(chest) ? 1 : 0) + (openedChests.contains(chest) && island.safeCity(at: heroTile)?.id == errand.cityId ? 1 : 0), 2)
+        case let .tower(id): return (conqueredTowers.contains(id) ? 1 : 0, 1)
+        }
+    }
+
+    /// Награда растёт: +15% HP и MP → доска → предмет → финал: 2 доски.
+    private func errandReward(_ step: Int, final: Bool) -> String {
+        if final { planks += ExploreRules.errandFinalPlanks; return "+\(ExploreRules.errandFinalPlanks) доски" }
+        switch step {
+        case 0:
+            hp = min(maxHP, hp + maxHP * ExploreRules.errandHealShare)
+            mp = min(maxMP, mp + maxMP * ExploreRules.errandHealShare)
+            return "+\(Int(ExploreRules.errandHealShare * 100))% HP и MP"
+        case 1:
+            planks += ExploreRules.errandPlanks
+            return "+\(ExploreRules.errandPlanks) доска"
+        default:
+            let item = ExploreItem.allCases[(step + steps) % ExploreItem.allCases.count]
+            return addItem(item) ? item.title : "сумка полна"
+        }
+    }
+
+    /// Шаги поручений и главного квеста — проверяются на каждом шаге героя.
+    func settleErrands() {
+        for errand in island.errands where errandStep[errand.id] != nil && !errandsDone.contains(errand.id) {
+            let state = errandProgress(errand)
+            guard state.done >= state.total, let index = errandStep[errand.id] else { continue }
+            let final = index == errand.steps.count - 1
+            let reward = errandReward(index, final: final)
+            if final {
+                errandsDone.insert(errand.id)
+                toast = "Поручение «\(errand.epicTitle)» выполнено · \(reward)"
+            } else {
+                errandStep[errand.id] = index + 1
+                errandBaseline[errand.id] = monsterWins
+                toast = "Шаг «\(errand.steps[index].title)» · \(reward) · дальше: \(errandText(errand.steps[index + 1]))"
+            }
+        }
+        settleMainQuest()
+    }
+
+    struct MainStep: Identifiable {
+        let id: Int
+        let title: String
+        let detail: String
+        let done: Bool
+    }
+
+    /// Главный квест «Путь по главам» (15F.2): корабль → главный город каждой главы и его поручение → финальная башня.
+    var mainSteps: [MainStep] {
+        var result: [MainStep] = []
+        var previousDone = true
+        func add(_ title: String, _ detail: String, _ done: Bool) {
+            let ok = previousDone && done
+            result.append(MainStep(id: result.count, title: title, detail: detail, done: ok))
+            previousDone = ok
+        }
+        if hasShipQuest { add("Корабль", "Победить монстров стартового острова · \(shipQuestKills)/\(ExploreRules.shipQuestKills)", shipReady) }
+        for region in island.regions {
+            let title = island.regions.count > 1 ? "Глава «\(region.title)»" : "Остров"
+            guard let city = island.mainCity(of: region) else { add(title, "Городов нет — глава пройдена", true); continue }
+            let errand = island.errands.first { $0.cityId == city.id }
+            let task = island.tasks.first { $0.cityId == city.id }
+            let boardDone = errand.map { errandsDone.contains($0.id) } ?? task.map { doneTasks.contains($0.id) } ?? true
+            var detail = "Главный город «\(city.name)»"
+            if let errand { detail += errandStep[errand.id].map { " · поручение \($0 + (errandsDone.contains(errand.id) ? 1 : 0))/\(errand.steps.count)" } ?? " · поручение" }
+            else if task != nil { detail += " · задание доски" }
+            add(title, detail, visitedCities.contains(city.id) && boardDone)
+        }
+        if let tower = finalTower { add("Финальная башня", "Босс на последнем острове", conqueredTowers.contains(tower.id)) }
+        return result
+    }
+
+    var mainCurrent: MainStep? { mainSteps.first { !$0.done } }
+
+    private func settleMainQuest() {
+        let steps = mainSteps
+        let offset = hasShipQuest ? 1 : 0
+        for (k, _) in island.regions.enumerated() where steps.indices.contains(k + offset) && steps[k + offset].done && !chaptersRewarded.contains(k) {
+            chaptersRewarded.insert(k)
+            planks += ExploreRules.chapterPlanks
+            hp = maxHP
+            mp = maxMP
+            toast = "★ \(steps[k + offset].title) пройдена · +\(ExploreRules.chapterPlanks) доски, HP и MP полностью"
+        }
+        if !walkCompleted, let last = steps.last, last.done, finalTower != nil {
+            walkCompleted = true
+            toast = "🏆 Прогулка пройдена"
+        }
+    }
+
     // MARK: 15E (17.11.2026): один корабль, экипаж, доски и верфь, море
 
     /// Корабль получен (квест: 10 монстров на стартовом острове). Один остров — корабль не нужен.
@@ -187,6 +311,7 @@ final class ExploreSession {
 
     /// Победа над монстром стартового острова — шаг квеста «Корабль».
     func registerWin(_ npcId: Int?) {
+        if let npcId, island.npcs.first(where: { $0.id == npcId })?.monster != nil { monsterWins += 1 }
         guard hasShipQuest, !shipReady, let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.monster != nil,
               island.regions.first?.contains(npc.home) == true else { return }
         shipQuestKills += 1

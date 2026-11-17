@@ -47,7 +47,8 @@ struct ExploreStage14Tests {
         #expect(island.lighthouses.map(\.title) == ["Зарядка"])
         #expect(island.lighthouses.allSatisfy { island.terrain(at: $0.position) == .sand })
         // Задание — у каждого города, ссылки верные.
-        #expect(island.tasks.count == island.cities.count)
+        // 15F: у города с поручением Epic обычного задания нет.
+        #expect(island.tasks.count + Set(island.errands.map(\.cityId)).count == island.cities.count)
         for task in island.tasks {
             #expect(island.cities.contains { $0.id == task.cityId })
             if case let .reachVillage(id) = task.kind { #expect(island.villages.contains { $0.id == id }) }

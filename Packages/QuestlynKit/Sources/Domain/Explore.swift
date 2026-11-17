@@ -95,6 +95,14 @@ public enum ExploreRules {
     /// Верфь — в столице и в городах, чья территория ближе 3 клеток к воде.
     public static let shipyardCoast = 3
 
+    // 15F (17.11.2026): поручения Epic и главный квест — рабочие гипотезы макета ExploreQuests15F.
+    public static let errandSteps = 3
+    public static let errandKills = 2
+    public static let errandHealShare = 0.15
+    public static let errandPlanks = 1
+    public static let errandFinalPlanks = 2
+    public static let chapterPlanks = 2
+
     // Остров (09, раздел 1–2).
     public static func islandSize(days: Int) -> IslandSize {
         switch days {
@@ -382,7 +390,11 @@ public struct ExploreEpic: Hashable, Sendable {
     public var title: String
     public var steps: Int
     public var dates: [LocalDate]
-    public init(title: String, steps: Int, dates: [LocalDate]) { self.title = title; self.steps = steps; self.dates = dates }
+    /// Названия шагов Epic (15F.1, поручения на досках) — по порядку.
+    public var stepTitles: [String]
+    public init(title: String, steps: Int, dates: [LocalDate], stepTitles: [String] = []) {
+        self.title = title; self.steps = steps; self.dates = dates; self.stepTitles = stepTitles
+    }
 }
 
 /// Выполненный квест — кандидат в клад (15C.1).
@@ -835,6 +847,28 @@ public enum MonsterKind: String, Sendable, CaseIterable, Hashable {
     }
 }
 
+/// Поручение Epic на доске города (15F.1): шаги по шагам Epic, финал — его Чёрная башня.
+public struct IslandErrand: Hashable, Sendable, Identifiable {
+    public enum Kind: Hashable, Sendable {
+        case reachVillage(Int)
+        /// Победить столько монстров после начала шага.
+        case defeat(Int)
+        /// Открыть сундук и вернуться к доске города.
+        case bring(chestId: Int)
+        case tower(Int)
+    }
+
+    public struct Step: Hashable, Sendable {
+        public var title: String
+        public var kind: Kind
+    }
+
+    public var id: Int
+    public var epicTitle: String
+    public var cityId: Int
+    public var steps: [Step]
+}
+
 /// Улучшение корабля на верфи (15E.2) — на одну прогулку.
 public enum ShipUpgrade: String, Sendable, CaseIterable, Hashable {
     case sails, hull, hold, mast, cannons
@@ -1224,6 +1258,14 @@ public struct Island: Sendable {
     public var wrecks: [IslandWreck] = []
     public var traders: [IslandTrader] = []
     public var serpent: IslandSerpent?
+    // 15F.
+    public var errands: [IslandErrand] = []
+
+    /// Главный город главы (15F.2): столица, если она на этом острове, иначе город с наибольшим числом событий.
+    public func mainCity(of region: IslandRegion) -> IslandCity? {
+        let local = cities.filter { region.contains($0.center) }
+        return local.first(where: \.isCapital) ?? local.max { ($0.events, $1.id) < ($1.events, $0.id) }
+    }
     public var bottles: [IslandBottle] = []
     public var towers: [IslandTower] = []
     public var lighthouses: [IslandLighthouse] = []
@@ -1464,6 +1506,21 @@ public enum IslandGenerator {
             for var bottle in part.bottles { bottle.id = world.bottles.count; bottle.position = moved(bottle.position, origin); world.bottles.append(bottle) }
             for var tower in part.towers { tower.id = world.towers.count; tower.position = moved(tower.position, origin); world.towers.append(tower) }
             for var light in part.lighthouses { light.id = world.lighthouses.count; light.position = moved(light.position, origin); world.lighthouses.append(light) }
+            for var errand in part.errands {
+                errand.id = world.errands.count
+                errand.cityId += cityBase
+                errand.steps = errand.steps.map { step in
+                    var step = step
+                    switch step.kind {
+                    case let .reachVillage(id): step.kind = .reachVillage(id + villageBase)
+                    case let .bring(chest): step.kind = .bring(chestId: chest + world.chests.count - part.chests.count)
+                    case let .tower(tower): step.kind = .tower(tower + world.towers.count - part.towers.count)
+                    case .defeat: break
+                    }
+                    return step
+                }
+                world.errands.append(errand)
+            }
             for var task in part.tasks {
                 task.id = world.tasks.count
                 task.cityId += cityBase
@@ -2083,6 +2140,34 @@ public enum IslandGenerator {
             }
             island.tasks.append(CityTask(id: island.tasks.count, cityId: city.id, kind: kind))
         }
+        // Поручения Epic (15F.1): у башни Epic — доска ближайшего города; обычное задание этого города заменяется.
+        for (index, tower) in island.towers.enumerated() {
+            guard let city = island.cities.filter({ city in !island.errands.contains { $0.cityId == city.id } })
+                .min(by: { $0.center.distance(to: tower.position) < $1.center.distance(to: tower.position) }),
+                  let epic = input.epics.first(where: { $0.title == tower.title }) else { continue }
+            let count = min(ExploreRules.errandSteps, max(1, epic.steps))
+            var steps: [IslandErrand.Step] = []
+            for k in 0..<count {
+                let title = epic.stepTitles.indices.contains(k) ? epic.stepTitles[k] : "Шаг \(k + 1)"
+                var kind: IslandErrand.Kind = .defeat(ExploreRules.errandKills)
+                switch k % 3 {
+                case 0:
+                    if let village = island.villages.min(by: { $0.center.distance(to: city.center) < $1.center.distance(to: city.center) }) {
+                        kind = .reachVillage(village.id)
+                    }
+                case 2:
+                    if let chest = island.chests.min(by: { $0.position.distance(to: city.center) < $1.position.distance(to: city.center) }) {
+                        kind = .bring(chestId: chest.id)
+                    }
+                default: break
+                }
+                steps.append(IslandErrand.Step(title: title, kind: kind))
+            }
+            steps.append(IslandErrand.Step(title: "Чёрная башня «\(epic.title)»", kind: .tower(index)))
+            island.errands.append(IslandErrand(id: island.errands.count, epicTitle: epic.title, cityId: city.id, steps: steps))
+            island.tasks.removeAll { $0.cityId == city.id }
+        }
+        for index in island.tasks.indices { island.tasks[index].id = index }
         island.regionWeather = [weather(input, random: &random)]
         lifeOnMap(&island, input: input, random: &random)
         exploration(&island, random: &random)
