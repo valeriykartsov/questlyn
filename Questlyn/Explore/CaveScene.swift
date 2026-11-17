@@ -11,6 +11,8 @@ final class CaveScene: SKScene {
 
     private let heroNode = SKSpriteNode()
     private var heroFrames: [SKTexture] = []
+    private var heroBackFrames: [SKTexture] = []
+    private var facing = 0
     private let cameraNode = SKCameraNode()
     private let darkNode = SKSpriteNode()
     private var darkRadius: CGFloat = 0
@@ -74,8 +76,10 @@ final class CaveScene: SKScene {
         addChild(exitNode)
 
         if let appearance = session.appearance {
-            heroFrames = ExploreCharacters.frames(ExploreCharacters.pixels(appearance, accent: session.accent), outline: false,
-                                                  weapon: HeroComposer.weaponLayers(appearance, accent: session.accent)).compactMap { texture($0) }
+            let pixels = ExploreCharacters.pixels(appearance, accent: session.accent)
+            let weapon = HeroComposer.weaponLayers(appearance, accent: session.accent)
+            heroFrames = ExploreCharacters.frames(pixels, outline: false, weapon: weapon).compactMap { texture($0) }
+            heroBackFrames = ExploreCharacters.backFrames(pixels, hair: appearance.hair.hex, outline: false, weapon: weapon).compactMap { texture($0) }
             heroNode.texture = heroFrames.first
             heroNode.size = CGSize(width: ExploreCharacters.frameSize.width, height: ExploreCharacters.frameSize.height)
             heroNode.anchorPoint = CGPoint(x: 0.5, y: CGFloat(ExploreCharacters.feetFromBottom) / CGFloat(ExploreCharacters.frameSize.height))
@@ -133,6 +137,7 @@ final class CaveScene: SKScene {
         moving = true
         let dx = Double(next.x) - heroPosition.x, dy = Double(next.y) - heroPosition.y
         let distance = hypot(dx, dy), step = session.speed * dt
+        facing = ExploreScene.facing(dx: dx, dy: dy, current: facing)
         if distance <= step { heroPosition = (Double(next.x), Double(next.y)); path.removeFirst() }
         else { heroPosition = (heroPosition.x + dx / distance * step, heroPosition.y + dy / distance * step) }
         walkPhase += dt * session.speed * 2.2
@@ -146,6 +151,7 @@ final class CaveScene: SKScene {
         let length = max(0.0001, hypot(tx, ty))
         tx /= length; ty /= length
         let step = session.speed * dt * magnitude
+        facing = ExploreScene.facing(dx: tx, dy: ty, current: facing)
         func floor(_ x: Double, _ y: Double) -> Bool { cave.isFloor(TilePoint(Int(x.rounded()), Int(y.rounded()))) }
         let (x, y) = heroPosition
         if floor(x + tx * step, y + ty * step) { heroPosition = (x + tx * step, y + ty * step) }
@@ -173,7 +179,11 @@ final class CaveScene: SKScene {
     }
 
     private func layout() {
-        if !heroFrames.isEmpty { heroNode.texture = heroFrames[moving ? Int(walkPhase) % 4 : 0] }
+        if !heroFrames.isEmpty {
+            let set = facing >= 2 && !heroBackFrames.isEmpty ? heroBackFrames : heroFrames
+            heroNode.texture = set[moving ? Int(walkPhase) % 4 : 0]
+            heroNode.xScale = abs(heroNode.xScale) * (facing % 2 == 0 ? 1 : -1)
+        }
         heroNode.position = point(heroPosition.x, heroPosition.y)
         heroNode.zPosition = CGFloat(heroPosition.x + heroPosition.y) + 0.5
         cameraNode.position = point(heroPosition.x, heroPosition.y, lift: 16)

@@ -87,7 +87,12 @@ public struct ActiveFight: Sendable {
     }
 
     public var npcMaxHP: Double { guardian?.hp ?? tier.hp * (isNight ? ExploreRules.nightHPFactor : 1) }
-    public var opponentTitle: String { guardian == nil ? tier.title : "Страж башни" }
+    public var opponentTitle: String { opponentName ?? (guardian == nil ? tier.title : "Страж башни") }
+    /// 15H: имя противника (монстр) и бонусы спутника-легенды: урон героя и первый удар.
+    public var opponentName: String?
+    public var heroDamageFactor = 1.0
+    public var firstStrikeFactor = 1.0
+    private var struckOnce = false
     /// Отойти дальше — сбежать: радиус погони NPC или поводок стража.
     public var escapeDistance: Double {
         guardian == nil ? tier.chaseRadius + (isNight ? ExploreRules.nightChaseBonus : 0) : ExploreRules.guardianLeash
@@ -188,7 +193,8 @@ public struct ActiveFight: Sendable {
     }
 
     private mutating func hit(factor: Double) {
-        let damage = (ExploreRules.strike(strength: hero.level(.strength)) * factor * nextHitBonus * random.spread(ExploreRules.hitSpread)).rounded()
+        let damage = (ExploreRules.strike(strength: hero.level(.strength)) * factor * nextHitBonus * heroDamageFactor * (struckOnce ? 1 : firstStrikeFactor) * random.spread(ExploreRules.hitSpread)).rounded()
+        struckOnce = true
         nextHitBonus = 1
         scoutLeft = 0
         npcHP = max(0, npcHP - damage)

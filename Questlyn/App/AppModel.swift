@@ -402,10 +402,18 @@ final class AppModel {
             }
         }
         #endif
-        let quests = (overview?.journal ?? []).filter { item in
-            let date = item.completion?.localDate ?? item.quest.dueDate
-            return date.map { $0 >= first && $0 <= last } ?? false
-        }.map { (title: $0.quest.title, priority: $0.quest.priority, date: $0.completion?.localDate ?? $0.quest.dueDate) }
+        // 15H: квест без срока и выполнения — по дате создания (раньше такие не попадали на остров).
+        func questDate(_ item: TodayItem) -> LocalDate {
+            item.completion?.localDate ?? item.quest.dueDate ?? LocalDate(item.quest.createdAt, timeZone: timeZone)
+        }
+        let quests = (overview?.journal ?? []).filter { questDate($0) >= first && questDate($0) <= last }
+            .map { (title: $0.quest.title, priority: $0.quest.priority, date: Optional(questDate($0))) }
+        // 15H: просроченные квесты диапазона — «Тени дедлайна»: срок прошёл, а выполнения в срок нет.
+        let overdue = (overview?.journal ?? []).compactMap { item -> (title: String, priority: QuestPriority, due: LocalDate)? in
+            guard let due = item.quest.dueDate, due >= first, due <= last else { return nil }
+            if let done = item.completion?.localDate, done <= due { return nil }
+            return (item.quest.title, item.quest.priority, due)
+        }
         var nights: [LocalDate: Double] = [:]
         for entry in vitals?.log ?? [] {
             if case let .night(night) = entry.kind, night.wakeDate >= first, night.wakeDate <= last { nights[night.wakeDate] = night.quality }
@@ -425,6 +433,7 @@ final class AppModel {
         }
         return ExploreInput(first: first, last: last, events: events, quests: quests, nights: nights, weekMoods: weekMoods,
                             hasCalendar: calendar.isAuthorized || !events.isEmpty, timeZone: timeZone)
+            .with(overdue: overdue, legends: exploreLegends(sample: events))
             .with(diary: diary, epics: epics, habits: exploreHabitDays)
             // Погода прогулки — случайная отметка настроения месяца (15A).
             .with(moods: (overview?.moods ?? []).filter { $0.localDate >= first && $0.localDate <= last }
@@ -438,6 +447,20 @@ final class AppModel {
             .with(skillGains: exploreSkillGains, closedEpics: exploreClosedEpics,
                   harmDays: sampleHarms(first, last) ?? exploreHarmDays.filter { $0 >= first && $0 <= last },
                   benefits: sampleBenefits(first, last) ?? exploreBenefits.filter { $0.date >= first && $0.date <= last })
+    }
+
+    /// Легенды (15H): самые частые участники встреч за последний год — до 9, по убыванию числа встреч.
+    private func exploreLegends(sample: [ExploreEvent]) -> [ExploreLegendPerson] {
+        let today = LocalDate(Date(), timeZone: timeZone)
+        let from = VitalsCalculator.date(today.adding(days: -365), LocalTime(hour: 0, minute: 0)!, timeZone: timeZone)
+        var events = calendar.exploreEvents(from: from, to: Date(), hidden: calendarPreferences.hidden)
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "QuestlynSampleEvents") { events += sample }
+        #endif
+        var counts: [String: Int] = [:]
+        for event in events { for key in Set(event.attendeeKeys) { counts[key, default: 0] += 1 } }
+        return counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(ExploreRules.legendCount)
+            .map { ExploreLegendPerson(key: $0.key, meetings: $0.value) }
     }
 
     /// Отладка: `-QuestlynSampleEvents YES` — отметки вредного и полезного для проверки болота и монументов.

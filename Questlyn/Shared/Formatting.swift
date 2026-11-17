@@ -91,6 +91,13 @@ enum Format {
         return "\(n) \(word)"
     }
 
+    /// «1 встреча», «3 встречи», «14 встреч».
+    static func meetings(_ n: Int) -> String {
+        let mod10 = n % 10, mod100 = n % 100
+        let word = mod10 == 1 && mod100 != 11 ? "встреча" : (2...4).contains(mod10) && !(12...14).contains(mod100) ? "встречи" : "встреч"
+        return "\(n) \(word)"
+    }
+
     static func times(_ n: Int) -> String {
         let mod10 = n % 10, mod100 = n % 100
         let word = (mod10 >= 2 && mod10 <= 4 && !(12...14).contains(mod100)) ? "раза" : "раз"

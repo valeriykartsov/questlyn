@@ -73,7 +73,7 @@ struct ExploreTests {
             // Каждый остров: всё достижимо пешком от места высадки у его корабля; корабли связаны морем.
             for ship in island.ships {
                 #expect(!island.isLand(ship.position))
-                #expect(island.npcs.allSatisfy { $0.home.distance(to: ship.position) >= ExploreRules.harbourRadius })
+                #expect(island.npcs.filter { !$0.isPeaceful }.allSatisfy { $0.home.distance(to: ship.position) >= ExploreRules.harbourRadius })
                 guard let landing = island.landing(near: ship.position) else { Issue.record("нет берега у корабля"); continue }
                 #expect(island.region(at: landing)?.id == ship.region)
                 let region = island.regions[ship.region]
@@ -85,14 +85,19 @@ struct ExploreTests {
         }
     }
 
-    @Test func archipelagoHasIslandPerMonth() {
+    @Test func archipelagoHasIslandPerChapter() {
         let data = input()
         let island = IslandGenerator.generate(data, seed: data.seed(attempt: 0))
-        // 12.08–10.11: август 20 дней, сентябрь 30, октябрь 31, ноябрь 10.
-        #expect(island.regions.map(\.days) == [20, 30, 31, 10])
-        #expect(island.regions.map(\.size) == [.medium, .medium, .medium, .small])
-        #expect(island.regions.map(\.monthTitle) == ["Август", "Сентябрь", "Октябрь", "Ноябрь"])
-        #expect(island.ships.count == 4)
+        // 15H: 91 день — 5 глав подряд, без пропусков, с равной долей данных.
+        #expect(island.regions.count == ExploreRules.chapterCount(days: 91))
+        #expect(island.regions.map(\.days).reduce(0, +) == 91)
+        #expect(island.regions.first?.first == data.first && island.regions.last?.last == data.last)
+        for (a, b) in zip(island.regions, island.regions.dropFirst()) { #expect(a.last.adding(days: 1) == b.first) }
+        let weights = island.regions.map { data.weight(from: $0.first, through: $0.last) }
+        let mean = Double(weights.reduce(0, +)) / Double(weights.count)
+        #expect(weights.allSatisfy { abs(Double($0) - mean) <= mean * 0.35 })
+        #expect(island.regions[0].title.contains("авг"))
+        #expect(island.ships.count == island.regions.count)
         // Острова не пересекаются и разделены водой.
         for (i, a) in island.regions.enumerated() { for b in island.regions[(i + 1)...] {
             let apart = a.origin.x + a.side + ExploreRules.islandGap <= b.origin.x || b.origin.x + b.side + ExploreRules.islandGap <= a.origin.x
@@ -102,35 +107,44 @@ struct ExploreTests {
         // Пешком между островами не дойти.
         let otherCity = island.cities.first { island.region(at: $0.center)?.id == island.regions.count - 1 }
         if let otherCity { #expect(island.path(from: island.start, to: otherCity.center) == nil) }
-        // Мини-остров из короткого куска месяца — тоже отдельный.
-        let short = input(days: 12)
-        #expect(IslandGenerator.generate(short, seed: 1).regions.map(\.days) == [2, 10])
-        // Один месяц — один остров без кораблей.
-        let one = input(days: 10)
+        // До 21 дня — один остров без кораблей.
+        #expect(ExploreRules.chapterCount(days: 21) == 1 && ExploreRules.chapterCount(days: 22) == 2 && ExploreRules.chapterCount(days: 92) == 5)
+        let one = input(days: 12)
         let single = IslandGenerator.generate(one, seed: 1)
-        #expect(single.regions.count == 1 && single.ships.isEmpty && single.side == IslandSize.small.tiles)
+        #expect(single.regions.count == 1 && single.ships.isEmpty)
     }
 
     @Test func objectsFollowRules() {
         let data = input()
         let island = IslandGenerator.generate(data, seed: data.seed(attempt: 0))
         #expect(island.size == .medium)
-        #expect(!island.cities.isEmpty && island.cities.count <= island.regions.map(\.size.cityCap).reduce(0, +))
-        #expect(island.cities.allSatisfy { $0.events >= 2 })
+        // 15H: до 3 городов на остров и одна столица; территории не сливаются.
+        #expect(!island.cities.isEmpty && island.cities.count <= island.regions.count * ExploreRules.cityCap + 1)
+        #expect(island.cities.filter(\.isCapital).count == 1)
+        #expect(island.cities.allSatisfy { $0.events >= 2 && (4...15).contains($0.radius) && $0.contains($0.center) })
         for (i, a) in island.cities.enumerated() { for b in island.cities[(i + 1)...] {
-            #expect(a.center.distance(to: b.center) >= Double(ExploreRules.cityMinDistance))
+            #expect(a.center.distance(to: b.center) >= Double(a.radius + b.radius + 6))
         } }
         #expect(Set(island.cities.map(\.id)) == Set(island.cities.indices))
         #expect(island.npcs.map(\.id) == Array(island.npcs.indices))
         // Старт (15G.2) — на северо-западном берегу первого острова.
         #expect(island.region(at: island.start)?.id == 0)
-        #expect(island.npcs.allSatisfy { $0.home.distance(to: island.start) >= Double(ExploreRules.npcMinDistanceFromStart) })
-        #expect(island.npcs.allSatisfy { island.safeCity(at: $0.home) == nil })
+        // Монстры — в диких местах, не у старта; мирные — на улицах своего города или на дороге.
+        let monsters = island.npcs.filter { !$0.isPeaceful }
+        #expect(!monsters.isEmpty && monsters.allSatisfy { island.safeCity(at: $0.home) == nil })
+        #expect(monsters.allSatisfy { $0.home.distance(to: island.start) >= Double(ExploreRules.npcMinDistanceFromStart) })
+        let people = island.npcs.filter(\.isPeaceful)
+        #expect(!people.isEmpty)
+        for npc in people {
+            if let id = npc.cityId { #expect(island.cities[id].contains(npc.home)) } else { #expect(npc.route.contains(npc.home)) }
+        }
+        let onStreets = Double(people.filter { $0.cityId != nil }.count) / Double(people.count)
+        #expect(onStreets >= 0.6)
         // Квесты по датам — на острове своего месяца.
         #expect(island.chests.count == 40)
         #expect(island.campfires.count >= 13)
         // Погода острова-месяца — из отметок настроения месяца (15A): в августе плохое — дождь, без отметок — ясно.
-        #expect(island.regionWeather == [.rain, .clear, .clear, .clear])
+        #expect(island.regionWeather.first == .rain && island.regionWeather.dropFirst().allSatisfy { $0 == .clear })
     }
 
     @Test func withoutCalendarThereAreNoCitiesOrNPC() {
@@ -138,7 +152,8 @@ struct ExploreTests {
         data.events = []
         data.hasCalendar = false
         let island = IslandGenerator.generate(data, seed: 7)
-        #expect(island.cities.isEmpty && island.npcs.isEmpty && !island.chests.isEmpty)
+        // Без календаря нет городов и людей; звери — всё равно есть (15H).
+        #expect(island.cities.isEmpty && island.npcs.allSatisfy { !$0.isPeaceful } && !island.chests.isEmpty)
         #expect(island.isLand(island.start))
     }
 
@@ -212,14 +227,14 @@ struct ExploreTests {
     }
 
     @Test func densitySimulation() {
-        // На большом острове с 40 NPC путь от старта к городу проходит рядом (в радиусе погони) не больше чем с 2–3 NPC в среднем.
+        // Путь от старта к городу проходит рядом (в радиусе погони) не больше чем с 2–3 монстрами в среднем (15H: люди мирные).
         var total = 0.0, paths = 0
         for attempt in 0..<20 {
             let data = input(people: 60)
             let island = IslandGenerator.generate(data, seed: data.seed(attempt: attempt))
             for city in island.cities.dropFirst() {
                 guard let path = island.path(from: island.start, to: city.center) else { continue }
-                let met = island.npcs.filter { npc in path.contains { $0.distance(to: npc.home) <= npc.tier.chaseRadius } }.count
+                let met = island.npcs.filter { npc in !npc.isPeaceful && path.contains { $0.distance(to: npc.home) <= npc.tier.chaseRadius } }.count
                 total += Double(met)
                 paths += 1
             }

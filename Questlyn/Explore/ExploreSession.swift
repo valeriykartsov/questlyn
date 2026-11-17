@@ -101,7 +101,61 @@ final class ExploreSession {
         guard sailing == nil, !inFight, inCave == nil else { return nil }
         return island.merchants.first { $0.position.distance(to: heroTile) <= 1.5 }
     }
-    var companionSkill: CompanionSkill? { companion.map { CompanionSkill($0.tier) } }
+    var companionSkill: CompanionSkill? { companion.map { CompanionSkill.of($0) } }
+    /// Навыки в бою (15H): «Уговорить» убран — в бою только монстры и стражи, людей уговаривают в диалоге.
+    var fightSkills: [ExploreSkill] { hero.skills.filter { $0.ability != .persuade } }
+
+    // MARK: 15H (17.11.2026): диалог с мирными NPC, монстры, умения легенд
+
+    /// Мирный NPC рядом — кнопка «Поговорить» (сцена обновляет каждый кадр).
+    var talkCandidate: Int?
+    /// Открытый диалог — игра на паузе.
+    var talkNPC: IslandNPC?
+    /// После неудачи — повтор не раньше этого времени.
+    var talkRetryAt: [Int: Date] = [:]
+    @ObservationIgnored private var talkRandom = ExploreRandom(0x7A1C)
+    /// Легенды, ставшие спутниками за прогулку — в итоги.
+    var recruitedLegends: [IslandNPC] = []
+
+    func canTalk(_ npc: IslandNPC) -> Bool {
+        npc.isPeaceful && npc.id != companion?.id && (talkRetryAt[npc.id] ?? .distantPast) <= .now
+    }
+
+    func talkChance(_ npc: IslandNPC, help: Bool) -> Double { npc.talkChance(charisma: hero.level(.charisma), help: help) }
+
+    /// Ответ в диалоге: удалось — спутник; нет — повтор через минуту.
+    func talk(_ npc: IslandNPC, help: Bool) {
+        guard canTalk(npc), !help || mp >= npc.talkHelpMP else { return }
+        if help { mp -= npc.talkHelpMP }
+        if talkRandom.unit() < talkChance(npc, help: help) {
+            persuaded += 1
+            companion = npc
+            if npc.legend != nil { recruitedLegends.append(npc) }
+            toast = "\(npc.title) теперь спутник · \(CompanionSkill.of(npc).summary)"
+        } else {
+            talkRetryAt[npc.id] = .now + ExploreRules.talkRetrySeconds
+            toast = "Не удалось уговорить — попробуй через минуту"
+        }
+        talkNPC = nil
+    }
+
+    /// Мастер-легенда: HP и MP героя +10%.
+    var maxHP: Double { hero.maxHP * (companionSkill == .legend(.master) ? ExploreRules.masterVitalsFactor : 1) }
+    var maxMP: Double { hero.maxMP * (companionSkill == .legend(.master) ? ExploreRules.masterVitalsFactor : 1) }
+
+    /// Бой с монстром: имя, ночь, умения легенды-спутника.
+    private func prepare(_ fight: inout Encounter, _ npc: IslandNPC) {
+        fight.opponentName = npc.title
+        fight.heroDamageFactor = companionSkill == .legend(.warrior) ? ExploreRules.warriorDamageFactor : 1
+        fight.firstStrikeFactor = companionSkill == .legend(.assassin) ? ExploreRules.assassinFirstStrike : 1
+    }
+    private func prepare(_ fight: inout ActiveFight, _ npc: IslandNPC) {
+        fight.opponentName = npc.title
+        fight.heroDamageFactor = companionSkill == .legend(.warrior) ? ExploreRules.warriorDamageFactor : 1
+        fight.firstStrikeFactor = companionSkill == .legend(.assassin) ? ExploreRules.assassinFirstStrike : 1
+    }
+    /// Ночью монстры сильнее (правило 15D.3 перешло на монстров).
+    func nightFight(_ npc: IslandNPC) -> Bool { isNight && npc.monster != nil }
 
     /// Обмен: отдать 2 предмета (можно одинаковых) — получить 1.
     @discardableResult
@@ -127,11 +181,11 @@ final class ExploreSession {
         bag[item, default: 0] += 1
     }
 
-    /// Ночной NPC повержен — предмет в сумку.
+    /// Монстр повержен (15H) — предмет в сумку.
     private func nightReward(_ npcId: Int?) {
-        guard let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.isNight else { return }
+        guard let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.monster != nil else { return }
         let item = ExploreItem.allCases[(npcId + steps) % ExploreItem.allCases.count]
-        toast = "Ночной \(npc.tier.title.lowercased()) повержен" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
+        toast = "\(npc.title) повержен" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
     }
 
     // MARK: 15C (17.11.2026)
@@ -170,8 +224,8 @@ final class ExploreSession {
             let item = ExploreItem.allCases[(k * 3 + steps) % ExploreItem.allCases.count]
             if addItem(item) { found.append(item.title) }
         }
-        hp = min(hero.maxHP, hp + hero.maxHP * ExploreRules.treasureRestoreShare)
-        mp = min(hero.maxMP, mp + hero.maxMP * ExploreRules.treasureRestoreShare)
+        hp = min(maxHP, hp + maxHP * ExploreRules.treasureRestoreShare)
+        mp = min(maxMP, mp + maxMP * ExploreRules.treasureRestoreShare)
         toast = "Клад «\(treasure.title)»: \(found.isEmpty ? "сумка полна" : found.joined(separator: ", ")) · +50% HP и MP"
     }
 
@@ -242,10 +296,11 @@ final class ExploreSession {
         activeNPC = npc.id
         activeTower = nil
         activeFight = ActiveFight(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id),
-                                  companion: companion?.tier, night: npc.isNight)
+                                  companion: companion?.tier, night: nightFight(npc))
         activeFight?.damageTakenFactor = damageTakenFactor
         activeFight?.cooldownFactor = cooldownFactor
-        toast = "Встреча · \(npc.tier.title) — бей и отходи; дальше \(Self.cells(npc.tier.chaseRadius)) — сбежал"
+        if var fight = activeFight { prepare(&fight, npc); activeFight = fight }
+        toast = "\(npc.title) — бей и отходи; дальше \(Self.cells(npc.tier.chaseRadius)) — сбежал"
     }
 
     func startActiveGuardian(_ tower: IslandTower) {
@@ -308,7 +363,7 @@ final class ExploreSession {
             toast = "Вы оторвались"
         case .lost:
             defeats += 1
-            hp = (hero.maxHP * ExploreRules.defeatHPShare).rounded()
+            hp = (maxHP * ExploreRules.defeatHPShare).rounded()
             toast = "Вы без сил — очнулись в городе"
         case nil: break
         }
@@ -320,7 +375,7 @@ final class ExploreSession {
     /// Пауза кнопкой (16.11.2026).
     var isPaused = false
     /// Время стоит: пауза или открыта карта мира.
-    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas }
+    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas || talkNPC != nil }
     var exploredShare: Double { landCount == 0 ? 0 : Double(exploredLand) / Double(landCount) }
 
     /// Открыть клетки в радиусе обзора.
@@ -342,8 +397,18 @@ final class ExploreSession {
         let ships = ships.indices.filter { $0 != sailing }.map { self.ships[$0] }
         let key = "\(openedChests.count)-\(litCampfires.count)-\(ships.map { "\($0.x),\($0.y)" })-\(treasureSpot.map { "\($0.x),\($0.y)" } ?? "")-\(treasureFound)"
         if let minimapCache, minimapCache.key == key { return minimapCache.image }
-        let image = ExploreRenderer.minimap(island, opened: openedChests, lit: litCampfires, ships: ships, treasure: treasureFound ? nil : treasureSpot)
+        let image = ExploreRenderer.isoMinimap(island, opened: openedChests, lit: litCampfires, ships: ships, treasure: treasureFound ? nil : treasureSpot)
         minimapCache = (key, image)
+        return image
+    }
+
+    /// Карта мира с туманом: перерисовывается, когда открыто ещё ~1% суши, — окно карты открывается сразу, без пустого кадра.
+    @ObservationIgnored private var worldMapCache: (key: Int, image: CGImage?)?
+    var worldMapImage: CGImage? {
+        let key = exploredLand / max(1, landCount / 100)
+        if let worldMapCache, worldMapCache.key == key { return worldMapCache.image }
+        let image = ExploreRenderer.worldMap(island, explored: explored)
+        worldMapCache = (key, image)
         return image
     }
 
@@ -363,8 +428,8 @@ final class ExploreSession {
         guard (bag[item] ?? 0) > 0, !inFight else { return }
         bag[item, default: 0] -= 1
         switch item {
-        case .potionHP: hp = min(hero.maxHP, hp + hero.maxHP * ExploreRules.potionShare)
-        case .potionMP: mp = min(hero.maxMP, mp + hero.maxMP * ExploreRules.potionShare)
+        case .potionHP: hp = min(maxHP, hp + maxHP * ExploreRules.potionShare)
+        case .potionMP: mp = min(maxMP, mp + maxMP * ExploreRules.potionShare)
         case .torch: torchUntil = .now + ExploreRules.torchSeconds
         case .compass: compassUntil = .now + ExploreRules.compassSeconds
         }
@@ -407,8 +472,8 @@ final class ExploreSession {
             let state = progress(task)
             guard state.done >= state.total else { continue }
             doneTasks.insert(id)
-            hp = min(hero.maxHP, hp + hero.maxHP * ExploreRules.taskRewardShare)
-            mp = min(hero.maxMP, mp + hero.maxMP * ExploreRules.taskRewardShare)
+            hp = min(maxHP, hp + maxHP * ExploreRules.taskRewardShare)
+            mp = min(maxMP, mp + maxMP * ExploreRules.taskRewardShare)
             let reward = "+\(Int(ExploreRules.taskRewardShare * 100))% HP и MP"
             toast = id == justTaken ? "«\(taskTitle(task))» — уже выполнено: \(reward)" : "Задание выполнено: \(reward)"
         }
@@ -466,13 +531,13 @@ final class ExploreSession {
     func canUseOnMap(_ skill: ExploreSkill) -> Bool {
         guard skill.ability == .dash || skill.ability == .scout, !inFight, sailing == nil else { return false }
         if let until = mapCooldownUntil[skill.ability], until > .now { return false }
-        return mp >= (skill.ability.mpShare * hero.maxMP).rounded()
+        return mp >= (skill.ability.mpShare * maxMP).rounded()
     }
 
     /// Рывок — ускорение ×2 на 3·m с; Разведка — обзор 15 клеток на 10 с (09, раздел 6).
     func useOnMap(_ skill: ExploreSkill) {
         guard canUseOnMap(skill) else { return }
-        mp -= (skill.ability.mpShare * hero.maxMP).rounded()
+        mp -= (skill.ability.mpShare * maxMP).rounded()
         mapCooldownUntil[skill.ability] = .now + Self.mapCooldown
         switch skill.ability {
         case .dash: dashUntil = .now + 3 * skill.power
@@ -485,13 +550,15 @@ final class ExploreSession {
         if sailing != nil { return hero.walkSpeed * ExploreRules.sailSpeedFactor }
         // По дороге быстрее — по её износу (15A.2).
         let swamp = island.isSwamp(heroTile) ? ExploreRules.swampSpeedFactor : 1
-        return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) * (roadHere?.wear.speedFactor ?? 1) * (1 + buff(.walk)) * swamp
+        let baller = companionSkill == .legend(.baller) ? ExploreRules.ballerSpeedFactor : 1
+        return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) * (roadHere?.wear.speedFactor ?? 1) * (1 + buff(.walk)) * swamp * baller
     }
     /// Обзор: Разведка и факел — 15 клеток; маяк +3; ночью ×0,7 (14.5).
     var vision: Double {
         let now = Date.now
         if (scoutUntil ?? .distantPast) > now || (torchUntil ?? .distantPast) > now { return ExploreRules.torchVision }
         var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom) + (companionSkill == .scout ? ExploreRules.scoutCompanionVision : 0)
+            + (companionSkill == .legend(.archer) ? ExploreRules.archerVision : 0)
         if isNight { value *= ExploreRules.nightVisionFactor }
         return value
     }
@@ -499,7 +566,8 @@ final class ExploreSession {
     func startEncounter(npc: IslandNPC) {
         encounterNPC = npc.id
         encounterTower = nil
-        var fight = Encounter(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id), night: npc.isNight)
+        var fight = Encounter(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id), night: nightFight(npc))
+        prepare(&fight, npc)
         fight.damageTakenFactor = damageTakenFactor
         fight.cooldownFactor = cooldownFactor
         if let companion { fight.companionAssist(tier: companion.tier) }
@@ -530,7 +598,7 @@ final class ExploreSession {
         case .fled: escapes += 1
         case .lost:
             defeats += 1
-            hp = (hero.maxHP * ExploreRules.defeatHPShare).rounded()
+            hp = (maxHP * ExploreRules.defeatHPShare).rounded()
         case nil: break
         }
         self.encounter = nil

@@ -22,13 +22,11 @@ struct ExploreStage15DTests {
         return ExploreInput(first: first, last: last, events: events, quests: [], nights: [:], weekMoods: [:], hasCalendar: true, timeZone: utc)
     }
 
-    @Test func nightNPCsComeFromEveningEvents() {
+    @Test func eveningPeopleArePeaceful() {
+        // 15H: ночных NPC больше нет — вечерние участники такие же мирные люди.
         let island = IslandGenerator.generate(input(days: 20), seed: 3)
-        let night = island.npcs.filter(\.isNight)
-        #expect(!night.isEmpty)
-        for region in island.regions { #expect(night.filter { region.contains($0.home) }.count <= ExploreRules.nightNPCCap) }
-        #expect(island.npcs.filter { !$0.isNight }.count >= 1)
-        #expect(night.allSatisfy { $0.chaseRadius == $0.tier.chaseRadius + 1 })
+        #expect(island.npcs.allSatisfy { !$0.isNight })
+        #expect(island.npcs.contains { $0.isPeaceful && $0.key.hasPrefix("night") })
         #expect(island.npcs.map(\.id) == Array(island.npcs.indices))
     }
 

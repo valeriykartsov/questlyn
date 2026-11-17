@@ -379,16 +379,15 @@ nonisolated enum ExploreSprites {
 
     // MARK: 15D: шатёр торговца
 
+    /// Шатёр торговца (15H: в 3,5 раза меньше прежнего — рядом с домиками города).
     static func merchantTent() -> RGBACanvas {
-        var c = RGBACanvas(width: 84, height: 72, fill: nil)
-        c.polygon([(2, 26), (42, 2), (82, 26)], 0xB8651B)
-        for x in stride(from: 6, to: 80, by: 10) { c.polygon([(x, 26), (42, 4), (x + 5, 26)], 0xF4EFE4) }
-        for y in 26...70 { for x in 8...76 { c.set(x, y, x > 42 ? 0x6A4024 : 0x7A4A2A) } }
-        for y in 56...61 { for x in 8...76 { c.set(x, y, 0xD9A441) } }
-        for cx in [17, 29, 65] {
-            for y in 42...56 { for x in (cx - 6)...(cx + 6) where pow(Double(x - cx) / 6, 2) + pow(Double(y - 49) / 7, 2) <= 1 { c.set(x, y, 0xC9A57A) } }
-            c.set(cx, 41, 0x5C3A1E); c.set(cx + 1, 40, 0x5C3A1E)
-        }
+        var c = RGBACanvas(width: 28, height: 24, fill: nil)
+        c.polygon([(1, 9), (14, 1), (27, 9)], 0xB8651B)
+        for x in stride(from: 3, to: 26, by: 5) { c.polygon([(x, 9), (14, 2), (x + 2, 9)], 0xF4EFE4) }
+        for y in 9...22 { for x in 3...24 { c.set(x, y, x > 14 ? 0x6A4024 : 0x7A4A2A) } }
+        for y in 18...19 { for x in 3...24 { c.set(x, y, 0xD9A441) } }
+        for y in 11...22 { for x in 11...16 { c.set(x, y, 0x3B2414) } }
+        for cx in [6, 21] { for y in 14...17 { for x in (cx - 1)...(cx + 1) { c.set(x, y, 0xC9A57A) } } }
         return c
     }
 
@@ -492,6 +491,98 @@ nonisolated enum ExploreSprites {
         return c
     }
 
+    /// Корабль носом вправо-вверх (15H, макет ExploreDirections): ближе к зрителю — корма с надстройкой и транцем,
+    /// паруса с изнанки. Влево-вверх — зеркало.
+    static func shipUp(frame: Int, sails: Int = 2) -> RGBACanvas {
+        var c = RGBACanvas(width: 72, height: 64, fill: nil)
+        let hull: UInt32 = 0x6B3F22, hullDark: UInt32 = 0x4E2E18, deck: UInt32 = 0xA87A4E, line: UInt32 = 0x3B2414
+        let cx = 36, cy = 44
+        let bow = (cx + 22, cy - 11), stern = (cx - 20, cy + 10)
+        let s1 = (stern.0 + 4, stern.1 + 2), s2 = (stern.0 - 4, stern.1 - 2)
+        let m1 = (cx + 6, cy + 3), m2 = (cx - 6, cy - 3)
+        let drop = 10
+        let bottom = [(bow.0 - 4, bow.1 + drop - 2), (m1.0 - 1, m1.1 + drop), (s1.0 - 2, s1.1 + drop - 2), (s2.0 + 1, s2.1 + drop)]
+        c.polygon([s2, s1, m1, bow] + bottom, hull)
+        c.polygon([(s2.0, s2.1 + drop - 3), (s1.0, s1.1 + drop - 3), (m1.0, m1.1 + drop - 3), (bow.0 - 3, bow.1 + drop - 4)] + bottom, hullDark)
+        // Транец — плоская корма к зрителю, окна кают.
+        c.polygon([s2, s1, (s1.0, s1.1 + 6), (s2.0, s2.1 + 6)], 0x5E3820)
+        for x in stride(from: s2.0 + 2, to: s1.0 - 1, by: 3) { c.set(x, s2.1 + 3 + (x - s2.0) / 2, 0xF2B35B) }
+        let deckPoly = [s2, m2, bow, m1, s1]
+        c.polygon(deckPoly, deck)
+        for k in stride(from: -4, through: 4, by: 2) { for t in 0..<40 {
+            let x = stern.0 + t + k, y = stern.1 - t / 2 + k / 2
+            if c.color(x, y) == deck { c.set(x, y, Pix.shade(deck, 0.88)) }
+        } }
+        for k in deckPoly.indices { line2(&c, deckPoly[k], deckPoly[(k + 1) % deckPoly.count], line) }
+        // Надстройка на корме.
+        for y in (stern.1 - 7)..<(stern.1 + 1) { for x in (stern.0 - 4)..<(stern.0 + 6) { c.set(x, y, x < stern.0 + 1 ? 0x7A4A2A : 0x5E3820) } }
+        let masts = [(cx + 7, cy - 4, 30)] + (sails > 1 ? [(cx - 8, cy + 4, 24)] : [])
+        let bulge = [0, 1, 2, 1][frame % 4]
+        for (mx, my, mh) in masts.reversed() {
+            for y in (my - mh)...my { c.set(mx, y, line) }
+            for (y0, y1, w) in [(my - mh + 4, my - mh + 13, 9), (my - mh + 15, my - mh + 24, 11)] {
+                for y in y0...min(y1, my - 2) {
+                    let t = Double(y - y0) / Double(max(1, y1 - y0))
+                    let b = Int((Double(bulge) * (1 - pow(2 * t - 1, 2))).rounded())
+                    for x in (mx - w - b)...(mx + w - b) {
+                        let yy = y - Int((Double(x - mx) / 5).rounded(.down))
+                        let edge = x == mx - w - b || x == mx + w - b || y == y0
+                        c.set(x, yy, edge ? 0xD5CCB8 : (x < mx ? 0xE9E1CF : 0xDCD3BF))
+                    }
+                    c.set(mx, y, line)
+                }
+            }
+        }
+        let (fx, fy, fh) = masts[0]
+        for k in 0..<6 { for j in 0..<3 { c.set(fx + 1 + k, fy - fh + j + ((k + frame) % 4 == 0 ? 1 : 0), 0xA8432F) } }
+        for k in 0..<8 { c.set(bow.0 + k, bow.1 - 3 - k / 2, line) }
+        return c
+    }
+
+    // MARK: 15H: монстры — звери зон и «долги» (макет ExploreMonsters)
+
+    /// Монстр 16×12, 2 кадра: второй — шаг (лапы) или колыхание (тень, лень).
+    static func monster(_ kind: MonsterKind, frame: Int) -> RGBACanvas {
+        let (rows, palette): ([String], [Character: UInt32]) = switch kind {
+        case .wolf: (["....KK......KK..", "...KWWK....KWWK.", "...KWWWKKKKWWWK.", "..KWWWWWWWWWWWK.", "..KWEWWWWWWEWWK.",
+                      ".KWWWWWWWWWWWWWK", "KWWWWnWWWWWWWWK.", ".KKWWWWWWWWWWK..", "...KWWKKKKWWK...", "...KWK....KWK...", "...KK......KK..."],
+                     ["K": 0x2A2320, "W": 0xC9CED6, "E": 0xE5482B, "n": 0x2A2320])
+        case .bear: (["..KK........KK..", ".KBBK......KBBK.", ".KBBBKKKKKKBBBK.", "KBBBBBBBBBBBBBBK", "KBBEBBBBBBBBEBBK",
+                      "KBBBBBnnnBBBBBBK", "KBBBBBBBBBBBBBBK", ".KBBBBBBBBBBBBK.", ".KBBKKBBBBKKBBK.", ".KBK..KBBK..KBK.", ".KK....KK....KK."],
+                     ["K": 0x2A2320, "B": 0x6B4A2E, "E": 0xF2D27A, "n": 0x2A2320])
+        case .boar: (["................", "....KKKKKKKK....", "...KbbbbbbbbK...", "..KbbbbbbbbbbK..", ".KbEbbbbbbbbbbK.",
+                      "KWbbbbbbbbbbbbK.", "KbbbbbbbbbbbbbK.", ".KKbbbbbbbbbbK..", "..KbbKKKKbbK....", "..KbK....KbK....", "..KK......KK...."],
+                     ["K": 0x2A2320, "b": 0x8A5A34, "E": 0xE5482B, "W": 0xF4EFE4])
+        case .jackal: (["..K.........K...", ".KJK.......KJK..", ".KJJKKKKKKKJJK..", "KJJJJJJJJJJJJK..", "KJEJJJJJJJEJJK..",
+                        ".KJJJJnJJJJJJJK.", "..KJJJJJJJJJJJJK", "..KJJJJJJJJJJK..", "...KJJKKKKJJK...", "...KJK....KJK...", "...KK......KK..."],
+                       ["K": 0x2A2320, "J": 0xC8AE7E, "E": 0x2A2320, "n": 0x2A2320])
+        case .scorpion: (["..........KK....", ".........KSSK...", "..........KSK...", "...KK......KSK..", "..KSSK....KSSK..",
+                          ".KSSSSKKKKSSK...", "KSESSSSSSSSK....", "KSSSSSSSSSSK....", ".KSKSKSKSKSK....", "..K.K.K.K.K.....", "................"],
+                         ["K": 0x2A2320, "S": 0xB8651B, "E": 0xF2D27A])
+        case .deadline: (["......KKKK......", ".....KNNNNK.....", "....KNNNNNNK....", "....KNEENEENK...", "...KNNNNNNNNK...",
+                          "...KNNGGGGNNK...", "..KNNNNGGNNNNK..", "..KNNNGGGGNNNK..", ".KNNNNNNNNNNNNK.", ".KNKNKNKNKNKNNK.", "..K.K.K.K.K.KK.."],
+                         ["K": 0x15131A, "N": 0x2B2B35, "E": 0xE5482B, "G": 0xD9A441])
+        case .sloth: (["................", "................", "......KKKK......", "....KKllllKK....", "...KllllllllK...",
+                       "..KllEllllEllK..", "..KlllllllllK...", ".KllllllnnllllK.", ".KllllllllllllK.", "KllllllllllllllK", ".KKKKKKKKKKKKKK."],
+                      ["K": 0x2E4A36, "l": 0x7DB86A, "E": 0x1F2A44, "n": 0x2E4A36])
+        case .lure: (["...K........K...", "...KK......KK...", "....KKKKKKKK....", "...KRRRRRRRRK...", "...KRYRRRRYRK...",
+                      "...KRRRnnRRRK...", "....KRRRRRRK....", "...KRRRRRRRRK.K.", "..KRRKRRRRKRRKRK", "...KK.KRRK.KK.K.", "......KK.KK....."],
+                     ["K": 0x2A1414, "R": 0xB5473A, "Y": 0xF2D27A, "n": 0x2A1414])
+        }
+        var c = RGBACanvas(width: 16, height: 13, fill: nil)
+        // Тень под ногами.
+        for x in 2...13 { c.setAlpha(x, 12, 0x141828, alpha: 0.25) }
+        let lift = frame % 2
+        for (y, row) in rows.enumerated() {
+            for (x, ch) in row.enumerated() {
+                guard let color = palette[ch] else { continue }
+                // Шаг: нижние ряды (лапы) остаются, корпус приподнимается на 1 px.
+                c.set(x, y + 1 - (y < 8 ? lift : 0), color)
+            }
+        }
+        return c
+    }
+
     private static func line2(_ c: inout RGBACanvas, _ a: (Int, Int), _ b: (Int, Int), _ color: UInt32) {
         let steps = max(abs(b.0 - a.0), abs(b.1 - a.1), 1)
         for k in 0...steps {
@@ -573,6 +664,34 @@ enum ExploreCharacters {
         }
     }
 
+    /// Вид со спины (15H, макет ExploreDirections): голова — затылок цвета волос, оружие — зеркально и за телом.
+    /// Влево — зеркало (xScale узла), поэтому рисунков два: спереди (`frames`) и со спины.
+    static func backFrames(_ pixels: [[UInt32?]], hair: UInt32, outline: Bool,
+                           weapon: (behind: [WeaponArt.Pixel], front: [WeaponArt.Pixel]) = ([], [])) -> [CGImage] {
+        var rows = pixels
+        let line: UInt32 = 0x2A2320, dark = HeroPalette.shade(hair, 0.76)
+        for y in 9...21 where y < rows.count {
+            let xs = rows[y].indices.filter { rows[y][$0] != nil }
+            guard let a = xs.first, let b = xs.last, b - a > 1 else { continue }
+            for x in (a + 1)..<b where rows[y][x] != nil && rows[y][x] != line {
+                rows[y][x] = (y >= 19 || (x + y) % 7 == 0) ? dark : hair
+            }
+        }
+        let mirrored = (weapon.behind + weapon.front).map { WeaponArt.Pixel(x: 31 - $0.x, y: $0.y, color: $0.color) }
+        return frames(rows, outline: outline, weapon: (mirrored, []))
+    }
+
+    /// Легенда (15H): полный комплект образа по месту в топе, волосы и кожа — по месту.
+    static func legend(rank: Int) -> (front: [CGImage], back: [CGImage]) {
+        let outfit = HeroAppearance.Outfit.allCases[rank % HeroAppearance.Outfit.allCases.count]
+        let hairs: [HeroAppearance.Hair] = [.dark, .red, .blond, .black, .dark, .dark, .red, .black, .blond]
+        let skins: [HeroAppearance.Skin] = [.light, .medium, .light, .tan, .deep, .light, .light, .medium, .tan]
+        let accents: [UInt32] = [0x3E5C8A, 0xA8432F, 0x2F6B4F, 0x2B2B35, 0xD9772B, 0x2F6B4F, 0x6A4E8C, 0x2F6B4F, 0xD9A441]
+        let look = HeroAppearance(hair: hairs[rank % 9], skin: skins[rank % 9], outfit: outfit, parts: .preset(outfit))
+        let base = pixels(look, accent: accents[rank % 9])
+        return (frames(base, outline: true), backFrames(base, hair: look.hair.hex, outline: true))
+    }
+
     /// Ночной NPC (15D.3): тёмный плащ поверх одежды, светящиеся глаза, фонарь.
     static func night(_ pixels: [[UInt32?]]) -> [[UInt32?]] {
         var rows = pixels
@@ -590,7 +709,7 @@ enum ExploreCharacters {
     }
 
     /// NPC: одежда по типу, добавки по зоне; ночной — в плаще с фонарём.
-    static func npc(tier: NPCTier, zone: ClimateZone, variant: Int, night isNight: Bool) -> [CGImage] {
+    static func npc(tier: NPCTier, zone: ClimateZone, variant: Int, night isNight: Bool) -> (front: [CGImage], back: [CGImage]) {
         let outfit: HeroAppearance.Outfit = switch tier {
         case .acquaintance: .coder
         case .colleague: .archer
@@ -601,7 +720,8 @@ enum ExploreCharacters {
         let accents: [UInt32] = [0x7A8A6A, 0x3E5C8A, 0x8A4B3A, 0x6B4FA3]
         let look = HeroAppearance(hair: hairs[variant % hairs.count], skin: skins[(variant / 2) % skins.count], outfit: outfit)
         let wear: Wear = zone.isCold ? .fur : zone == .desert || zone == .steppe ? .scarf : .plain
-        let base = pixels(look, accent: accents[variant % accents.count], wear: wear)
-        return frames(isNight ? night(base) : base, outline: true)
+        let base = isNight ? night(pixels(look, accent: accents[variant % accents.count], wear: wear))
+                           : pixels(look, accent: accents[variant % accents.count], wear: wear)
+        return (frames(base, outline: true), backFrames(base, hair: look.hair.hex, outline: true))
     }
 }

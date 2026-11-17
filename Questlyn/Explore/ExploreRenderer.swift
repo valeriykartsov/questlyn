@@ -32,36 +32,6 @@ enum ExploreRenderer {
 
     // MARK: Мини-карта
 
-    /// Вид сверху: клетка — пиксель; цвета зон, горы, дороги (15A).
-    static func minimap(_ island: Island, opened: Set<Int> = [], lit: Set<Int> = [], ships: [TilePoint] = [], treasure: TilePoint? = nil) -> CGImage? {
-        var canvas = RGBACanvas(width: island.side, height: island.side, fill: 0x3F6E9C)
-        for index in island.terrain.indices {
-            let point = TilePoint(index % island.side, index / island.side)
-            if let color = mapColor(island, point) { canvas.set(point.x, point.y, color) }
-        }
-        for city in island.cities {
-            for dx in -1...1 { for dy in -1...1 { canvas.set(city.center.x + dx, city.center.y + dy, 0x1F2A44) } }
-        }
-        // Неоткрытые сундуки и незажжённые костры (8C.9).
-        for chest in island.chests where !opened.contains(chest.id) {
-            for dx in 0...1 { for dy in 0...1 { canvas.set(chest.position.x + dx, chest.position.y + dy, 0xB8651B) } }
-        }
-        for fire in island.campfires where !lit.contains(fire.id) {
-            for dx in 0...1 { for dy in 0...1 { canvas.set(fire.position.x + dx, fire.position.y + dy, 0xE5482B) } }
-        }
-        // Корабли (12B): коричневый корпус с белым парусом.
-        let mark = max(2, island.side / 60)
-        // Клад (15C.1): красный крестик.
-        if let treasure {
-            for k in -(mark + 1)...(mark + 1) { canvas.set(treasure.x + k, treasure.y + k, 0xA8281E); canvas.set(treasure.x + k, treasure.y - k, 0xA8281E) }
-        }
-        for ship in ships {
-            for dx in -mark...mark { for dy in 0...mark { canvas.set(ship.x + dx, ship.y + dy, 0x6B3F22) } }
-            for dy in 1...(mark + 1) { canvas.set(ship.x, ship.y - dy, 0xFFFCF6) }
-        }
-        return canvas.image
-    }
-
     /// Цвет клетки на картах: nil — вода (фон).
     static func mapColor(_ island: Island, _ point: TilePoint) -> UInt32? {
         let zone = island.zone(at: point)
@@ -78,7 +48,32 @@ enum ExploreRenderer {
     }
 
     /// Карта мира (15A.3) в изометрии, как на экране: клетка — 2 px по ширине; неоткрытая суша — под туманом.
-    static func worldMap(_ island: Island, explored: [Bool]) -> CGImage? {
+    /// `explored == nil` — без тумана (мини-карта).
+    static func worldMap(_ island: Island, explored: [Bool]?) -> CGImage? {
+        isoCanvas(island, explored: explored).image
+    }
+
+    /// Мини-карта (15H): та же изометрия, что на экране и на карте мира, без тумана, с неоткрытыми сундуками,
+    /// незажжёнными кострами, кораблями и кладом.
+    static func isoMinimap(_ island: Island, opened: Set<Int>, lit: Set<Int>, ships: [TilePoint], treasure: TilePoint?) -> CGImage? {
+        var canvas = isoCanvas(island, explored: nil)
+        let side = island.side
+        func mark(_ p: TilePoint, _ color: UInt32, _ w: Int = 3, _ h: Int = 2) {
+            let px = p.x - p.y + side - 1, py = (p.x + p.y) / 2
+            for dx in 0..<w { for dy in 0..<h { canvas.set(px + dx - w / 2 + 1, py + dy - h / 2, color) } }
+        }
+        for city in island.cities { mark(city.center, 0x1F2A44, 4, 3) }
+        for chest in island.chests where !opened.contains(chest.id) { mark(chest.position, 0xB8651B) }
+        for fire in island.campfires where !lit.contains(fire.id) { mark(fire.position, 0xE5482B) }
+        for ship in ships { mark(ship, 0x6B3F22, 5, 2); mark(TilePoint(ship.x - 1, ship.y - 1), 0xFFFCF6, 1, 2) }
+        if let treasure {
+            let px = treasure.x - treasure.y + side - 1, py = (treasure.x + treasure.y) / 2
+            for k in -2...2 { canvas.set(px + k, py + k, 0xA8281E); canvas.set(px + k, py - k, 0xA8281E) }
+        }
+        return canvas.image
+    }
+
+    private static func isoCanvas(_ island: Island, explored: [Bool]?) -> RGBACanvas {
         let side = island.side
         var canvas = RGBACanvas(width: side * 2, height: side + 1, fill: 0x3F6E9C)
         for index in island.terrain.indices {
@@ -86,13 +81,13 @@ enum ExploreRenderer {
             let px = x - y + side - 1, py = (x + y) / 2
             var color = mapColor(island, TilePoint(x, y)) ?? (index % 7 == 0 ? 0x4A7BAA : 0x3F6E9C)
             // Море известно всегда; под туманом — неоткрытая суша.
-            if island.terrain[index] != .water, !(explored.indices.contains(index) && explored[index]) {
+            if let explored, island.terrain[index] != .water, !(explored.indices.contains(index) && explored[index]) {
                 color = (px + py) % 6 == 0 ? 0xD8CDB6 : PixelColor.mix(color, 0xE9E1D0, 0.86)
             }
             canvas.set(px, py, color)
             canvas.set(px + 1, py, color)
         }
-        return canvas.image
+        return canvas
     }
 
     /// Точка клетки на карте мира: доли ширины и высоты картинки.
