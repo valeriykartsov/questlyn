@@ -1201,6 +1201,7 @@ final class ExploreScene: SKScene {
             session.visitedCities.insert(city.id)
             // Доска заданий: первое посещение города берёт его задание.
             if let task = island.tasks.first(where: { $0.cityId == city.id }) { session.takeTask(task) }
+            session.takeErrand(cityId: city.id)
             session.lastCity = city.center
             // В городе +10% в секунду (09, раздел 5); обновляем модель не чаще раза в 0,25 с.
             restAccumulator += dt
@@ -1229,6 +1230,7 @@ final class ExploreScene: SKScene {
             session.toast = "Костёр: +\(Int((share * 100).rounded()))% HP и MP"
         }
         session.settleTasks()
+        session.settleErrands()
     }
 
     /// Короткая вспышка при находке: увеличение и золотое кольцо.
