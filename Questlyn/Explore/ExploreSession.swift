@@ -102,6 +102,132 @@ final class ExploreSession {
         return island.merchants.first { $0.position.distance(to: heroTile) <= 1.5 }
     }
     var companionSkill: CompanionSkill? { companion.map { CompanionSkill.of($0) } }
+
+    // MARK: 15E (17.11.2026): один корабль, экипаж, доски и верфь, море
+
+    /// Корабль получен (квест: 10 монстров на стартовом острове). Один остров — корабль не нужен.
+    var shipReady = false
+    var shipQuestKills = 0
+    var hasShipQuest: Bool { !island.ships.isEmpty }
+    var planks = 0
+    var upgrades: Set<ShipUpgrade> = []
+    /// Экипаж — до 2 спутников; на палубе не видны, их умения работают.
+    var crew: [IslandNPC] = []
+    var lootedWrecks: Set<Int> = []
+    var traderGifts: Set<Int> = []
+    var serpentDefeated = false
+    var encounterSerpent = false
+    @ObservationIgnored var serpentRamAt = Date.distantPast
+    /// Где корабль стоял перед отплытием — туда он вернётся, если герой проиграет в море.
+    var mooredAt: TilePoint?
+    var shipyardOpen = false
+    var crewOpen = false
+    var traderOpen: IslandTrader?
+    let currentTiles: Set<TilePoint>
+    /// Города с верфью: столица и города, чья территория ближе 3 клеток к воде.
+    let shipyardCities: Set<Int>
+
+    var bagCap: Int { ExploreRules.bagCap + (upgrades.contains(.hold) ? ExploreRules.holdBagBonus : 0) }
+    /// Умения спутника и экипажа вместе; одинаковые не складываются.
+    var skills: [CompanionSkill] { ([companion] + crew.map(Optional.some)).compactMap { $0.map(CompanionSkill.of) } }
+    func has(_ skill: CompanionSkill) -> Bool { skills.contains(skill) }
+
+    var inStorm: Bool { sailing != nil && island.storms.contains { $0.contains(heroTile) } }
+    var onCurrent: Bool { sailing != nil && currentTiles.contains(heroTile) }
+    var nearbyShipyard: Bool {
+        guard shipReady, sailing == nil, !inFight, let city = island.safeCity(at: heroTile) else { return false }
+        return shipyardCities.contains(city.id)
+    }
+    /// У корабля (на берегу рядом) — окно «Экипаж».
+    var nearShip: Bool { shipReady && sailing == nil && !inFight && ships.first.map { $0.distance(to: heroTile) <= ExploreRules.boardRadius + 1 } == true }
+    var nearbyTrader: IslandTrader? {
+        guard sailing != nil, !inFight else { return nil }
+        return island.traders.first { $0.position.distance(to: heroTile) <= 2.5 }
+    }
+
+    func buy(_ upgrade: ShipUpgrade) {
+        guard !upgrades.contains(upgrade), planks >= upgrade.planks else { return }
+        planks -= upgrade.planks
+        upgrades.insert(upgrade)
+        toast = "Верфь: \(upgrade.title) — \(upgrade.summary)"
+    }
+
+    /// Назначить спутника в экипаж (есть свободное место).
+    func assignCrew() {
+        guard let companion, crew.count < ExploreRules.crewCap else { return }
+        crew.append(companion)
+        self.companion = nil
+        toast = "\(companion.title) теперь в экипаже · \(CompanionSkill.of(companion).summary)"
+    }
+
+    /// Поменять спутника и члена экипажа местами.
+    func swapCrew(_ index: Int) {
+        guard crew.indices.contains(index), let companion else { return }
+        let member = crew[index]
+        crew[index] = companion
+        self.companion = member
+        toast = "\(member.title) идёт с тобой, \(companion.title) — на корабле"
+    }
+
+    func takeGift(_ trader: IslandTrader) {
+        guard !traderGifts.contains(trader.id) else { return }
+        traderGifts.insert(trader.id)
+        planks += 1
+        toast = "Встречный корабль: доска в подарок"
+    }
+
+    func loot(_ wreck: IslandWreck) {
+        guard !lootedWrecks.contains(wreck.id) else { return }
+        lootedWrecks.insert(wreck.id)
+        planks += wreck.planks
+        var text = "Обломки: +\(wreck.planks) \(wreck.planks == 1 ? "доска" : "доски")"
+        if let item = wreck.item { text += addItem(item) ? " · \(item.title)" : " · сумка полна" }
+        toast = text
+    }
+
+    /// Победа над монстром стартового острова — шаг квеста «Корабль».
+    func registerWin(_ npcId: Int?) {
+        guard hasShipQuest, !shipReady, let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.monster != nil,
+              island.regions.first?.contains(npc.home) == true else { return }
+        shipQuestKills += 1
+        if shipQuestKills >= ExploreRules.shipQuestKills {
+            shipReady = true
+            toast = "⛵ Корабль готов — у причала стартового острова"
+        }
+    }
+
+    /// Поражение: герой очнётся на острове, где пришвартован корабль; проигрыш в море — корабль вернётся к причалу.
+    func defeatRespawn() -> TilePoint {
+        if let index = sailing {
+            if let mooredAt { ships[index] = mooredAt }
+            sailing = nil
+        }
+        guard shipReady, let ship = ships.first, let landing = island.landing(near: ship) else { return island.start }
+        return landing
+    }
+
+    /// Морской змей (15E.1): с пушками — бой; без пушек — таран раз в 2 с.
+    func startSerpent() {
+        guard let serpent = island.serpent, !serpentDefeated else { return }
+        encounterSerpent = true
+        encounterNPC = nil
+        encounterTower = nil
+        var fight = Encounter(tier: .regular, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 13),
+                              guardian: .init(title: serpent.title, hp: serpent.hp, damageShare: ExploreRules.serpentDamageShare))
+        fight.opponentName = "Морской змей"
+        fight.damageTakenFactor = damageTakenFactor * (upgrades.contains(.hull) ? ExploreRules.hullDamageFactor : 1)
+        fight.cooldownFactor = cooldownFactor
+        if let companion { fight.companionAssist(tier: companion.tier) }
+        encounter = fight
+    }
+
+    func serpentRam() {
+        guard Date.now.timeIntervalSince(serpentRamAt) >= ExploreRules.serpentRamSeconds else { return }
+        serpentRamAt = .now
+        let damage = maxHP * ExploreRules.serpentRamShare * (upgrades.contains(.hull) ? ExploreRules.hullDamageFactor : 1)
+        hp = max(1, hp - damage)
+        toast = "Змей бьёт по кораблю: −\(Int(damage.rounded())) HP · нужны пушки (верфь)"
+    }
     /// Навыки в бою (15H): «Уговорить» убран — в бою только монстры и стражи, людей уговаривают в диалоге.
     var fightSkills: [ExploreSkill] { hero.skills.filter { $0.ability != .persuade } }
 
@@ -140,19 +266,19 @@ final class ExploreSession {
     }
 
     /// Мастер-легенда: HP и MP героя +10%.
-    var maxHP: Double { hero.maxHP * (companionSkill == .legend(.master) ? ExploreRules.masterVitalsFactor : 1) }
-    var maxMP: Double { hero.maxMP * (companionSkill == .legend(.master) ? ExploreRules.masterVitalsFactor : 1) }
+    var maxHP: Double { hero.maxHP * (has(.legend(.master)) ? ExploreRules.masterVitalsFactor : 1) }
+    var maxMP: Double { hero.maxMP * (has(.legend(.master)) ? ExploreRules.masterVitalsFactor : 1) }
 
     /// Бой с монстром: имя, ночь, умения легенды-спутника.
     private func prepare(_ fight: inout Encounter, _ npc: IslandNPC) {
         fight.opponentName = npc.title
-        fight.heroDamageFactor = companionSkill == .legend(.warrior) ? ExploreRules.warriorDamageFactor : 1
-        fight.firstStrikeFactor = companionSkill == .legend(.assassin) ? ExploreRules.assassinFirstStrike : 1
+        fight.heroDamageFactor = has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1
+        fight.firstStrikeFactor = has(.legend(.assassin)) ? ExploreRules.assassinFirstStrike : 1
     }
     private func prepare(_ fight: inout ActiveFight, _ npc: IslandNPC) {
         fight.opponentName = npc.title
-        fight.heroDamageFactor = companionSkill == .legend(.warrior) ? ExploreRules.warriorDamageFactor : 1
-        fight.firstStrikeFactor = companionSkill == .legend(.assassin) ? ExploreRules.assassinFirstStrike : 1
+        fight.heroDamageFactor = has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1
+        fight.firstStrikeFactor = has(.legend(.assassin)) ? ExploreRules.assassinFirstStrike : 1
     }
     /// Ночью монстры сильнее (правило 15D.3 перешло на монстров).
     func nightFight(_ npc: IslandNPC) -> Bool { isNight && npc.monster != nil }
@@ -176,7 +302,7 @@ final class ExploreSession {
     }
 
     func withdraw(_ item: ExploreItem) {
-        guard (storage[item] ?? 0) > 0, bagCount < ExploreRules.bagCap else { return }
+        guard (storage[item] ?? 0) > 0, bagCount < bagCap else { return }
         storage[item, default: 0] -= 1
         bag[item, default: 0] += 1
     }
@@ -353,6 +479,7 @@ final class ExploreSession {
             } else {
                 toast = "\(fight.opponentTitle) повержен"
                 nightReward(activeNPC)
+                registerWin(activeNPC)
             }
         case .persuaded:
             persuaded += 1
@@ -375,7 +502,7 @@ final class ExploreSession {
     /// Пауза кнопкой (16.11.2026).
     var isPaused = false
     /// Время стоит: пауза или открыта карта мира.
-    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas || talkNPC != nil }
+    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas || talkNPC != nil || shipyardOpen || crewOpen || traderOpen != nil }
     var exploredShare: Double { landCount == 0 ? 0 : Double(exploredLand) / Double(landCount) }
 
     /// Открыть клетки в радиусе обзора.
@@ -419,7 +546,7 @@ final class ExploreSession {
     var clockText: String { String(format: "%02d:%02d", Int(clockHour) % 24, Int(clockHour * 60) % 60) }
 
     func addItem(_ item: ExploreItem) -> Bool {
-        guard bagCount < ExploreRules.bagCap else { return false }
+        guard bagCount < bagCap else { return false }
         bag[item, default: 0] += 1
         return true
     }
@@ -492,7 +619,7 @@ final class ExploreSession {
 
     /// Корабль в радиусе посадки — показывается «Сесть на корабль».
     var boardableShip: Int? {
-        guard sailing == nil, encounter == nil else { return nil }
+        guard sailing == nil, encounter == nil, shipReady else { return nil }
         return ships.indices.min { ships[$0].distance(to: heroTile) < ships[$1].distance(to: heroTile) }
             .flatMap { ships[$0].distance(to: heroTile) <= ExploreRules.boardRadius ? $0 : nil }
     }
@@ -520,6 +647,17 @@ final class ExploreSession {
         heroTile = island.start
         lastCity = island.start
         ships = island.ships.map(\.position)
+        currentTiles = Set(island.currents.flatMap(\.tiles))
+        shipyardCities = Set(island.cities.filter { city in
+            city.isCapital || (-(city.radius + ExploreRules.shipyardCoast)...(city.radius + ExploreRules.shipyardCoast)).contains { dy in
+                (-(city.radius + ExploreRules.shipyardCoast)...(city.radius + ExploreRules.shipyardCoast)).contains { dx in
+                    let point = TilePoint(city.center.x + dx, city.center.y + dy)
+                    return island.terrain(at: point) == .water && island.cities.contains { $0.id == city.id }
+                        && hypot(Double(dx), Double(dy)) <= Double(city.radius + ExploreRules.shipyardCoast)
+                }
+            }
+        }.map(\.id))
+        if island.ships.isEmpty { shipReady = false }
         let parts = Calendar.current.dateComponents([.hour, .minute], from: .now)
         clockHour = Double(parts.hour ?? 12) + Double(parts.minute ?? 0) / 60
         if let region = island.region(at: island.start) { visitedRegions.insert(region.id) }
@@ -547,18 +685,23 @@ final class ExploreSession {
     }
 
     var speed: Double {
-        if sailing != nil { return hero.walkSpeed * ExploreRules.sailSpeedFactor }
+        if sailing != nil {
+            // 15E: паруса, течение привычки, шторм.
+            return hero.walkSpeed * ExploreRules.sailSpeedFactor * (upgrades.contains(.sails) ? ExploreRules.sailsSpeedFactor : 1)
+                * (onCurrent ? ExploreRules.currentSpeedFactor : 1) * (inStorm ? ExploreRules.stormSpeedFactor : 1)
+        }
         // По дороге быстрее — по её износу (15A.2).
         let swamp = island.isSwamp(heroTile) ? ExploreRules.swampSpeedFactor : 1
-        let baller = companionSkill == .legend(.baller) ? ExploreRules.ballerSpeedFactor : 1
+        let baller = has(.legend(.baller)) ? ExploreRules.ballerSpeedFactor : 1
         return hero.walkSpeed * ((dashUntil ?? .distantPast) > .now ? 2 : 1) * (roadHere?.wear.speedFactor ?? 1) * (1 + buff(.walk)) * swamp * baller
     }
     /// Обзор: Разведка и факел — 15 клеток; маяк +3; ночью ×0,7 (14.5).
     var vision: Double {
         let now = Date.now
         if (scoutUntil ?? .distantPast) > now || (torchUntil ?? .distantPast) > now { return ExploreRules.torchVision }
-        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom) + (companionSkill == .scout ? ExploreRules.scoutCompanionVision : 0)
-            + (companionSkill == .legend(.archer) ? ExploreRules.archerVision : 0)
+        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom) + (has(.scout) ? ExploreRules.scoutCompanionVision : 0)
+            + (has(.legend(.archer)) ? ExploreRules.archerVision : 0)
+            + (sailing != nil && upgrades.contains(.mast) ? ExploreRules.mastSeaVision : 0)
         if isNight { value *= ExploreRules.nightVisionFactor }
         return value
     }
@@ -584,6 +727,13 @@ final class ExploreSession {
         case .won:
             wins += 1
             nightReward(encounterNPC)
+            registerWin(encounterNPC)
+            if encounterSerpent, let serpent = island.serpent {
+                serpentDefeated = true
+                planks += ExploreRules.serpentPlanks
+                let item = ExploreItem.allCases[steps % ExploreItem.allCases.count]
+                toast = "🐉 Морской змей «\(serpent.title)» повержен · +\(ExploreRules.serpentPlanks) доски" + (addItem(item) ? " · \(item.title)" : "")
+            }
             // Страж повержен — башня взята, сундук Epic: предмет в сумку.
             if let id = encounterTower, let tower = island.towers.first(where: { $0.id == id }) {
                 conqueredTowers.insert(id)
@@ -603,6 +753,7 @@ final class ExploreSession {
         }
         self.encounter = nil
         encounterTower = nil
+        encounterSerpent = false
         return outcome
     }
 }

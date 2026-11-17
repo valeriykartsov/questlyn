@@ -539,6 +539,82 @@ nonisolated enum ExploreSprites {
         return c
     }
 
+    // MARK: 15E: вид корабля — без парусов до квеста, улучшения верфи (макет ExploreShipyard)
+
+    /// Перекрашивает и дополняет корабль: `bare` — без парусов (квест не выполнен); `up` — рисунок «носом вверх».
+    static func dress(_ c: inout RGBACanvas, upgrades: Set<ShipUpgrade>, bare: Bool, up: Bool) {
+        let sails: Set<UInt32> = up ? [0xE9E1CF, 0xDCD3BF, 0xD5CCB8] : [0xFFFCF6, 0xEDE6D6, 0xE3DCCB]
+        let grey: [UInt32: UInt32] = up ? [0xE9E1CF: 0x969BA4, 0xDCD3BF: 0x868B94, 0xD5CCB8: 0x7A7F88]
+                                         : [0xFFFCF6: 0xA8ADB5, 0xEDE6D6: 0x969BA4, 0xE3DCCB: 0x7A7F88]
+        let hull: [UInt32: UInt32] = [0x6B3F22: 0x3A3A40, 0x4E2E18: 0x24242A]
+        for y in 0..<c.height { for x in 0..<c.width {
+            guard let color = c.color(x, y) else { continue }
+            if sails.contains(color) {
+                if bare { c.setAlpha(x, y, 0, alpha: 0) } else if upgrades.contains(.sails), let g = grey[color] { c.set(x, y, g) }
+            } else if upgrades.contains(.hull), let h = hull[color] {
+                c.set(x, y, h)
+            }
+        } }
+        if upgrades.contains(.cannons) {
+            for t in stride(from: 5, to: 33, by: 7) {
+                let x = up ? 24 + t : 10 + t, y = up ? 59 - t * 9 / 16 : 40 + t / 2
+                for k in 0..<4 {
+                    c.set(x - k, y + 1 + k / 2, 0x18181E)
+                    c.set(x - k, y + 2 + k / 2, 0x3C3C46)
+                }
+                c.set(x + 1, y, 0xE5482B)
+            }
+        }
+        if upgrades.contains(.hold) {
+            let boxes: [(Int, Int, UInt32)] = up ? [(26, 44, 0xB8651B), (32, 41, 0xC9A878), (38, 38, 0xB8651B)]
+                                                 : [(17, 38, 0xB8651B), (23, 41, 0xC9A878), (29, 44, 0xB8651B), (20, 34, 0xC9A878)]
+            for (bx, by, color) in boxes { for dy in 0..<5 { for dx in 0..<5 {
+                c.set(bx + dx, by + dy, dx == 0 || dx == 4 || dy == 0 || dy == 4 ? 0x3B2414 : color)
+            } } }
+        }
+        if upgrades.contains(.mast) {
+            let (mx, top) = up ? (43, 8) : (40, 15)
+            for dx in -4...4 {
+                c.set(mx + dx, top, 0x3B2414); c.set(mx + dx, top + 1, 0x7A4A2A); c.set(mx + dx, top + 2, 0x3B2414)
+            }
+            for k in 0..<5 { c.set(mx + 2 + k, top - 1 - k / 2, 0xD9A441) }
+            c.set(mx + 7, top - 3, 0xFFF8D2)
+        }
+    }
+
+    /// Обломки в море: доски и бочка (15E.1).
+    static func wreck() -> RGBACanvas {
+        var c = RGBACanvas(width: 24, height: 14, fill: nil)
+        for (x0, y0, n) in [(2, 7, 14), (6, 9, 14), (4, 4, 12)] {
+            for i in 0..<n { c.set(x0 + i, y0 + i / 4, 0x8A5A34); c.set(x0 + i, y0 + i / 4 + 1, 0x6B4A2E) }
+        }
+        for (x, y) in [(8, 7), (14, 9), (12, 5)] { c.set(x, y, 0x3B2414) }
+        for y in 2...6 { for x in 17...20 { c.set(x, y, y == 3 || y == 5 ? 0x5E3820 : 0xB8651B) } }
+        return c
+    }
+
+    /// Морской змей (15E.1): три горба из воды и голова; frame — горбы «дышат».
+    static func serpent(frame: Int) -> RGBACanvas {
+        var c = RGBACanvas(width: 48, height: 28, fill: nil)
+        for hump in 0..<3 {
+            let cx = 8 + hump * 13, lift = (hump + frame) % 2
+            for a in stride(from: 0, through: 180, by: 6) {
+                for w in 0..<4 {
+                    let r = Double(a) * .pi / 180
+                    let x = Int((Double(cx) + cos(r) * (6 - Double(w) * 0.4)).rounded())
+                    let y = Int((20 - Double(lift * 2) - sin(r) * Double(8 - w)).rounded())
+                    c.set(x, y, w < 3 ? 0x2E6B4F : 0x9DB06A)
+                }
+            }
+            for x in (cx - 6)...(cx + 6) { c.set(x, 21, 0xB8D3E6) }
+        }
+        for y in 4...10 { for x in 40...46 where (x - 43) * (x - 43) + (y - 7) * (y - 7) <= 11 { c.set(x, y, 0x2E6B4F) } }
+        for y in 9...20 { c.set(41, y, 0x2E6B4F); c.set(42, y, 0x1F4A36) }
+        c.set(44, 6, 0xE5482B)
+        for x in stride(from: 40, to: 47, by: 2) { c.set(x, 3, 0xA8432F) }
+        return c
+    }
+
     // MARK: 15H: монстры — звери зон и «долги» (макет ExploreMonsters)
 
     /// Монстр 16×12, 2 кадра: второй — шаг (лапы) или колыхание (тень, лень).

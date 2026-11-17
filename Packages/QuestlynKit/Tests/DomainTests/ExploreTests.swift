@@ -97,7 +97,8 @@ struct ExploreTests {
         let mean = Double(weights.reduce(0, +)) / Double(weights.count)
         #expect(weights.allSatisfy { abs(Double($0) - mean) <= mean * 0.35 })
         #expect(island.regions[0].title.contains("авг"))
-        #expect(island.ships.count == island.regions.count)
+        // 15E: один корабль — у стартового острова.
+        #expect(island.ships.count == 1 && island.ships[0].region == 0)
         // Острова не пересекаются и разделены водой.
         for (i, a) in island.regions.enumerated() { for b in island.regions[(i + 1)...] {
             let apart = a.origin.x + a.side + ExploreRules.islandGap <= b.origin.x || b.origin.x + b.side + ExploreRules.islandGap <= a.origin.x

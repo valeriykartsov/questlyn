@@ -441,7 +441,7 @@ final class AppModel {
             // 15C.1: выполненные квесты диапазона — кандидаты в клад.
             .with(doneQuests: (overview?.journal ?? []).compactMap { item in
                 guard let done = item.completion?.localDate, done >= first, done <= last else { return nil }
-                return ExploreDoneQuest(title: item.quest.title, priority: item.quest.priority, minutes: item.quest.durationMinutes ?? 0)
+                return ExploreDoneQuest(title: item.quest.title, priority: item.quest.priority, minutes: item.quest.durationMinutes ?? 0, date: done)
             })
             // 15B и 15G.4: рост навыков, закрытые Epic, вредное и полезное.
             .with(skillGains: exploreSkillGains, closedEpics: exploreClosedEpics,
