@@ -123,8 +123,13 @@ struct DayStripCard: View {
                     }
                 }
                 if !map.offMap.isEmpty {
-                    Text("Вне карты: " + map.offMap.joined(separator: " · "))
-                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(3)
+                    // Вне карты — каждый квест отдельной строкой (16.1).
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Вне карты").font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+                        ForEach(Array(map.offMap.enumerated()), id: \.offset) { _, title in
+                            Text("· \(title)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary).lineLimit(1)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, QSpacing.l)
@@ -535,7 +540,9 @@ struct MapOverviewView: View {
             if !map.offMap.isEmpty {
                 VStack(alignment: .leading, spacing: QSpacing.xxs) {
                     Text("Вне карты — без точного времени").font(QFont.text(12, weight: .bold)).foregroundStyle(QColor.inkSecondary)
-                    Text(map.offMap.joined(separator: " · ")).font(QFont.text(12))
+                    ForEach(Array(map.offMap.enumerated()), id: \.offset) { _, title in
+                        Text("· \(title)").font(QFont.text(12)).lineLimit(1)
+                    }
                 }
                 .padding(QSpacing.m)
                 .frame(maxWidth: .infinity, alignment: .leading)

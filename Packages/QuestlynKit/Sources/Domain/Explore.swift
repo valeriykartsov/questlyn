@@ -23,14 +23,15 @@ public struct ExploreRandom: Sendable {
 // MARK: - Правила (09)
 
 public enum ExploreRules {
-    public static let maxDays = 92
+    /// До 6 месяцев (16.3, 18.11.2026; было 92 дня).
+    public static let maxDays = 183
     public static let maxSkills = 3
 
     // 15H (17.11.2026): главы, столица, города-территории, мирные NPC, монстры, легенды.
     // Рабочие гипотезы, утверждены пользователем по макетам ExploreCities15H, ExploreMonsters, ExploreLegends.
-    /// Число глав (островов) по длине диапазона: до 21 дня — 1, до 42 — 2–3, дольше — 4–5.
+    /// Число глав (островов) по длине диапазона: до 21 дня — 1, до 42 — 2–3, до 92 — 4–5, до 137 — 6, дольше — 7 (16.3).
     public static func chapterCount(days: Int) -> Int {
-        switch days { case ...21: 1; case ...31: 2; case ...42: 3; case ...63: 4; default: 5 }
+        switch days { case ...21: 1; case ...31: 2; case ...42: 3; case ...63: 4; case ...92: 5; case ...137: 6; default: 7 }
     }
     /// Размер острова главы — по объёму её данных (события, квесты, отметки).
     public static func islandSize(weight: Int) -> IslandSize { weight < 30 ? .small : weight < 90 ? .medium : .large }
@@ -66,6 +67,22 @@ public enum ExploreRules {
     public static let sageCampfireFactor = 1.5
     public static let illusionistChaseMinus = 1.0
     public static let masterVitalsFactor = 1.10
+
+    /// 16.4: побеждённый монстр возрождается через 3 минуты (≈ 6 ч на острове) на своём месте, если героя нет рядом.
+    public static let monsterRespawnSeconds: TimeInterval = 180
+    // 16.2: пираты — рабочие гипотезы макета ExploreStage16.
+    public static let pirateWaterTiles = 4000
+    public static let pirateCap = 6
+    public static let pirateMinCoast = 6
+    public static let pirateChaseRadius = 6.0
+    public static let pirateSpeedFactor = 1.1
+    public static let pirateHP = 120.0
+    public static let pirateDamageShare = 0.10
+    public static let piratePlanks = 2
+    public static let pirateItemChance = 0.5
+    // 16.5: зал Чёрной башни.
+    public static let hallSide = 11
+    public static let hallVision = 4.0
 
     // 15E (17.11.2026): море, верфь, один корабль и экипаж. Рабочие гипотезы — макеты ExploreSea15E, ExploreShipyard, ExploreShipCrew.
     /// Квест «Корабль»: победить столько монстров на стартовом острове.
@@ -869,6 +886,12 @@ public struct IslandErrand: Hashable, Sendable, Identifiable {
     public var steps: [Step]
 }
 
+/// Пиратский корабль (16.2): ходит по открытому морю, гонится за кораблём героя.
+public struct IslandPirate: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var home: TilePoint
+}
+
 /// Улучшение корабля на верфи (15E.2) — на одну прогулку.
 public enum ShipUpgrade: String, Sendable, CaseIterable, Hashable {
     case sails, hull, hold, mast, cannons
@@ -1260,6 +1283,8 @@ public struct Island: Sendable {
     public var serpent: IslandSerpent?
     // 15F.
     public var errands: [IslandErrand] = []
+    // 16.2.
+    public var pirates: [IslandPirate] = []
 
     /// Главный город главы (15F.2): столица, если она на этом острове, иначе город с наибольшим числом событий.
     public func mainCity(of region: IslandRegion) -> IslandCity? {
@@ -1733,6 +1758,18 @@ public enum IslandGenerator {
             straits.append(path)
             island.traders.append(IslandTrader(id: island.traders.count, position: path[path.count / 2]))
         }
+        // Пираты (16.2): случайно по открытому морю — 1 на 4000 клеток воды дальше 6 клеток от суши, до 6.
+        let open = coast.indices.filter { coast[$0] != Int.max && coast[$0] > ExploreRules.pirateMinCoast }
+        let pirateCount = min(ExploreRules.pirateCap, open.count / ExploreRules.pirateWaterTiles)
+        var attempts = 0
+        while island.pirates.count < pirateCount && attempts < 2000 && !open.isEmpty {
+            attempts += 1
+            let index = open[random.int(open.count)]
+            let point = TilePoint(index % side, index / side)
+            guard island.ships.allSatisfy({ $0.position.distance(to: point) >= 12 }),
+                  island.pirates.allSatisfy({ $0.home.distance(to: point) >= 15 }) else { continue }
+            island.pirates.append(IslandPirate(id: island.pirates.count, home: point))
+        }
         // Морской змей: незакрытый Epic с самым дальним сроком — в проливе между средними главами.
         let closed = Set(input.closedEpics.map(\.title))
         if let epic = input.epics.filter({ !closed.contains($0.title) && !$0.dates.isEmpty }).max(by: { ($0.dates.max()!, $1.title) < ($1.dates.max()!, $0.title) }),
@@ -1769,6 +1806,10 @@ public enum IslandGenerator {
     /// Общее для острова и архипелага (15A): зоны климата по всему миру и клетки дорог.
     static func finish(_ island: inout Island, seed: UInt64, days: Int = 0, treasure: ExploreDoneQuest? = nil) {
         finalTower(&island, days: days)
+        // 16.5: у Чёрных башен монстры не стоят — вход в зал не начинается с боя.
+        let before = island.npcs.count
+        island.npcs.removeAll { npc in npc.monster != nil && island.towers.contains { $0.position.distance(to: npc.home) < 4 } }
+        if island.npcs.count != before { for index in island.npcs.indices { island.npcs[index].id = index } }
         if let treasure { hideTreasure(&island, title: treasure.title, seed: seed) }
         island.zones = climate(side: island.side, seed: seed)
         // Звери (15H) — по климату места.

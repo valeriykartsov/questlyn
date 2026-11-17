@@ -70,6 +70,17 @@ final class ExploreScene: SKScene {
     private let serpentNode = SKSpriteNode()
     private var serpentCalmUntil: TimeInterval = 0
     private let crewBadges = SKNode()
+    // 16.2: пираты.
+    private struct PirateState {
+        var x: Double
+        var y: Double
+        var target: (x: Double, y: Double)?
+        var respawnAt: TimeInterval?
+        var calmUntil: TimeInterval = 0
+    }
+    private var pirates: [PirateState] = []
+    private var pirateNodes: [SKSpriteNode] = []
+    private var activePirate: Int?
     private var crewLook = ""
 
     /// Вид по направлению движения в клетках (15H): вниз по экрану — лицом, вверх — спиной; влево — зеркало.
@@ -121,6 +132,18 @@ final class ExploreScene: SKScene {
         var facing = 0
         var routeIndex = 0
         var routeForward = true
+        /// 16.4: побеждённый монстр скрыт до этого времени, потом возрождается на своём месте.
+        var respawnAt: TimeInterval?
+    }
+
+    /// Победа над NPC: монстр уходит до возрождения (16.4), человек становится мирным.
+    private func defeated(_ npcId: Int) {
+        if session.island.npcs[npcId].monster != nil {
+            npcs[npcId].respawnAt = now + ExploreRules.monsterRespawnSeconds
+            npcs[npcId].chasing = false
+        } else {
+            npcs[npcId].peaceful = true
+        }
     }
     private var npcs: [NPCState] = []
     private var npcLast: [(x: Double, y: Double)] = []
@@ -651,7 +674,7 @@ final class ExploreScene: SKScene {
         }
         guard let npcId, npcs.indices.contains(npcId) else { return }
         switch outcome {
-        case .won, .persuaded: npcs[npcId].peaceful = true
+        case .won, .persuaded: defeated(npcId)
         case .fled: npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
         case .lost:
             npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
@@ -908,6 +931,7 @@ final class ExploreScene: SKScene {
         moveGhosts(dt)
         interact(dt)
         updateSea(dt)
+        movePirates(dt)
         advanceClock(dt)
         layoutDynamic()
         updateFog()
@@ -999,6 +1023,14 @@ final class ExploreScene: SKScene {
         for index in npcs.indices {
             var state = npcs[index]
             let npc = island.npcs[index]
+            // 16.4: побеждённый монстр возрождается дома с полным HP, если героя нет рядом.
+            if let respawn = state.respawnAt {
+                if now >= respawn, hypot(heroPosition.x - Double(npc.home.x), heroPosition.y - Double(npc.home.y)) > 6 {
+                    state = NPCState(x: Double(npc.home.x), y: Double(npc.home.y))
+                }
+                npcs[index] = state
+                continue
+            }
             // Экипаж (15E) — на корабле, на карте не ходит.
             if session.crew.contains(where: { $0.id == npc.id }) { npcs[index] = state; continue }
             // Спутник (14.5) идёт за героем, в том числе на корабле.
@@ -1187,16 +1219,7 @@ final class ExploreScene: SKScene {
             if let node = lightNodes[light.id] { flash(node) }
             session.toast = "Маяк «\(light.title)» зажжён: обзор +\(Int(ExploreRules.lighthouseVisionBonus))"
         }
-        if let tower = island.towers.first(where: { !session.conqueredTowers.contains($0.id) && near($0.position, 1.2) }) {
-            if session.mode == .active {
-                if session.activeFight == nil { session.startActiveGuardian(tower) }
-                return
-            }
-            path = []
-            session.startGuardian(tower)
-            onEncounter?()
-            return
-        }
+        // 16.5: у Чёрной башни — кнопка «Войти в башню», бой — в зале с боссом.
         if let city = island.safeCity(at: tile) {
             session.visitedCities.insert(city.id)
             // Доска заданий: первое посещение города берёт его задание.
@@ -1306,7 +1329,7 @@ final class ExploreScene: SKScene {
             let lunge = session.island.npcs[index].id == session.companion?.id && now - companionLunge < 0.3
             // 15H: ночью люди расходятся по домам (кроме спутника), монстры — на месте.
             let npc = session.island.npcs[index]
-            npcNodes[index].isHidden = (npc.isPeaceful && session.isNight && npc.id != session.companion?.id) || session.crew.contains { $0.id == npc.id }
+            npcNodes[index].isHidden = (npc.isPeaceful && session.isNight && npc.id != session.companion?.id) || session.crew.contains { $0.id == npc.id } || npcs[index].respawnAt != nil
             npcNodes[index].position = point(state.x, state.y, lift: lunge ? sin((now - companionLunge) / 0.3 * .pi) * 4 : 0)
             npcNodes[index].position += lungeOffset(npcNodes[index])
             npcNodes[index].zPosition = depth(state.x, state.y) + 0.4
@@ -1409,8 +1432,71 @@ final class ExploreScene: SKScene {
             addChild(serpentNode)
             addLabel("Морской змей «\(serpent.title)»", at: serpent.position, lift: 30, dark: true)
         }
+        for pirate in island.pirates {
+            var c = ExploreSprites.ship(frame: 1, sails: 2)
+            ExploreSprites.pirate(&c)
+            let node = sprite(c.image)
+            node.anchorPoint = CGPoint(x: 0.47, y: 0.12)
+            node.setScale(Self.characterScale * 1.1)
+            addChild(node)
+            pirateNodes.append(node)
+            pirates.append(PirateState(x: Double(pirate.home.x), y: Double(pirate.home.y)))
+        }
         crewBadges.zPosition = 9_500
         addChild(crewBadges)
+    }
+
+    /// Пираты (16.2): бродят по морю; корабль героя ближе 6 клеток — гонятся; догнали — бой (залпы или абордаж).
+    private func movePirates(_ dt: Double) {
+        let island = session.island
+        for index in pirates.indices {
+            var state = pirates[index]
+            let home = island.pirates[index].home
+            let node = pirateNodes[index]
+            let toHero = hypot(heroPosition.x - state.x, heroPosition.y - state.y)
+            if let respawn = state.respawnAt {
+                node.isHidden = true
+                if now >= respawn, hypot(heroPosition.x - Double(home.x), heroPosition.y - Double(home.y)) > 10 {
+                    state = PirateState(x: Double(home.x), y: Double(home.y))
+                    node.isHidden = false
+                }
+                pirates[index] = state
+                continue
+            }
+            let chase = session.sailing != nil && toHero <= ExploreRules.pirateChaseRadius && now >= state.calmUntil && session.encounter == nil
+            let target: (x: Double, y: Double)
+            let speed: Double
+            if chase {
+                target = heroPosition
+                speed = session.speed * ExploreRules.pirateSpeedFactor
+            } else {
+                if state.target == nil || hypot(state.target!.x - state.x, state.target!.y - state.y) < 0.3 {
+                    let candidate = TilePoint(home.x + random.int(17) - 8, home.y + random.int(17) - 8)
+                    state.target = island.terrain(at: candidate) == .water ? (Double(candidate.x), Double(candidate.y)) : nil
+                }
+                target = state.target ?? (state.x, state.y)
+                speed = 0.8
+            }
+            let dx = target.x - state.x, dy = target.y - state.y, distance = hypot(dx, dy)
+            if distance > 0.05 {
+                let move = min(distance, speed * dt)
+                let nx = state.x + dx / distance * move, ny = state.y + dy / distance * move
+                if island.terrain(at: TilePoint(Int(nx.rounded()), Int(ny.rounded()))) == .water { state.x = nx; state.y = ny } else { state.target = nil }
+                if abs(dx - dy) > 0.01 { node.xScale = abs(node.xScale) * (dx - dy > 0 ? 1 : -1) }
+            }
+            node.position = point(state.x, state.y, lift: sin(now * 1.7 + Double(index)) * 0.6)
+            node.zPosition = depth(state.x, state.y) + 0.3
+            if chase && toHero <= 1.2 {
+                path = []
+                activePirate = index
+                state.calmUntil = now + 10
+                pirates[index] = state
+                session.startPirate(index)
+                onEncounter?()
+                return
+            }
+            pirates[index] = state
+        }
     }
 
     /// Обломки подбираются с корабля; змей рядом — бой с пушками, без них — таран.
@@ -1521,8 +1607,15 @@ final class ExploreScene: SKScene {
     func resolveEncounter(_ outcome: EncounterOutcome?, npcId: Int?, towerId: Int? = nil) {
         // Морской змей (15E): после побега или поражения — передышка; поражение — к кораблю у причала.
         if npcId == nil && towerId == nil {
-            serpentCalmUntil = now + 10
-            if outcome == .won { serpentNode.run(.sequence([.fadeOut(withDuration: 0.6), .hide()])) }
+            if let pirate = activePirate, pirates.indices.contains(pirate) {
+                // Пираты (16.2): отбиты — уходят до возрождения; иначе — передышка.
+                if outcome == .won { pirates[pirate].respawnAt = now + ExploreRules.monsterRespawnSeconds }
+                pirates[pirate].calmUntil = now + 10
+                activePirate = nil
+            } else {
+                serpentCalmUntil = now + 10
+                if outcome == .won { serpentNode.run(.sequence([.fadeOut(withDuration: 0.6), .hide()])) }
+            }
             if outcome == .lost {
                 let home = session.defeatRespawn()
                 heroPosition = (Double(home.x), Double(home.y))
@@ -1554,7 +1647,7 @@ final class ExploreScene: SKScene {
         guard let npcId, npcs.indices.contains(npcId) else { return }
         switch outcome {
         case .won, .persuaded:
-            npcs[npcId].peaceful = true
+            defeated(npcId)
         case .fled:
             npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
             // Герой отскакивает на 2 клетки от NPC, если там суша.

@@ -582,6 +582,17 @@ nonisolated enum ExploreSprites {
         }
     }
 
+    /// Пиратский корабль (16.2): чёрные паруса с черепом, тёмно-красный борт.
+    static func pirate(_ c: inout RGBACanvas) {
+        let sails: [UInt32: UInt32] = [0xFFFCF6: 0x28262C, 0xEDE6D6: 0x1E1C22, 0xE3DCCB: 0x15131A]
+        let hull: [UInt32: UInt32] = [0x6B3F22: 0x4A241E, 0x4E2E18: 0x321814]
+        for y in 0..<c.height { for x in 0..<c.width {
+            guard let color = c.color(x, y) else { continue }
+            if let s = sails[color] { c.set(x, y, s) } else if let h = hull[color] { c.set(x, y, h) }
+        } }
+        for (x, y) in [(40, 26), (41, 26), (42, 26), (39, 27), (43, 27), (40, 28), (42, 28), (41, 29)] { c.set(x, y, 0xF4EFE4) }
+    }
+
     /// Обломки в море: доски и бочка (15E.1).
     static func wreck() -> RGBACanvas {
         var c = RGBACanvas(width: 24, height: 14, fill: nil)
@@ -766,6 +777,22 @@ enum ExploreCharacters {
         let look = HeroAppearance(hair: hairs[rank % 9], skin: skins[rank % 9], outfit: outfit, parts: .preset(outfit))
         let base = pixels(look, accent: accents[rank % 9])
         return (frames(base, outline: true), backFrames(base, hair: look.hair.hex, outline: true))
+    }
+
+    /// Босс Чёрной башни (16.5): воин в тёмном, катана, чёрная корона с алым камнем. Рисуется ×1,5 к NPC.
+    static func boss() -> (front: [CGImage], back: [CGImage]) {
+        var parts = HeroAppearance.Parts.preset(.warrior)
+        parts.weapon = .katana
+        let look = HeroAppearance(hair: .black, skin: .tan, outfit: .warrior, parts: parts)
+        let accent: UInt32 = 0x2B2B35
+        var rows = pixels(look, accent: accent)
+        let crown: UInt32 = 0x18161C
+        for x in 10...22 { for y in 8...9 where y < rows.count && x < rows[y].count { rows[y][x] = crown } }
+        for x in [10, 13, 16, 19, 22] { for y in (4 + x % 2)...7 where x < rows[y].count { rows[y][x] = crown } }
+        rows[7][16] = 0xE5482B
+        rows[8][16] = 0xE5482B
+        let weapon = HeroComposer.weaponLayers(look, accent: accent)
+        return (frames(rows, outline: true, weapon: weapon), backFrames(rows, hair: look.hair.hex, outline: true, weapon: weapon))
     }
 
     /// Ночной NPC (15D.3): тёмный плащ поверх одежды, светящиеся глаза, фонарь.
