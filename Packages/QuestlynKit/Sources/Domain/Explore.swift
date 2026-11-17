@@ -73,6 +73,21 @@ public enum ExploreRules {
     public static let nightVisionFactor = 0.7
     public static func isNight(hour: Double) -> Bool { hour >= 21 || hour < 6 }
 
+    // Этап 15D (17.11.2026, 09 раздел 1.6, Рабочая гипотеза).
+    /// Торговец: отдать 2 предмета — получить 1; хранилище на 6.
+    public static let tradeGive = 2
+    public static let storageCap = 6
+    /// Ночные NPC: участники событий с 19:00, до 6 на остров; HP ×1,5, урон ×1,25, погоня +1.
+    public static let eveningHour = 19
+    public static let nightNPCCap = 6
+    public static let nightHPFactor = 1.5
+    public static let nightDamageFactor = 1.25
+    public static let nightChaseBonus = 1.0
+    /// Умения спутника: разведчик — обзор +2; лекарь — +0,2% HP/с вне боя, ×1,5 в городах и у костров.
+    public static let scoutCompanionVision = 2.0
+    public static let healerHPPerSecond = 0.002
+    public static let healerRestoreFactor = 1.5
+
     // Этап 15C (17.11.2026, 09 раздел 1.5, Рабочая гипотеза).
     public static let treasureFragments = 3
     public static let treasureItems = 2
@@ -636,6 +651,46 @@ public struct IslandNPC: Hashable, Sendable, Identifiable {
     public var tier: NPCTier
     public var home: TilePoint
     public var meetings: Int
+    /// Ночной NPC (15D.3): выходит с 21:00 до 6:00, сильнее, за победу — предмет.
+    public var isNight = false
+    public var chaseRadius: Double { tier.chaseRadius + (isNight ? ExploreRules.nightChaseBonus : 0) }
+}
+
+/// Умение спутника по его типу (15D.4).
+public enum CompanionSkill: Sendable, Equatable {
+    case scout, guide, healer
+
+    public init(_ tier: NPCTier) {
+        switch tier {
+        case .acquaintance: self = .scout
+        case .colleague: self = .guide
+        case .regular: self = .healer
+        }
+    }
+
+    public var title: String {
+        switch self {
+        case .scout: "Разведчик"
+        case .guide: "Проводник"
+        case .healer: "Лекарь"
+        }
+    }
+
+    public var summary: String {
+        switch self {
+        case .scout: "обзор +2"
+        case .guide: "стрелка к заданию"
+        case .healer: "+0,2% HP/с"
+        }
+    }
+}
+
+/// Торговец (15D.2) — в городе острова с наибольшим числом событий.
+public struct IslandMerchant: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var region: Int
+    public var cityId: Int
+    public var position: TilePoint
 }
 
 public struct IslandChest: Hashable, Sendable, Identifiable {
@@ -868,6 +923,8 @@ public struct Island: Sendable {
     public var treasure: IslandTreasure?
     public var caves: [IslandCave] = []
     public var lookouts: [IslandLookout] = []
+    // 15D.
+    public var merchants: [IslandMerchant] = []
 
     init(size: IslandSize, side: Int? = nil, terrain: [Terrain], cities: [IslandCity], villages: [IslandCity], npcs: [IslandNPC],
          chests: [IslandChest], campfires: [IslandCampfire], start: TilePoint) {
@@ -1088,6 +1145,10 @@ public enum IslandGenerator {
                 cave.id = world.caves.count; cave.region = index
                 cave.entrance = moved(cave.entrance, origin); cave.exit = moved(cave.exit, origin)
                 world.caves.append(cave)
+            }
+            for var merchant in part.merchants {
+                merchant.id = world.merchants.count; merchant.region = index; merchant.cityId += cityBase
+                merchant.position = moved(merchant.position, origin); world.merchants.append(merchant)
             }
             for var lookout in part.lookouts { lookout.id = world.lookouts.count; lookout.region = index; lookout.position = moved(lookout.position, origin); world.lookouts.append(lookout) }
             for y in 0..<part.side { for x in 0..<part.side {
@@ -1310,10 +1371,31 @@ public enum IslandGenerator {
         for event in input.events { for key in Set(event.attendeeKeys) { meetings[key, default: 0] += 1 } }
         let people = meetings.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(size.npcCap)
         let safe = island.cities.map { ($0.center, Double(ExploreRules.citySafeRadius + 2)) }
-        for (index, person) in people.enumerated() {
+        // Ночные NPC (15D.3): не меньше половины встреч — вечерние (с 19:00); до 6 на остров.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = input.timeZone
+        var evening: [String: Int] = [:]
+        for event in input.events where calendar.component(.hour, from: event.start) >= ExploreRules.eveningHour {
+            for key in Set(event.attendeeKeys) { evening[key, default: 0] += 1 }
+        }
+        let nightKeys = Set(people.filter { (evening[$0.key] ?? 0) * 2 >= $0.value }.prefix(ExploreRules.nightNPCCap).map(\.key))
+        for person in people where !nightKeys.contains(person.key) {
             guard let spot = freeSpot(minDistance: 2, from: island.npcs.map(\.home),
                                       avoid: safe + [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]) else { continue }
-            island.npcs.append(IslandNPC(id: index, tier: NPCTier.of(meetings: person.value), home: spot, meetings: person.value))
+            island.npcs.append(IslandNPC(id: island.npcs.count, tier: NPCTier.of(meetings: person.value), home: spot, meetings: person.value))
+        }
+        for person in people where nightKeys.contains(person.key) {
+            guard let spot = freeSpot(minDistance: 2, from: island.npcs.map(\.home),
+                                      avoid: safe + [(island.start, Double(ExploreRules.npcMinDistanceFromStart))]) else { continue }
+            var npc = IslandNPC(id: island.npcs.count, tier: NPCTier.of(meetings: person.value), home: spot, meetings: person.value)
+            npc.isNight = true
+            island.npcs.append(npc)
+        }
+        // Торговец (15D.2) — у города с наибольшим числом событий, в безопасной зоне.
+        if let city = island.cities.max(by: { ($0.events, $1.id) < ($1.events, $0.id) }) {
+            let spot = [(2, 1), (1, 2), (-2, 1), (1, -2), (2, -1)].map { TilePoint(city.center.x + $0.0, city.center.y + $0.1) }
+                .first { island.isWalkable($0) } ?? city.center
+            island.merchants.append(IslandMerchant(id: 0, region: 0, cityId: city.id, position: spot))
         }
 
         // Сундуки: квесты по приоритету, не больше 30.
@@ -1858,17 +1940,20 @@ public struct Encounter: Sendable {
         }
     }
 
-    public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64, guardian: Guardian? = nil) {
+    public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64, guardian: Guardian? = nil, night: Bool = false) {
         self.tier = tier
         self.hero = hero
         self.heroHP = heroHP
         self.heroMP = heroMP
         self.guardian = guardian
-        self.npcHP = guardian?.hp ?? tier.hp
+        self.isNight = night
+        self.npcHP = guardian?.hp ?? tier.hp * (night ? ExploreRules.nightHPFactor : 1)
         self.random = ExploreRandom(seed)
     }
 
-    public var npcMaxHP: Double { guardian?.hp ?? tier.hp }
+    public var npcMaxHP: Double { guardian?.hp ?? tier.hp * (isNight ? ExploreRules.nightHPFactor : 1) }
+    /// Ночной NPC (15D.3): HP ×1,5, урон ×1,25.
+    public let isNight: Bool
     /// Кто противник: «Страж башни» или тип NPC.
     public var opponentTitle: String { guardian == nil ? tier.title : "Страж башни" }
 
@@ -1967,6 +2052,7 @@ public struct Encounter: Sendable {
         }
         var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if guardTurns > 0 { damage *= 0.5; guardTurns -= 1 }
+        if isNight { damage *= ExploreRules.nightDamageFactor }
         damage = (damage * damageTakenFactor).rounded()
         heroHP = max(0, heroHP - damage)
         log.append("\(opponentTitle) ударил: −\(Int(damage)) HP")

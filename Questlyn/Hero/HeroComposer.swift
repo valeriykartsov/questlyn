@@ -25,11 +25,13 @@ enum HeroComposer {
                 let core = x >= 10 && x <= 21
                 var source: HeroAppearance.Outfit
                 var char: Character
+                // С оружием (17.11.2026) руки опущены, как у «Ассасина» (до кистей), ниже — без предмета.
+                let sides: HeroAppearance.Outfit = parts.weapon == nil ? parts.item : (y <= 37 ? .assassin : .coder)
                 if y <= 23 { source = parts.hair }
-                else if y <= 40 { source = core ? parts.top : parts.item }
+                else if y <= 40 { source = core ? parts.top : sides }
                 else if y <= 51 {
-                    if case let .outfit(bottom) = parts.bottom { source = core ? bottom : parts.item }
-                    else { source = parts.item }
+                    if case let .outfit(bottom) = parts.bottom { source = core ? bottom : sides }
+                    else { source = sides }
                 } else { source = parts.shoes }
                 char = rows[source]![y][x]
                 if let hat = parts.hat, y <= 14 {
@@ -46,6 +48,23 @@ enum HeroComposer {
             }
         }
         return result
+    }
+
+    /// Оружие поверх тела и позади него, с пальцами поверх рукояти (хват). Координаты — в рисунке 32×56, могут выходить за него.
+    static func weaponLayers(_ appearance: HeroAppearance, accent: UInt32) -> (behind: [WeaponArt.Pixel], front: [WeaponArt.Pixel]) {
+        guard let weapon = appearance.resolvedParts.weapon else { return ([], []) }
+        let layers = WeaponArt.layers(weapon)
+        let behind = layers.behind
+        var front = layers.front
+        // Пальцы — кожа рук «Ассасина» в рядах 35–38 — поверх рукояти.
+        var look = appearance
+        look.outfit = .assassin
+        let palette = HeroPalette.colors(for: look, accent: appearance.accent ?? accent)
+        let arms = HeroAppearance.Outfit.assassin.spriteRows.map(Array.init)
+        for y in 35...38 { for x in Array(5...10) + Array(21...26) where arms[y][x] == "S" || arms[y][x] == "s" {
+            if let color = palette[arms[y][x]] { front.append(WeaponArt.Pixel(x: x, y: y, color: color)) }
+        } }
+        return (behind, front)
     }
 
     /// Половинный масштаб (16×28) — для карт.

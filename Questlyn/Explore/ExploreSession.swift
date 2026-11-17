@@ -90,6 +90,50 @@ final class ExploreSession {
     let landCount: Int
     /// Карта мира открыта — игра на паузе.
     var isWorldMapOpen = false
+    // MARK: 15D (17.11.2026)
+
+    /// Хранилище торговцев — общее на прогулку.
+    var storage: [ExploreItem: Int] = [:]
+    var storageCount: Int { storage.values.reduce(0, +) }
+    /// Открытое окно торговца — игра на паузе.
+    var merchantOpen: IslandMerchant?
+    var nearbyMerchant: IslandMerchant? {
+        guard sailing == nil, !inFight, inCave == nil else { return nil }
+        return island.merchants.first { $0.position.distance(to: heroTile) <= 1.5 }
+    }
+    var companionSkill: CompanionSkill? { companion.map { CompanionSkill($0.tier) } }
+
+    /// Обмен: отдать 2 предмета (можно одинаковых) — получить 1.
+    @discardableResult
+    func trade(give: [ExploreItem], get: ExploreItem) -> Bool {
+        guard give.count == ExploreRules.tradeGive else { return false }
+        let need = Dictionary(grouping: give, by: { $0 }).mapValues(\.count)
+        guard need.allSatisfy({ (bag[$0.key] ?? 0) >= $0.value }) else { return false }
+        for (item, count) in need { bag[item, default: 0] -= count }
+        bag[get, default: 0] += 1
+        toast = "Обмен: \(give.map(\.title).joined(separator: " + ")) → \(get.title)"
+        return true
+    }
+
+    func deposit(_ item: ExploreItem) {
+        guard (bag[item] ?? 0) > 0, storageCount < ExploreRules.storageCap else { return }
+        bag[item, default: 0] -= 1
+        storage[item, default: 0] += 1
+    }
+
+    func withdraw(_ item: ExploreItem) {
+        guard (storage[item] ?? 0) > 0, bagCount < ExploreRules.bagCap else { return }
+        storage[item, default: 0] -= 1
+        bag[item, default: 0] += 1
+    }
+
+    /// Ночной NPC повержен — предмет в сумку.
+    private func nightReward(_ npcId: Int?) {
+        guard let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.isNight else { return }
+        let item = ExploreItem.allCases[(npcId + steps) % ExploreItem.allCases.count]
+        toast = "Ночной \(npc.tier.title.lowercased()) повержен" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
+    }
+
     // MARK: 15C (17.11.2026)
 
     var fragmentsFound: Set<Int> = []
@@ -198,7 +242,7 @@ final class ExploreSession {
         activeNPC = npc.id
         activeTower = nil
         activeFight = ActiveFight(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id),
-                                  companion: companion?.tier)
+                                  companion: companion?.tier, night: npc.isNight)
         activeFight?.damageTakenFactor = damageTakenFactor
         activeFight?.cooldownFactor = cooldownFactor
         toast = "Встреча · \(npc.tier.title) — бей и отходи; дальше \(Self.cells(npc.tier.chaseRadius)) — сбежал"
@@ -253,6 +297,7 @@ final class ExploreSession {
                     : "Сундук «Epic: \(tower.title)»" + (addItem(item) ? " · \(item.title)" : " · сумка полна")
             } else {
                 toast = "\(fight.opponentTitle) повержен"
+                nightReward(activeNPC)
             }
         case .persuaded:
             persuaded += 1
@@ -275,7 +320,7 @@ final class ExploreSession {
     /// Пауза кнопкой (16.11.2026).
     var isPaused = false
     /// Время стоит: пауза или открыта карта мира.
-    var isFrozen: Bool { isPaused || isWorldMapOpen }
+    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas }
     var exploredShare: Double { landCount == 0 ? 0 : Double(exploredLand) / Double(landCount) }
 
     /// Открыть клетки в радиусе обзора.
@@ -446,7 +491,7 @@ final class ExploreSession {
     var vision: Double {
         let now = Date.now
         if (scoutUntil ?? .distantPast) > now || (torchUntil ?? .distantPast) > now { return ExploreRules.torchVision }
-        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom)
+        var value = hero.vision + ((lighthouseUntil ?? .distantPast) > now ? ExploreRules.lighthouseVisionBonus : 0) + buff(.custom) + (companionSkill == .scout ? ExploreRules.scoutCompanionVision : 0)
         if isNight { value *= ExploreRules.nightVisionFactor }
         return value
     }
@@ -454,7 +499,7 @@ final class ExploreSession {
     func startEncounter(npc: IslandNPC) {
         encounterNPC = npc.id
         encounterTower = nil
-        var fight = Encounter(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id))
+        var fight = Encounter(tier: npc.tier, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 31 + npc.id), night: npc.isNight)
         fight.damageTakenFactor = damageTakenFactor
         fight.cooldownFactor = cooldownFactor
         if let companion { fight.companionAssist(tier: companion.tier) }
@@ -470,6 +515,7 @@ final class ExploreSession {
         switch outcome {
         case .won:
             wins += 1
+            nightReward(encounterNPC)
             // Страж повержен — башня взята, сундук Epic: предмет в сумку.
             if let id = encounterTower, let tower = island.towers.first(where: { $0.id == id }) {
                 conqueredTowers.insert(id)

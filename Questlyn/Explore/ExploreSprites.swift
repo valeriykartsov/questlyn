@@ -377,6 +377,21 @@ nonisolated enum ExploreSprites {
         return c
     }
 
+    // MARK: 15D: шатёр торговца
+
+    static func merchantTent() -> RGBACanvas {
+        var c = RGBACanvas(width: 84, height: 72, fill: nil)
+        c.polygon([(2, 26), (42, 2), (82, 26)], 0xB8651B)
+        for x in stride(from: 6, to: 80, by: 10) { c.polygon([(x, 26), (42, 4), (x + 5, 26)], 0xF4EFE4) }
+        for y in 26...70 { for x in 8...76 { c.set(x, y, x > 42 ? 0x6A4024 : 0x7A4A2A) } }
+        for y in 56...61 { for x in 8...76 { c.set(x, y, 0xD9A441) } }
+        for cx in [17, 29, 65] {
+            for y in 42...56 { for x in (cx - 6)...(cx + 6) where pow(Double(x - cx) / 6, 2) + pow(Double(y - 49) / 7, 2) <= 1 { c.set(x, y, 0xC9A57A) } }
+            c.set(cx, 41, 0x5C3A1E); c.set(cx + 1, 40, 0x5C3A1E)
+        }
+        return c
+    }
+
     // MARK: 15C: клад, вход в пещеру, смотровая площадка
 
     static func treasureChest(opened: Bool) -> RGBACanvas {
@@ -489,8 +504,10 @@ nonisolated enum ExploreSprites {
 // MARK: - Персонажи (на главном потоке: палитры героя)
 
 enum ExploreCharacters {
-    /// Размер кадра персонажа: рисунок 32×56 + тень и запас на шаг.
-    static let frameSize = (width: 36, height: 61)
+    /// Размер кадра персонажа: рисунок 32×56 + поля для оружия (10 px с каждой стороны), тень и запас на шаг.
+    static let frameSize = (width: 56, height: 61)
+    /// Сдвиг рисунка в кадре по горизонтали.
+    static let inset = 12
     /// Ноги на кадре — от низа, пикселей (для anchorPoint).
     static let feetFromBottom = 3
 
@@ -521,16 +538,20 @@ enum ExploreCharacters {
     }
 
     /// 4 кадра шага: ноги по очереди, корпус качается на 1 px; контур (для NPC) и тень под ногами.
-    static func frames(_ pixels: [[UInt32?]], outline: Bool) -> [CGImage] {
+    static func frames(_ pixels: [[UInt32?]], outline: Bool,
+                       weapon: (behind: [WeaponArt.Pixel], front: [WeaponArt.Pixel]) = ([], [])) -> [CGImage] {
         (0..<4).compactMap { frame in
             var c = RGBACanvas(width: frameSize.width, height: frameSize.height, fill: nil)
             // Тень.
-            for y in 54...59 { for x in 3...33 {
-                let dx = (Double(x) - 18) / 15, dy = (Double(y) - 57) / 2.6
+            let cx = Double(inset + 16)
+            for y in 54...59 { for x in (inset + 1)...(inset + 31) {
+                let dx = (Double(x) - cx) / 15, dy = (Double(y) - 57) / 2.6
                 if dx * dx + dy * dy <= 1 { c.setAlpha(x, y, 0x141828, alpha: 0.28) }
             } }
             let bob = frame % 2 == 1 ? 1 : 0
             var body = RGBACanvas(width: frameSize.width, height: frameSize.height, fill: nil)
+            // Оружие позади тела (копьё за спиной).
+            for pixel in weapon.behind { body.set(pixel.x + inset, pixel.y + 2 - bob, pixel.color) }
             for y in 0..<pixels.count { for x in 0..<pixels[y].count {
                 guard let color = pixels[y][x] else { continue }
                 var ny = y + 2 - bob
@@ -538,8 +559,9 @@ enum ExploreCharacters {
                     let left = x < 16
                     if frame == 1 { ny += left ? -1 : 1 } else if frame == 3 { ny += left ? 1 : -1 }
                 }
-                body.set(x + 2, ny, color)
+                body.set(x + inset, ny, color)
             } }
+            for pixel in weapon.front { body.set(pixel.x + inset, pixel.y + 2 - bob, pixel.color) }
             if outline {
                 let source = body
                 for y in 0..<source.height { for x in 0..<source.width where source.color(x, y) == nil {
@@ -551,8 +573,24 @@ enum ExploreCharacters {
         }
     }
 
-    /// NPC: одежда по типу, добавки по зоне.
-    static func npc(tier: NPCTier, zone: ClimateZone, variant: Int) -> [CGImage] {
+    /// Ночной NPC (15D.3): тёмный плащ поверх одежды, светящиеся глаза, фонарь.
+    static func night(_ pixels: [[UInt32?]]) -> [[UInt32?]] {
+        var rows = pixels
+        for y in 0..<rows.count { for x in 0..<rows[y].count {
+            guard let c = rows[y][x] else { continue }
+            let grey = (Double((c >> 16) & 0xFF) + Double((c >> 8) & 0xFF) + Double(c & 0xFF)) / 3
+            if (24...52).contains(y), (8...24).contains(x) { rows[y][x] = (x + y) % 5 == 0 ? 0x302A3E : 0x221E2E }
+            else if y < 24, grey < 90 { rows[y][x] = 0x1C1824 }
+        } }
+        for (x, y) in [(13, 17), (14, 17), (18, 17), (19, 17)] where y < rows.count { rows[y][x] = 0xF2D27A }
+        // Фонарь в правой руке.
+        for y in 30...36 where y < rows.count { rows[y][28] = 0x5C3A1E }
+        for y in 36...42 where y < rows.count { for x in 26...30 { rows[y][x] = 0xF2B35B } }
+        return rows
+    }
+
+    /// NPC: одежда по типу, добавки по зоне; ночной — в плаще с фонарём.
+    static func npc(tier: NPCTier, zone: ClimateZone, variant: Int, night isNight: Bool) -> [CGImage] {
         let outfit: HeroAppearance.Outfit = switch tier {
         case .acquaintance: .coder
         case .colleague: .archer
@@ -563,6 +601,7 @@ enum ExploreCharacters {
         let accents: [UInt32] = [0x7A8A6A, 0x3E5C8A, 0x8A4B3A, 0x6B4FA3]
         let look = HeroAppearance(hair: hairs[variant % hairs.count], skin: skins[(variant / 2) % skins.count], outfit: outfit)
         let wear: Wear = zone.isCold ? .fur : zone == .desert || zone == .steppe ? .scarf : .plain
-        return frames(pixels(look, accent: accents[variant % accents.count], wear: wear), outline: true)
+        let base = pixels(look, accent: accents[variant % accents.count], wear: wear)
+        return frames(isNight ? night(base) : base, outline: true)
     }
 }
