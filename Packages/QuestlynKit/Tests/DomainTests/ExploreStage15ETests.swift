@@ -59,6 +59,16 @@ struct ExploreStage15ETests {
         #expect(island.serpent?.hp == ExploreRules.serpentBaseHP + 4 * ExploreRules.serpentHPPerStep)
     }
 
+    @Test func piratesSailOpenSea() {
+        // 16.2: пираты — в открытом море, вдали от причала, не больше 6.
+        let island = IslandGenerator.generate(input(days: 120), seed: 5)
+        #expect(island.pirates.count <= ExploreRules.pirateCap)
+        for pirate in island.pirates {
+            #expect(!island.isLand(pirate.home))
+            #expect(island.ships.allSatisfy { $0.position.distance(to: pirate.home) >= 12 })
+        }
+    }
+
     @Test func singleChapterHasNoSea() {
         let island = IslandGenerator.generate(input(days: 15), seed: 1)
         #expect(island.regions.count == 1 && island.ships.isEmpty && island.storms.isEmpty && island.serpent == nil)

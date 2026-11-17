@@ -10,6 +10,8 @@ struct ExploreFlowView: View {
 
     enum Phase { case setup, game, summary }
     @State private var phase: Phase = .setup
+    /// Мир строится в фоне (16.3: до 6 месяцев и 7 глав).
+    @State private var building = false
     @State private var first: Date
     @State private var last: Date
     @State private var chosen: [UUID] = []
@@ -28,7 +30,21 @@ struct ExploreFlowView: View {
             switch phase {
             case .setup:
                 NavigationStack {
-                    ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen, start: start)
+                    ExploreSetupView(model: model, first: $first, last: $last, chosen: $chosen) { start(background: true) }
+                }
+                .overlay {
+                    if building {
+                        ZStack {
+                            Color.black.opacity(0.35).ignoresSafeArea()
+                            VStack(spacing: QSpacing.m) {
+                                ProgressView()
+                                Text("Строю мир…").font(QFont.text(15, weight: .semibold))
+                                Text("Большой диапазон — до нескольких секунд").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                            }
+                            .padding(QSpacing.xl)
+                            .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.card))
+                        }
+                    }
                 }
             case .game:
                 if let session { ExploreGameView(session: session) { phase = .summary } }
@@ -36,7 +52,8 @@ struct ExploreFlowView: View {
                 if let session {
                     ExploreSummaryView(session: session) {
                         attempt += 1
-                        start()
+                        phase = .setup
+                        start(background: true)
                     } close: { dismiss() }
                 }
             }
@@ -49,16 +66,28 @@ struct ExploreFlowView: View {
 
     private var range: (LocalDate, LocalDate) { (LocalDate(first, timeZone: .current), LocalDate(last, timeZone: .current)) }
 
-    private func start() {
+    private func start(background: Bool = false) {
+        guard !building else { return }
         let (a, b) = range
         let skills = model.exploreSkills.filter { chosen.contains($0.id) }
-        session = ExploreSession(input: model.exploreInput(first: a, last: b), hero: model.exploreHero(skills: skills),
-                                 attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
-                                 mode: ExploreModeSetting.current)
-        session?.ghostCount = model.ghosts.count
-        session?.aura = model.auraTier
-        session?.badge = model.heroBadge
-        phase = .game
+        let input = model.exploreInput(first: a, last: b), hero = model.exploreHero(skills: skills)
+        let attempt = attempt
+        func open(_ island: Island?) {
+            session = ExploreSession(input: input, hero: hero, attempt: attempt, appearance: model.hero?.appearance, accent: model.heroAccent,
+                                     mode: ExploreModeSetting.current, prebuilt: island)
+            session?.ghostCount = model.ghosts.count
+            session?.aura = model.auraTier
+            session?.badge = model.heroBadge
+            phase = .game
+        }
+        guard background else { open(nil); return }
+        building = true
+        Task {
+            let seed = input.seed(attempt: attempt)
+            let island = await Task.detached(priority: .userInitiated) { IslandGenerator.generate(input, seed: seed) }.value
+            open(island)
+            building = false
+        }
     }
 
     private func autoStartIfNeeded() {
@@ -89,7 +118,7 @@ struct ExploreFlowView: View {
             if demo.contains("legend") { session.talkNPC = session.island.npcs.first { $0.legend != nil } }
             // `boss` — у финальной башни; `shrine` — у монумента полезного; `swamp` — в болоте (15B, 15G).
             if demo.contains("boss"), let tower = session.finalTower,
-               let spot = [(3, 0), (0, 3), (-3, 0), (0, -3)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
+               let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(tower.position.x + $0.0, tower.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
                 session.heroTile = spot
             }
             if demo.contains("shrine"), let shrine = session.island.shrines.first,
@@ -211,9 +240,10 @@ struct ExploreSetupView: View {
                 .environment(\.locale, Locale(identifier: "ru_RU"))
                 .sheetCard()
                 HStack(spacing: QSpacing.s) {
-                    preset("2 недели", days: 14)
+                    preset("2 нед.", days: 14)
                     preset("Месяц", days: 30)
-                    preset("3 месяца", days: ExploreRules.maxDays)
+                    preset("3 мес.", days: 92)
+                    preset("6 мес.", days: ExploreRules.maxDays)
                 }
                 summary
                 // 15A: время года заменили климатические зоны, погода — из настроения.
@@ -247,7 +277,7 @@ struct ExploreSetupView: View {
         .tint(QColor.amber)
     }
 
-    /// Самое раннее начало: 92 дня до конца диапазона.
+    /// Самое раннее начало: 183 дня до конца диапазона (16.3).
     private var earliest: Date { Calendar.current.date(byAdding: .day, value: -(ExploreRules.maxDays - 1), to: last) ?? last }
 
     private func preset(_ title: String, days: Int) -> some View {
@@ -352,13 +382,18 @@ struct ExploreGameView: View {
     let exit: () -> Void
     @State private var scene: ExploreScene?
     @State private var caveScene: CaveScene?
+    @State private var hallScene: HallScene?
     @State private var showsTasks = false
 
     var body: some View {
         GeometryReader { proxy in
             let wide = proxy.size.width > proxy.size.height
             ZStack(alignment: .top) {
-                if let caveScene {
+                if let hallScene {
+                    SpriteView(scene: hallScene, preferredFramesPerSecond: 60)
+                        .ignoresSafeArea()
+                        .accessibilityLabel("Зал башни: босс у дальней стены")
+                } else if let caveScene {
                     SpriteView(scene: caveScene, preferredFramesPerSecond: 60)
                         .ignoresSafeArea()
                         .accessibilityLabel("Пещера: найдите выход")
@@ -457,13 +492,25 @@ struct ExploreGameView: View {
                         .transition(.opacity)
                 }
                 if session.encounter != nil {
-                    EncounterView(session: session) { outcome, npc, tower in scene?.resolveEncounter(outcome, npcId: npc, towerId: tower) }
+                    EncounterView(session: session) { outcome, npc, tower in
+                        scene?.resolveEncounter(outcome, npcId: npc, towerId: tower)
+                        // 16.5: бой в зале — победа или поражение выводят из башни, побег — передышка в зале.
+                        if hallScene != nil {
+                            if outcome == .won || outcome == .lost {
+                                session.leaveTower()
+                                hallScene = nil
+                            } else {
+                                hallScene?.calmBoss()
+                            }
+                        }
+                    }
                         .transition(.opacity)
                 }
             }
             .onAppear {
                 if scene == nil { scene = ExploreScene(session: session, size: proxy.size) }
                 OrientationLock.set(.allButUpsideDown)
+                demoHall()
             }
             .onDisappear { OrientationLock.set(.portrait) }
         }
@@ -688,6 +735,30 @@ struct ExploreGameView: View {
         caveScene = cave_
     }
 
+    /// Отладка: `-QuestlynExploreDemo boss hall` — сразу в зал финальной башни.
+    private func demoHall() {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "QuestlynExploreDemo")?.contains("hall") == true, hallScene == nil else { return }
+        session.encounter = nil
+        session.encounterNPC = nil
+        enterTower(size: scene?.size ?? CGSize(width: 390, height: 844))
+        #endif
+    }
+
+    /// Войти в зал Чёрной башни (16.5).
+    private func enterTower(size: CGSize) {
+        session.enterTower()
+        guard let id = session.inTower, let tower = session.island.towers.first(where: { $0.id == id }) else { return }
+        let hall = HallScene(session: session, tower: tower, size: size)
+        hall.onLeave = { [session] in
+            session.leaveTower()
+            session.toast = "Вы вышли из башни"
+            hallScene = nil
+        }
+        hall.onBoss = { [session] in session.startGuardian(tower) }
+        hallScene = hall
+    }
+
     @ViewBuilder private var shipBar: some View {
         if let id = session.talkCandidate, session.talkNPC == nil, let npc = session.island.npcs.first(where: { $0.id == id }) {
             // 15H: мирный NPC рядом — поговорить, чтобы позвать в спутники.
@@ -712,6 +783,19 @@ struct ExploreGameView: View {
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .foregroundStyle(QColor.ink)
                 .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, QSpacing.s)
+        }
+        if let tower = session.enterableTower {
+            Button { enterTower(size: scene?.size ?? CGSize(width: 390, height: 844)) } label: {
+                VStack(spacing: 2) {
+                    Text("Войти в башню").font(QFont.text(15, weight: .bold))
+                    Text(tower.isFinal ? "финальный босс" : "Чёрная башня «\(tower.title)»").font(QFont.text(11)).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(QColor.sheet)
+                .background(Color(hex: 0x2B2B35), in: RoundedRectangle(cornerRadius: QRadius.card))
             }
             .buttonStyle(.plain)
             .padding(.bottom, QSpacing.s)
@@ -878,7 +962,7 @@ struct EncounterView: View {
                         }
                         .buttonStyle(PrimaryButtonStyle())
                     }
-                    Text("Поражение — герой приходит в себя в последнем городе, ничего не теряется.")
+                    Text("Поражение — герой приходит в себя у корабля (до квеста — на старте), ничего не теряется.")
                         .font(QFont.text(11)).foregroundStyle(QColor.inkSecondary)
                 }
                 .foregroundStyle(QColor.ink)
@@ -904,7 +988,9 @@ struct EncounterView: View {
         case .persuaded: "Разошлись миром"
         case .fled: "Вы оторвались"
         case .lost: "Без сил"
-        case nil: encounter.guardian.map { "Страж башни «\($0.title)»" } ?? "\(encounter.tier.title) преградил путь"
+        case nil:
+            if let name = encounter.opponentName { name == "Морской змей" || name == "Пираты" ? "\(name) атакуют" : "\(name) преграждает путь" }
+            else { encounter.guardian.map { "Страж башни «\($0.title)»" } ?? "\(encounter.tier.title) преградил путь" }
         }
     }
 

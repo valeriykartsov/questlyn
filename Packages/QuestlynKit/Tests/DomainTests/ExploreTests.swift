@@ -48,8 +48,8 @@ struct ExploreTests {
         #expect(ExploreRules.islandSize(days: 15) == .medium)
         #expect(ExploreRules.islandSize(days: 43) == .large)
         let today = LocalDate(year: 2026, month: 11, day: 11)
-        #expect(ExploreInput.isValidRange(first: today.adding(days: -92), last: today.adding(days: -1), today: today))
-        #expect(!ExploreInput.isValidRange(first: today.adding(days: -93), last: today.adding(days: -1), today: today))
+        #expect(ExploreInput.isValidRange(first: today.adding(days: -183), last: today.adding(days: -1), today: today))
+        #expect(!ExploreInput.isValidRange(first: today.adding(days: -184), last: today.adding(days: -1), today: today))
         #expect(!ExploreInput.isValidRange(first: today.adding(days: -3), last: today, today: today))
     }
 
@@ -109,10 +109,22 @@ struct ExploreTests {
         let otherCity = island.cities.first { island.region(at: $0.center)?.id == island.regions.count - 1 }
         if let otherCity { #expect(island.path(from: island.start, to: otherCity.center) == nil) }
         // До 21 дня — один остров без кораблей.
-        #expect(ExploreRules.chapterCount(days: 21) == 1 && ExploreRules.chapterCount(days: 22) == 2 && ExploreRules.chapterCount(days: 92) == 5)
+        #expect(ExploreRules.chapterCount(days: 21) == 1 && ExploreRules.chapterCount(days: 22) == 2 && ExploreRules.chapterCount(days: 92) == 5 && ExploreRules.chapterCount(days: 183) == 7)
         let one = input(days: 12)
         let single = IslandGenerator.generate(one, seed: 1)
         #expect(single.regions.count == 1 && single.ships.isEmpty)
+    }
+
+    @Test func sixMonthsWorldBuilds() {
+        // 16.3: до 6 месяцев — 7 глав; время сборки печатается для оценки нагрузки на телефон.
+        let today = LocalDate(year: 2026, month: 11, day: 11)
+        var data = input(days: 91)
+        data = ExploreInput(first: today.adding(days: -183), last: today.adding(days: -1), events: data.events, quests: data.quests,
+                            nights: data.nights, weekMoods: data.weekMoods, hasCalendar: true, timeZone: utc)
+        let started = Date()
+        let island = IslandGenerator.generate(data, seed: 1)
+        print("Мир на 183 дня: \(island.regions.count) глав, сторона \(island.side), \(String(format: "%.1f", Date().timeIntervalSince(started))) с")
+        #expect(island.regions.count == 7)
     }
 
     @Test func objectsFollowRules() {

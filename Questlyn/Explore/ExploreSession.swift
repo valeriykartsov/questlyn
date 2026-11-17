@@ -103,6 +103,48 @@ final class ExploreSession {
     }
     var companionSkill: CompanionSkill? { companion.map { CompanionSkill.of($0) } }
 
+    // MARK: 16 (18.11.2026): зал Чёрной башни и пираты
+
+    /// Герой в зале башни.
+    var inTower: Int?
+    var encounterPirate: Int?
+    @ObservationIgnored private var pirateRandom = ExploreRandom(0x9149_7E00)
+
+    /// Непокорённая Чёрная башня рядом — «Войти в башню».
+    var enterableTower: IslandTower? {
+        guard sailing == nil, !inFight, inTower == nil, inCave == nil else { return nil }
+        return island.towers.first { !conqueredTowers.contains($0.id) && $0.position.distance(to: heroTile) <= 2.5 }
+    }
+
+    func enterTower() {
+        guard let tower = enterableTower else { return }
+        inTower = tower.id
+        toast = tower.isFinal ? "Финальная башня: босс ждёт у дальней стены" : "Чёрная башня «\(tower.title)»: босс у дальней стены"
+    }
+
+    /// Выйти из зала — герой снова у башни.
+    func leaveTower() { inTower = nil }
+
+    /// Пираты (16.2): с пушками — бой залпами, без пушек — абордаж.
+    func startPirate(_ id: Int) {
+        encounterPirate = id
+        encounterNPC = nil
+        encounterTower = nil
+        var fight: Encounter
+        if upgrades.contains(.cannons) {
+            fight = Encounter(tier: .colleague, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 19 + id),
+                              guardian: .init(title: "Пираты", hp: ExploreRules.pirateHP, damageShare: ExploreRules.pirateDamageShare))
+            fight.opponentName = "Пираты"
+        } else {
+            fight = Encounter(tier: .colleague, hero: hero, heroHP: hp, heroMP: mp, seed: seed &+ UInt64(steps * 19 + id))
+            fight.opponentName = "Пираты — абордаж"
+        }
+        fight.damageTakenFactor = damageTakenFactor * (upgrades.contains(.hull) ? ExploreRules.hullDamageFactor : 1)
+        fight.cooldownFactor = cooldownFactor
+        if let companion { fight.companionAssist(tier: companion.tier) }
+        encounter = fight
+    }
+
     // MARK: 15F (17.11.2026): поручения Epic и главный квест «Путь по главам»
 
     var monsterWins = 0
@@ -627,7 +669,7 @@ final class ExploreSession {
     /// Пауза кнопкой (16.11.2026).
     var isPaused = false
     /// Время стоит: пауза или открыта карта мира.
-    var isFrozen: Bool { isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas || talkNPC != nil || shipyardOpen || crewOpen || traderOpen != nil }
+    var isFrozen: Bool { encounter != nil && inTower != nil || isPaused || isWorldMapOpen || merchantOpen != nil || showsAtlas || talkNPC != nil || shipyardOpen || crewOpen || traderOpen != nil }
     var exploredShare: Double { landCount == 0 ? 0 : Double(exploredLand) / Double(landCount) }
 
     /// Открыть клетки в радиусе обзора.
@@ -755,12 +797,14 @@ final class ExploreSession {
         return island.landing(near: heroTile)
     }
 
-    init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32, mode: ExploreMode = .turnBased) {
+    init(input: ExploreInput, hero: ExploreHero, attempt: Int, appearance: HeroAppearance?, accent: UInt32, mode: ExploreMode = .turnBased,
+         prebuilt: Island? = nil) {
         self.mode = mode
         self.input = input
         self.hero = hero
         self.seed = input.seed(attempt: attempt)
-        let island = IslandGenerator.generate(input, seed: seed)
+        // 16.3: большой мир (до 6 месяцев) строится в фоне и приходит готовым.
+        let island = prebuilt ?? IslandGenerator.generate(input, seed: seed)
         self.island = island
         ground = ExploreGround(island: island)
         explored = [Bool](repeating: false, count: island.side * island.side)
@@ -853,6 +897,15 @@ final class ExploreSession {
             wins += 1
             nightReward(encounterNPC)
             registerWin(encounterNPC)
+            if encounterPirate != nil {
+                planks += ExploreRules.piratePlanks
+                var text = "🏴‍☠️ Пираты отбиты · +\(ExploreRules.piratePlanks) доски"
+                if pirateRandom.unit() < ExploreRules.pirateItemChance {
+                    let item = ExploreItem.allCases[pirateRandom.int(ExploreItem.allCases.count)]
+                    text += addItem(item) ? " · \(item.title)" : " · сумка полна"
+                }
+                toast = text
+            }
             if encounterSerpent, let serpent = island.serpent {
                 serpentDefeated = true
                 planks += ExploreRules.serpentPlanks
@@ -879,6 +932,7 @@ final class ExploreSession {
         self.encounter = nil
         encounterTower = nil
         encounterSerpent = false
+        encounterPirate = nil
         return outcome
     }
 }
