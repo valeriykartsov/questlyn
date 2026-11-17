@@ -67,6 +67,34 @@ public enum ExploreRules {
     public static let illusionistChaseMinus = 1.0
     public static let masterVitalsFactor = 1.10
 
+    // 15E (17.11.2026): море, верфь, один корабль и экипаж. Рабочие гипотезы — макеты ExploreSea15E, ExploreShipyard, ExploreShipCrew.
+    /// Квест «Корабль»: победить столько монстров на стартовом острове.
+    public static let shipQuestKills = 10
+    public static let crewCap = 2
+    public static let badNightQuality = 0.4
+    public static let stormCap = 3
+    public static let stormRadius = 4.0
+    public static let stormHPPerSecond = 0.005
+    public static let stormSpeedFactor = 0.6
+    public static let currentStreak = 5
+    public static let currentSpeedFactor = 1.5
+    public static let wreckQuests = 3
+    public static let wreckCap = 6
+    public static let wreckItemChance = 0.25
+    public static let serpentBaseHP = 200.0
+    public static let serpentHPPerStep = 10.0
+    public static let serpentDamageShare = 0.12
+    /// Змей без пушек: удар на 10% HP раз в 2 с, пока корабль рядом.
+    public static let serpentRamShare = 0.10
+    public static let serpentRamSeconds: TimeInterval = 2
+    public static let serpentPlanks = 4
+    public static let sailsSpeedFactor = 1.25
+    public static let hullDamageFactor = 0.5
+    public static let holdBagBonus = 2
+    public static let mastSeaVision = 5.0
+    /// Верфь — в столице и в городах, чья территория ближе 3 клеток к воде.
+    public static let shipyardCoast = 3
+
     // Остров (09, раздел 1–2).
     public static func islandSize(days: Int) -> IslandSize {
         switch days {
@@ -362,7 +390,11 @@ public struct ExploreDoneQuest: Hashable, Sendable {
     public var title: String
     public var priority: QuestPriority
     public var minutes: Int
-    public init(title: String, priority: QuestPriority, minutes: Int) { self.title = title; self.priority = priority; self.minutes = minutes }
+    /// День выполнения (15E: обломки у острова главы); nil — неизвестен.
+    public var date: LocalDate?
+    public init(title: String, priority: QuestPriority, minutes: Int, date: LocalDate? = nil) {
+        self.title = title; self.priority = priority; self.minutes = minutes; self.date = date
+    }
 }
 
 /// Навык и его прирост XP по дням (15B.1): сектора острова.
@@ -609,6 +641,7 @@ public struct ExploreInput: Sendable {
                   habits: habits)
             .with(moods: moods.filter { $0.date >= first && $0.date <= last })
             .with(overdue: overdue.filter { $0.due >= first && $0.due <= last }, legends: legends)
+            .with(doneQuests: doneQuests.filter { quest in quest.date.map { $0 >= first && $0 <= last } ?? isLastMonth })
             .with(skillGains: skillGains, closedEpics: closedEpics.filter { $0.closed >= first && $0.closed <= last },
                   harmDays: harmDays.filter { $0 >= first && $0 <= last },
                   benefits: benefits.filter { $0.date >= first && $0.date <= last })
@@ -802,6 +835,76 @@ public enum MonsterKind: String, Sendable, CaseIterable, Hashable {
     }
 }
 
+/// Улучшение корабля на верфи (15E.2) — на одну прогулку.
+public enum ShipUpgrade: String, Sendable, CaseIterable, Hashable {
+    case sails, hull, hold, mast, cannons
+
+    public var title: String {
+        switch self {
+        case .sails: "Паруса"
+        case .hull: "Корпус"
+        case .hold: "Трюм"
+        case .mast: "Мачта с трубой"
+        case .cannons: "Пушки"
+        }
+    }
+
+    public var summary: String {
+        switch self {
+        case .sails: "ход на море ×1,25"
+        case .hull: "урон шторма и змея −50%"
+        case .hold: "сумка +2"
+        case .mast: "обзор на море +5"
+        case .cannons: "бой со змеем, удар — залп"
+        }
+    }
+
+    public var planks: Int {
+        switch self {
+        case .sails, .hull: 3
+        case .hold, .mast: 2
+        case .cannons: 4
+        }
+    }
+}
+
+/// Шторм в море у острова главы (15E.1).
+public struct IslandStorm: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var center: TilePoint
+    public var radius: Double
+    public func contains(_ point: TilePoint) -> Bool { center.distance(to: point) <= radius }
+}
+
+/// Течение привычки между островами (15E.1): по его клеткам корабль идёт быстрее.
+public struct IslandCurrent: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var title: String
+    public var tiles: [TilePoint]
+}
+
+/// Обломки в море (15E.1): доски и, иногда, предмет.
+public struct IslandWreck: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var position: TilePoint
+    public var planks: Int
+    public var item: ExploreItem?
+}
+
+/// Встречный корабль в проливе (15E.1): обмен и доска в подарок.
+public struct IslandTrader: Hashable, Sendable, Identifiable {
+    public var id: Int
+    public var position: TilePoint
+}
+
+/// Морской змей (15E.1): незакрытый Epic с самым дальним сроком.
+public struct IslandSerpent: Hashable, Sendable {
+    public var title: String
+    public var steps: Int
+    public var position: TilePoint
+    public var hp: Double { ExploreRules.serpentBaseHP + ExploreRules.serpentHPPerStep * Double(steps) }
+}
+
 /// Человек топа за всё время (15H, легенды): ключ участника и число встреч.
 public struct ExploreLegendPerson: Hashable, Sendable {
     public var key: String
@@ -903,6 +1006,7 @@ public struct IslandMerchant: Hashable, Sendable, Identifiable {
     public var region: Int
     public var cityId: Int
     public var position: TilePoint
+    public init(id: Int, region: Int, cityId: Int, position: TilePoint) { self.id = id; self.region = region; self.cityId = cityId; self.position = position }
 }
 
 public struct IslandChest: Hashable, Sendable, Identifiable {
@@ -1114,6 +1218,12 @@ public struct Island: Sendable {
     public var regions: [IslandRegion] = []
     /// Корабли — только когда островов больше одного.
     public var ships: [IslandShip] = []
+    // 15E: море.
+    public var storms: [IslandStorm] = []
+    public var currents: [IslandCurrent] = []
+    public var wrecks: [IslandWreck] = []
+    public var traders: [IslandTrader] = []
+    public var serpent: IslandSerpent?
     public var bottles: [IslandBottle] = []
     public var towers: [IslandTower] = []
     public var lighthouses: [IslandLighthouse] = []
@@ -1398,7 +1508,12 @@ public enum IslandGenerator {
         world.swamp = swamp
         // Старт (15G.2) — на северо-западном берегу первого (самого раннего) острова.
         world.start = moved(parts[0].start, origins[0])
-        world.ships = ships(in: world)
+        // 15E: один корабль — у берега стартового острова, ближе к старту; без квеста на нём не уплыть.
+        world.ships = ships(in: world).filter { $0.region == 0 }.map { ship in
+            var ship = ship
+            ship.position = mooring(in: world, region: world.regions[0], near: world.start) ?? ship.position
+            return ship
+        }
         // Островки — после кораблей: не мешают ни стоянке, ни высадке.
         islets(&world.terrain, side: side, count: parts.count * 3, seed: seed)
         // У корабля, как у старта, монстры не стоят — высадка не начинается с боя.
@@ -1407,6 +1522,8 @@ public enum IslandGenerator {
         }
         for index in world.npcs.indices { world.npcs[index].id = index }
         placeLegends(&world, input.legends, seed: seed)
+        questMonsters(&world, seed: seed)
+        sea(&world, input: input, chapters: months, seed: seed)
         finish(&world, seed: seed, days: input.days, treasure: input.treasureQuest)
         return world
     }
@@ -1449,6 +1566,123 @@ public enum IslandGenerator {
             npc.cityId = city.id
             npc.meetingTitle = city.name
             island.npcs.append(npc)
+        }
+    }
+
+    /// Причал (15E): вода у берега острова главы, ближайшая к точке.
+    static func mooring(in island: Island, region: IslandRegion, near point: TilePoint) -> TilePoint? {
+        let side = island.side
+        var best: TilePoint?, bestDistance = Double.infinity
+        for y in max(1, region.origin.y - 2)..<min(side - 1, region.origin.y + region.side + 2) {
+            for x in max(1, region.origin.x - 2)..<min(side - 1, region.origin.x + region.side + 2) where island.terrain[y * side + x] == .water {
+                let tile = TilePoint(x, y)
+                guard [(1, 0), (-1, 0), (0, 1), (0, -1)].contains(where: { island.isWalkable(TilePoint(x + $0.0, y + $0.1)) }),
+                      island.landing(near: tile).map({ region.contains($0) }) == true,
+                      // Открытая вода вокруг — не в узкой бухте.
+                      [(2, 0), (-2, 0), (0, 2), (0, -2)].filter({ !island.isLand(TilePoint(x + $0.0, y + $0.1)) }).count >= 2 else { continue }
+                let distance = tile.distance(to: point)
+                if distance < bestDistance { bestDistance = distance; best = tile }
+            }
+        }
+        return best
+    }
+
+    /// Квест «Корабль» (15E): на стартовом острове не меньше 10 монстров — недостающих добавляют зверями.
+    static func questMonsters(_ island: inout Island, seed: UInt64) {
+        guard let region = island.regions.first, !island.ships.isEmpty else { return }
+        var random = ExploreRandom(seed ^ 0x5417_0000)
+        var count = island.npcs.filter { !$0.isPeaceful && region.contains($0.home) }.count
+        var attempts = 0
+        while count < ExploreRules.shipQuestKills && attempts < 4000 {
+            attempts += 1
+            let point = TilePoint(region.origin.x + random.int(region.side), region.origin.y + random.int(region.side))
+            guard island.isWalkable(point), island.safeCity(at: point) == nil, island.road(at: point) == nil,
+                  point.distance(to: island.start) >= Double(ExploreRules.npcMinDistanceFromStart),
+                  island.ships.allSatisfy({ $0.position.distance(to: point) >= ExploreRules.harbourRadius }),
+                  island.npcs.filter({ !$0.isPeaceful }).allSatisfy({ $0.home.distance(to: point) >= 3 }) else { continue }
+            var npc = IslandNPC(id: island.npcs.count, tier: .acquaintance, home: point, meetings: 0)
+            npc.monster = .boar
+            island.npcs.append(npc)
+            count += 1
+        }
+    }
+
+    /// Море (15E.1): шторма, течения привычек, обломки, встречные корабли, морской змей.
+    static func sea(_ island: inout Island, input: ExploreInput, chapters: [(first: LocalDate, last: LocalDate)], seed: UInt64) {
+        guard island.regions.count > 1 else { return }
+        var random = ExploreRandom(seed ^ 0x5EA0_0000)
+        let side = island.side
+        // Расстояние до суши по воде — для мест у берега.
+        var coast = [Int](repeating: Int.max, count: side * side)
+        var queue: [Int] = [], head = 0
+        for index in island.terrain.indices where island.terrain[index] != .water { coast[index] = 0; queue.append(index) }
+        while head < queue.count {
+            let current = queue[head]; head += 1
+            let x = current % side, y = current / side
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = x + dx, ny = y + dy
+                guard nx >= 0, ny >= 0, nx < side, ny < side else { continue }
+                let next = ny * side + nx
+                if coast[next] > coast[current] + 1 { coast[next] = coast[current] + 1; queue.append(next) }
+            }
+        }
+        func seaSpot(in region: IslandRegion, distance: ClosedRange<Int>, avoid: [(TilePoint, Double)]) -> TilePoint? {
+            for _ in 0..<600 {
+                let point = TilePoint(region.origin.x - 4 + random.int(region.side + 8), region.origin.y - 4 + random.int(region.side + 8))
+                guard point.x >= 0, point.y >= 0, point.x < side, point.y < side,
+                      distance.contains(coast[point.y * side + point.x]), island.terrain(at: point) == .water,
+                      avoid.allSatisfy({ $0.0.distance(to: point) >= $0.1 }) else { continue }
+                return point
+            }
+            return nil
+        }
+        let harbour = island.ships.map { ($0.position, 8.0) }
+        // Шторма: плохие ночи и отметки «плохо» главы.
+        for (index, chapter) in chapters.enumerated() where index < island.regions.count {
+            let bad = input.nights.filter { $0.key >= chapter.first && $0.key <= chapter.last && $0.value < ExploreRules.badNightQuality }.count
+                + input.moods.filter { $0.date >= chapter.first && $0.date <= chapter.last && $0.mood == .bad }.count
+            for _ in 0..<min(ExploreRules.stormCap, bad) {
+                guard let center = seaSpot(in: island.regions[index], distance: 3...9,
+                                           avoid: harbour + island.storms.map { ($0.center, 10) }) else { break }
+                island.storms.append(IslandStorm(id: island.storms.count, center: center, radius: ExploreRules.stormRadius))
+            }
+        }
+        // Течения: привычка с серией от 5 дней в главе — путь к следующему острову.
+        func landingWater(_ region: IslandRegion, _ toward: TilePoint) -> TilePoint? { mooring(in: island, region: region, near: toward) }
+        for index in 0..<(island.regions.count - 1) where index < chapters.count {
+            let chapter = chapters[index]
+            guard let habit = input.habits.map({ ($0, $0.longestStreak(from: chapter.first, through: chapter.last)) })
+                .filter({ $0.1 >= ExploreRules.currentStreak }).max(by: { ($0.1, $1.0.title) < ($1.1, $0.0.title) })?.0 else { continue }
+            let a = island.regions[index], b = island.regions[index + 1]
+            guard let from = landingWater(a, b.center), let to = landingWater(b, a.center),
+                  let path = island.seaPath(from: from, to: to), path.count > 6 else { continue }
+            island.currents.append(IslandCurrent(id: island.currents.count, title: habit.title, tiles: Array(path.dropFirst(2).dropLast(2))))
+        }
+        // Обломки: одни на 3 выполненных квеста главы.
+        for (index, chapter) in chapters.enumerated() where index < island.regions.count {
+            let done = input.doneQuests.filter { quest in quest.date.map { $0 >= chapter.first && $0 <= chapter.last } ?? (index == chapters.count - 1) }.count
+            for _ in 0..<min(ExploreRules.wreckCap, done / ExploreRules.wreckQuests) {
+                guard let spot = seaSpot(in: island.regions[index], distance: 2...6,
+                                         avoid: harbour + island.wrecks.map { ($0.position, 5) } + island.storms.map { ($0.center, $0.radius + 1) }) else { break }
+                let item = random.unit() < ExploreRules.wreckItemChance ? ExploreItem.allCases[random.int(ExploreItem.allCases.count)] : nil
+                island.wrecks.append(IslandWreck(id: island.wrecks.count, position: spot, planks: 1 + random.int(2), item: item))
+            }
+        }
+        // Встречные корабли — по одному в проливе между соседними островами, на середине морского пути.
+        var straits: [[TilePoint]] = []
+        for index in 0..<(island.regions.count - 1) {
+            let a = island.regions[index], b = island.regions[index + 1]
+            guard let from = landingWater(a, b.center), let to = landingWater(b, a.center), let path = island.seaPath(from: from, to: to) else { continue }
+            straits.append(path)
+            island.traders.append(IslandTrader(id: island.traders.count, position: path[path.count / 2]))
+        }
+        // Морской змей: незакрытый Epic с самым дальним сроком — в проливе между средними главами.
+        let closed = Set(input.closedEpics.map(\.title))
+        if let epic = input.epics.filter({ !closed.contains($0.title) && !$0.dates.isEmpty }).max(by: { ($0.dates.max()!, $1.title) < ($1.dates.max()!, $0.title) }),
+           !straits.isEmpty {
+            let path = straits[(straits.count - 1) / 2]
+            let spot = path[min(path.count - 1, path.count * 3 / 4)]
+            island.serpent = IslandSerpent(title: epic.title, steps: epic.steps, position: spot)
         }
     }
 

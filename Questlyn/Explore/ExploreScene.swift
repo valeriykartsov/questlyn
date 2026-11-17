@@ -63,6 +63,14 @@ final class ExploreScene: SKScene {
     private var shipFrames: [SKTexture] = []
     private var shipUpFrames: [SKTexture] = []
     private var shipFacesUp = false
+    // 15E: вид корабля по квесту и улучшениям, море, значки экипажа.
+    private var shipLook = ""
+    private var shipMoored: SKTexture?
+    private var wreckNodes: [Int: SKSpriteNode] = [:]
+    private let serpentNode = SKSpriteNode()
+    private var serpentCalmUntil: TimeInterval = 0
+    private let crewBadges = SKNode()
+    private var crewLook = ""
 
     /// Вид по направлению движения в клетках (15H): вниз по экрану — лицом, вверх — спиной; влево — зеркало.
     static func facing(dx: Double, dy: Double, current: Int) -> Int {
@@ -192,6 +200,7 @@ final class ExploreScene: SKScene {
             shipNodes.append(node)
             addChild(node)
         }
+        setupSea(island)
         for chest in island.chests {
             let node = sprite(ExploreRenderer.chest(opened: false))
             node.position = point(Double(chest.position.x), Double(chest.position.y))
@@ -636,7 +645,7 @@ final class ExploreScene: SKScene {
                     ? ExploreSprites.bossTower(conquered: true).image : ExploreRenderer.tower(conquered: true))
                 if let node = towerNodes[towerId] { flash(node) }
             } else if outcome == .lost {
-                let home = session.lastCity; heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home
+                let home = session.defeatRespawn(); heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home
             }
             return
         }
@@ -646,7 +655,7 @@ final class ExploreScene: SKScene {
         case .fled: npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
         case .lost:
             npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
-            let home = session.lastCity
+            let home = session.defeatRespawn()
             heroPosition = (Double(home.x), Double(home.y))
             session.heroTile = home
         case nil: break
@@ -898,6 +907,7 @@ final class ExploreScene: SKScene {
         moveNPCs(dt)
         moveGhosts(dt)
         interact(dt)
+        updateSea(dt)
         advanceClock(dt)
         layoutDynamic()
         updateFog()
@@ -941,8 +951,8 @@ final class ExploreScene: SKScene {
 
     private func updateCompass() {
         let compass = (session.compassUntil ?? .distantPast) > .now
-        let coder = session.companionSkill == .legend(.coder) && session.sailing == nil
-        let guide = session.companionSkill == .guide && session.sailing == nil
+        let coder = session.has(.legend(.coder)) && session.sailing == nil
+        let guide = session.has(.guide) && session.sailing == nil
         guard compass || guide || coder else { compassNode.isHidden = true; return }
         compassNode.fillColor = compass ? UIColor(red: 0.18, green: 0.42, blue: 0.31, alpha: 1) : UIColor(red: 0.89, green: 0.63, blue: 0.29, alpha: 1)
         let goals = compass || coder ? session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position) : guideTargets()
@@ -985,10 +995,12 @@ final class ExploreScene: SKScene {
         var talk: (id: Int, distance: Double)?
         defer { if session.talkCandidate != talk?.id { session.talkCandidate = talk?.id } }
         // Иллюзионист-спутник: монстры замечают героя позже.
-        let chaseMinus = session.companionSkill == .legend(.illusionist) ? ExploreRules.illusionistChaseMinus : 0
+        let chaseMinus = session.has(.legend(.illusionist)) ? ExploreRules.illusionistChaseMinus : 0
         for index in npcs.indices {
             var state = npcs[index]
             let npc = island.npcs[index]
+            // Экипаж (15E) — на корабле, на карте не ходит.
+            if session.crew.contains(where: { $0.id == npc.id }) { npcs[index] = state; continue }
             // Спутник (14.5) идёт за героем, в том числе на корабле.
             if npc.id == session.companion?.id {
                 state.peaceful = true
@@ -1154,11 +1166,12 @@ final class ExploreScene: SKScene {
             }
         }
         // Спутник-лекарь (15D.4): +0,2% HP в секунду вне боя.
-        let healer = session.companionSkill == .healer && session.activeFight == nil ? ExploreRules.healerHPPerSecond : 0
+        let healer = session.has(.healer) && session.activeFight == nil ? ExploreRules.healerHPPerSecond : 0
         // Маг-легенда (15H): +0,5% MP в секунду вне боя.
-        let mage = session.companionSkill == .legend(.mage) && session.activeFight == nil ? ExploreRules.mageMPPerSecond : 0
+        let mage = session.has(.legend(.mage)) && session.activeFight == nil ? ExploreRules.mageMPPerSecond : 0
         let water = session.buff(.water) + healer, vegetables = session.buff(.vegetables) + mage
-        let swampDamage = island.isSwamp(tile) ? ExploreRules.swampHPPerSecond : 0
+        let stormDamage = session.inStorm ? ExploreRules.stormHPPerSecond * (session.upgrades.contains(.hull) ? ExploreRules.hullDamageFactor : 1) : 0
+        let swampDamage = (island.isSwamp(tile) && session.sailing == nil ? ExploreRules.swampHPPerSecond : 0) + stormDamage
         if water > 0 || vegetables > 0 || swampDamage > 0 {
             session.hp = max(1, min(session.maxHP, session.hp + session.maxHP * (water - swampDamage) * dt))
             session.mp = min(session.maxMP, session.mp + session.maxMP * vegetables * dt)
@@ -1192,7 +1205,7 @@ final class ExploreScene: SKScene {
             // В городе +10% в секунду (09, раздел 5); обновляем модель не чаще раза в 0,25 с.
             restAccumulator += dt
             if restAccumulator >= 0.25 {
-                let rate = ExploreRules.cityRestorePerSecond * (session.companionSkill == .healer ? ExploreRules.healerRestoreFactor : 1)
+                let rate = ExploreRules.cityRestorePerSecond * (session.has(.healer) ? ExploreRules.healerRestoreFactor : 1)
                 session.hp = min(session.maxHP, session.hp + session.maxHP * rate * restAccumulator)
                 session.mp = min(session.maxMP, session.mp + session.maxMP * rate * restAccumulator)
                 restAccumulator = 0
@@ -1209,8 +1222,8 @@ final class ExploreScene: SKScene {
             session.litCampfires.insert(fire.id)
             fireNodes[fire.id]?.texture = texture(ExploreRenderer.campfire(lit: true))
             if let node = fireNodes[fire.id] { flash(node) }
-            let share = ExploreRules.campfireShare * fire.quality * (session.companionSkill == .healer ? ExploreRules.healerRestoreFactor : 1)
-                * (session.companionSkill == .legend(.sage) ? ExploreRules.sageCampfireFactor : 1)
+            let share = ExploreRules.campfireShare * fire.quality * (session.has(.healer) ? ExploreRules.healerRestoreFactor : 1)
+                * (session.has(.legend(.sage)) ? ExploreRules.sageCampfireFactor : 1)
             session.hp = min(session.maxHP, session.hp + session.maxHP * share)
             session.mp = min(session.maxMP, session.mp + session.maxMP * share)
             session.toast = "Костёр: +\(Int((share * 100).rounded()))% HP и MP"
@@ -1238,6 +1251,8 @@ final class ExploreScene: SKScene {
     }
 
     private func layoutDynamic() {
+        refreshShipTextures()
+        layoutCrew()
         // Кадры шага (15A.7): герой — пока идёт, NPC — пока двигаются.
         let walking = (!path.isEmpty || stickMoving) && session.sailing == nil
         if !heroFrames.isEmpty {
@@ -1263,6 +1278,7 @@ final class ExploreScene: SKScene {
                 node.zPosition = depth(heroPosition.x, heroPosition.y) + 0.6
             } else {
                 let tile = session.ships[index]
+                if let shipMoored, node.texture !== shipMoored { node.texture = shipMoored; node.xScale = abs(node.xScale) }
                 node.position = point(Double(tile.x), Double(tile.y), lift: sin(now * 1.5 + Double(index)) * 0.5)
                 node.zPosition = depth(Double(tile.x), Double(tile.y)) + 0.3
             }
@@ -1288,7 +1304,7 @@ final class ExploreScene: SKScene {
             let lunge = session.island.npcs[index].id == session.companion?.id && now - companionLunge < 0.3
             // 15H: ночью люди расходятся по домам (кроме спутника), монстры — на месте.
             let npc = session.island.npcs[index]
-            npcNodes[index].isHidden = npc.isPeaceful && session.isNight && npc.id != session.companion?.id
+            npcNodes[index].isHidden = (npc.isPeaceful && session.isNight && npc.id != session.companion?.id) || session.crew.contains { $0.id == npc.id }
             npcNodes[index].position = point(state.x, state.y, lift: lunge ? sin((now - companionLunge) / 0.3 * .pi) * 4 : 0)
             npcNodes[index].position += lungeOffset(npcNodes[index])
             npcNodes[index].zPosition = depth(state.x, state.y) + 0.4
@@ -1323,6 +1339,156 @@ final class ExploreScene: SKScene {
         layoutDynamic()
     }
 
+    // MARK: Море (15E)
+
+    private func setupSea(_ island: Island) {
+        for storm in island.storms {
+            let node = SKShapeNode(ellipseOf: CGSize(width: storm.radius * 2 * Double(ExploreRenderer.tileW), height: storm.radius * 2 * Double(ExploreRenderer.tileH)))
+            node.fillColor = UIColor(red: 0.09, green: 0.12, blue: 0.2, alpha: 0.42)
+            node.strokeColor = .clear
+            node.position = point(Double(storm.center.x), Double(storm.center.y))
+            node.zPosition = -900
+            addChild(node)
+            // Косой дождь.
+            for k in 0..<14 {
+                let drop = SKShapeNode(rectOf: CGSize(width: 0.8, height: 4))
+                drop.fillColor = UIColor(red: 0.8, green: 0.86, blue: 0.92, alpha: 0.8)
+                drop.strokeColor = .clear
+                drop.zRotation = 0.5
+                let angle = Double(k) * 2.4, r = Double(k % 5) / 5 * storm.radius * 6
+                drop.position = CGPoint(x: node.position.x + cos(angle) * r * 1.6, y: node.position.y + sin(angle) * r * 0.8 + 6)
+                drop.zPosition = 9_000
+                drop.run(.repeatForever(.sequence([.moveBy(x: -3, y: -8, duration: 0.5), .moveBy(x: 3, y: 8, duration: 0)])))
+                addChild(drop)
+            }
+            addLabel("Шторм", at: storm.center, lift: 14, dark: true)
+        }
+        for current in island.currents {
+            for (index, tile) in current.tiles.enumerated() where index % 3 == 0 {
+                let dot = SKShapeNode(ellipseOf: CGSize(width: 4, height: 2))
+                dot.fillColor = UIColor(red: 0.94, green: 0.97, blue: 0.98, alpha: 0.7)
+                dot.strokeColor = .clear
+                dot.position = point(Double(tile.x), Double(tile.y))
+                dot.zPosition = -890
+                dot.run(.repeatForever(.sequence([.fadeAlpha(to: 0.25, duration: 0.6 + Double(index % 4) * 0.1), .fadeAlpha(to: 0.8, duration: 0.6)])))
+                addChild(dot)
+            }
+            if !current.tiles.isEmpty { addLabel("Течение «\(current.title)» · ×1,5", at: current.tiles[current.tiles.count / 2], lift: 10, dark: false) }
+        }
+        for wreck in island.wrecks {
+            let node = sprite(ExploreSprites.wreck().image)
+            node.position = point(Double(wreck.position.x), Double(wreck.position.y))
+            node.zPosition = depth(Double(wreck.position.x), Double(wreck.position.y))
+            node.run(.repeatForever(.sequence([.moveBy(x: 0, y: 1, duration: 1.2), .moveBy(x: 0, y: -1, duration: 1.2)])))
+            node.isHidden = session.lootedWrecks.contains(wreck.id)
+            wreckNodes[wreck.id] = node
+            addChild(node)
+        }
+        for trader in island.traders {
+            var c = ExploreSprites.ship(frame: 1, sails: 1)
+            ExploreSprites.dress(&c, upgrades: [], bare: false, up: false)
+            let node = sprite(c.image)
+            node.anchorPoint = CGPoint(x: 0.47, y: 0.12)
+            node.setScale(Self.characterScale * 1.1)
+            node.xScale = -node.xScale
+            node.position = point(Double(trader.position.x), Double(trader.position.y))
+            node.zPosition = depth(Double(trader.position.x), Double(trader.position.y))
+            addChild(node)
+            addLabel("Встречный корабль", at: trader.position, lift: 34, dark: false)
+        }
+        if let serpent = island.serpent {
+            let frames = (0..<2).compactMap { texture(ExploreSprites.serpent(frame: $0).image) }
+            serpentNode.texture = frames.first
+            serpentNode.size = CGSize(width: 48, height: 28)
+            serpentNode.anchorPoint = CGPoint(x: 0.5, y: 0.2)
+            serpentNode.position = point(Double(serpent.position.x), Double(serpent.position.y))
+            serpentNode.zPosition = depth(Double(serpent.position.x), Double(serpent.position.y))
+            serpentNode.run(.repeatForever(.animate(with: frames, timePerFrame: 0.6)))
+            addChild(serpentNode)
+            addLabel("Морской змей «\(serpent.title)»", at: serpent.position, lift: 30, dark: true)
+        }
+        crewBadges.zPosition = 9_500
+        addChild(crewBadges)
+    }
+
+    /// Обломки подбираются с корабля; змей рядом — бой с пушками, без них — таран.
+    private func updateSea(_ dt: Double) {
+        guard session.sailing != nil, session.encounter == nil else { return }
+        let tile = session.heroTile
+        for wreck in session.island.wrecks where !session.lootedWrecks.contains(wreck.id) && wreck.position.distance(to: tile) <= 1.5 {
+            session.loot(wreck)
+            if let node = wreckNodes[wreck.id] { flash(node); node.run(.sequence([.fadeOut(withDuration: 0.4), .hide()])) }
+        }
+        if let serpent = session.island.serpent, !session.serpentDefeated, now >= serpentCalmUntil,
+           hypot(Double(serpent.position.x) - heroPosition.x, Double(serpent.position.y) - heroPosition.y) <= 2.2 {
+            if session.upgrades.contains(.cannons) {
+                path = []
+                session.startSerpent()
+                onEncounter?()
+            } else {
+                session.serpentRam()
+            }
+        }
+    }
+
+    /// Вид корабля (15E): без парусов, пока квест не выполнен; улучшения верфи видны на всех направлениях.
+    private func refreshShipTextures() {
+        let look = "\(session.shipReady)-\(session.upgrades.map(\.rawValue).sorted())"
+        guard look != shipLook else { return }
+        shipLook = look
+        let bare = !session.shipReady, upgrades = session.upgrades
+        func make(_ canvas: RGBACanvas, up: Bool) -> SKTexture? {
+            var c = canvas
+            ExploreSprites.dress(&c, upgrades: upgrades, bare: bare, up: up)
+            return texture(c.image)
+        }
+        shipFrames = (0..<4).compactMap { make(ExploreSprites.ship(frame: $0), up: false) }
+        shipUpFrames = (0..<4).compactMap { make(ExploreSprites.shipUp(frame: $0), up: true) }
+        shipMoored = make(ExploreSprites.ship(frame: 0, sails: 1), up: false)
+    }
+
+    /// Значки экипажа слева вверху у корабля: лицо и умение (15E, макет ExploreShipCrew).
+    private func layoutCrew() {
+        let ids = session.crew.map(\.id)
+        let look = ids.map(String.init).joined(separator: ",")
+        if look != crewLook {
+            crewLook = look
+            crewBadges.removeAllChildren()
+            for (k, member) in session.crew.enumerated() {
+                let badge = SKNode()
+                badge.position = CGPoint(x: 0, y: CGFloat(-k) * 11)
+                let plate = SKShapeNode(rectOf: CGSize(width: 46, height: 9.5), cornerRadius: 4.75)
+                plate.fillColor = UIColor(red: 1, green: 0.99, blue: 0.96, alpha: 0.94)
+                plate.strokeColor = .clear
+                plate.position = CGPoint(x: 18, y: 0)
+                badge.addChild(plate)
+                let ring = SKShapeNode(circleOfRadius: 5)
+                ring.fillColor = UIColor(red: 0.62, green: 0.69, blue: 0.42, alpha: 1)
+                ring.strokeColor = UIColor(red: 0.85, green: 0.64, blue: 0.25, alpha: 1)
+                ring.lineWidth = 1
+                badge.addChild(ring)
+                if npcFrames.indices.contains(member.id), let frame = npcFrames[member.id].first {
+                    // Голова из первого кадра: строки 11–24 и столбцы 20–36 рисунка 56×61.
+                    let face = SKSpriteNode(texture: SKTexture(rect: CGRect(x: 20.0 / 56, y: 36.0 / 61, width: 16.0 / 56, height: 14.0 / 61), in: frame))
+                    face.size = CGSize(width: 9, height: 8)
+                    badge.addChild(face)
+                }
+                let label = SKLabelNode(text: CompanionSkill.of(member).summary)
+                label.fontName = "HelveticaNeue-Bold"
+                label.fontSize = 5
+                label.fontColor = UIColor(red: 0.18, green: 0.42, blue: 0.31, alpha: 1)
+                label.horizontalAlignmentMode = .left
+                label.verticalAlignmentMode = .center
+                label.position = CGPoint(x: 7, y: 0)
+                badge.addChild(label)
+                crewBadges.addChild(badge)
+            }
+        }
+        guard !ids.isEmpty, let ship = shipNodes.first else { crewBadges.isHidden = true; return }
+        crewBadges.isHidden = false
+        crewBadges.position = CGPoint(x: ship.position.x - 26, y: ship.position.y + 34)
+    }
+
     // MARK: Корабль (12B)
 
     /// «Сесть на корабль»: герой переходит на палубу, дальше управление кораблём.
@@ -1330,6 +1496,7 @@ final class ExploreScene: SKScene {
         guard let index = session.boardableShip else { return }
         let tile = session.ships[index]
         path = []
+        session.mooredAt = tile
         session.sailing = index
         heroPosition = (Double(tile.x), Double(tile.y))
         session.heroTile = tile
@@ -1350,6 +1517,19 @@ final class ExploreScene: SKScene {
     // MARK: После встречи
 
     func resolveEncounter(_ outcome: EncounterOutcome?, npcId: Int?, towerId: Int? = nil) {
+        // Морской змей (15E): после побега или поражения — передышка; поражение — к кораблю у причала.
+        if npcId == nil && towerId == nil {
+            serpentCalmUntil = now + 10
+            if outcome == .won { serpentNode.run(.sequence([.fadeOut(withDuration: 0.6), .hide()])) }
+            if outcome == .lost {
+                let home = session.defeatRespawn()
+                heroPosition = (Double(home.x), Double(home.y))
+                session.heroTile = home
+            }
+            path = []
+            layoutDynamic()
+            return
+        }
         if let towerId {
             if outcome == .won {
                 towerNodes[towerId]?.texture = texture(session.island.towers.first { $0.id == towerId }?.isFinal == true
@@ -1357,7 +1537,7 @@ final class ExploreScene: SKScene {
                 if let node = towerNodes[towerId] { flash(node) }
             } else {
                 // Побег или поражение — отойти от башни, чтобы встреча не началась снова.
-                if outcome == .lost { let home = session.lastCity; heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home }
+                if outcome == .lost { let home = session.defeatRespawn(); heroPosition = (Double(home.x), Double(home.y)); session.heroTile = home }
                 else if let tower = session.island.towers.first(where: { $0.id == towerId }) {
                     let dx = heroPosition.x - Double(tower.position.x), dy = heroPosition.y - Double(tower.position.y)
                     let length = max(0.01, hypot(dx, dy))
@@ -1382,7 +1562,7 @@ final class ExploreScene: SKScene {
             if session.island.isWalkable(target) { heroPosition = (Double(target.x), Double(target.y)); session.heroTile = target }
         case .lost:
             npcs[npcId].calmUntil = now + NPCTier.calmAfterEncounter
-            let home = session.lastCity
+            let home = session.defeatRespawn()
             heroPosition = (Double(home.x), Double(home.y))
             session.heroTile = home
         case nil:

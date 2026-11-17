@@ -76,6 +76,14 @@ struct ExploreFlowView: View {
         if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
             if demo.contains("night") { session.clockHour = 22 }
             if demo.contains("map") { session.isWorldMapOpen = true }
+            // `ship` / `sea` (15E) — корабль готов, 14 досок, лучший спутник в экипаже; `sea` — сразу на корабле.
+            if demo.contains("ship") || demo.contains("sea") {
+                session.shipReady = true
+                session.planks = 14
+                for npc in session.island.npcs.filter({ $0.legend != nil }).prefix(2) { session.crew.append(npc) }
+                session.companion = session.island.npcs.first { $0.isPeaceful && $0.legend == nil }
+            }
+            if demo.contains("sea"), let ship = session.ships.first, let landing = session.island.landing(near: ship) { session.heroTile = landing }
             // `talk` / `legend` (15H) — открыт диалог с мирным NPC или легендой.
             if demo.contains("talk") { session.talkNPC = session.island.npcs.first { $0.isPeaceful && $0.legend == nil && !$0.meetingTitle.isEmpty } }
             if demo.contains("legend") { session.talkNPC = session.island.npcs.first { $0.legend != nil } }
@@ -410,13 +418,27 @@ struct ExploreGameView: View {
                     TalkView(session: session, npc: npc)
                         .transition(.opacity)
                 }
-                if session.showsAtlas {
-                    AtlasView(session: session) { session.showsAtlas = false }
-                        .transition(.opacity)
+                if session.shipyardOpen {
+                    ShipyardView(session: session).transition(.opacity)
+                }
+                if session.crewOpen {
+                    CrewView(session: session).transition(.opacity)
+                }
+                if let trader = session.traderOpen {
+                    MerchantView(session: session, merchant: IslandMerchant(id: -1 - trader.id, region: 0, cityId: -1, position: trader.position)) {
+                        withAnimation { session.traderOpen = nil }
+                    }
+                    .transition(.opacity)
                 }
                 if session.isPaused {
                     PauseCard(session: session, exit: exit)
                         .transition(.opacity)
+                }
+                // Атлас — поверх паузы: открывается и из её меню (исправлено 17.11.2026).
+                if session.showsAtlas {
+                    AtlasView(session: session) { session.showsAtlas = false }
+                        .transition(.opacity)
+                        .zIndex(1)
                 }
                 if showsTasks {
                     TaskListCard(session: session) { showsTasks = false }
@@ -516,6 +538,13 @@ struct ExploreGameView: View {
             // Этап 14: часы острова, башни, задания, спутник.
             WrapRow(spacing: QSpacing.m) {
                 Text("\(session.isNight ? "☾" : "☀") \(session.clockText)").monospacedDigit().lineLimit(1).fixedSize()
+                // 15E: квест «Корабль» и доски.
+                if session.hasShipQuest && !session.shipReady {
+                    Text("⛵ Корабль: монстры \(session.shipQuestKills)/\(ExploreRules.shipQuestKills)").lineLimit(1).fixedSize()
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(QColor.amber.opacity(0.25), in: Capsule())
+                }
+                if session.planks > 0 { Text("🪵 \(session.planks)").lineLimit(1).fixedSize() }
                 if !session.island.towers.isEmpty { Text("Башни \(session.conqueredTowers.count)/\(session.island.towers.count)").lineLimit(1).fixedSize() }
                 if !session.island.tasks.isEmpty {
                     Button { showsTasks = true } label: {
@@ -721,6 +750,47 @@ struct ExploreGameView: View {
             .buttonStyle(.plain)
             .padding(.bottom, QSpacing.s)
         }
+        seaButtons
+    }
+
+    /// 15E: верфь, экипаж, встречный корабль; корабль у причала, пока квест не выполнен.
+    @ViewBuilder private var seaButtons: some View {
+        HStack(spacing: QSpacing.s) {
+            if session.nearbyShipyard {
+                pill("Верфь", note: "🪵 \(session.planks) · улучшения") { session.shipyardOpen = true }
+            }
+            if session.nearShip {
+                pill("Экипаж", note: "\(session.crew.count)/\(ExploreRules.crewCap)") { session.crewOpen = true }
+            }
+            if let trader = session.nearbyTrader {
+                pill("Обмен", note: "встречный корабль") { session.traderOpen = trader }
+                if !session.traderGifts.contains(trader.id) {
+                    pill("Доска", note: "в подарок") { session.takeGift(trader) }
+                }
+            }
+        }
+        .padding(.bottom, QSpacing.s)
+        if session.hasShipQuest, !session.shipReady, session.sailing == nil,
+           let ship = session.ships.first, ship.distance(to: session.heroTile) <= ExploreRules.boardRadius + 1 {
+            Text("Корабль ещё не готов: победи монстров острова \(session.shipQuestKills)/\(ExploreRules.shipQuestKills)")
+                .font(QFont.text(13, weight: .semibold)).foregroundStyle(QColor.ink)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(QColor.sheet.opacity(0.94), in: RoundedRectangle(cornerRadius: QRadius.card))
+                .padding(.bottom, QSpacing.s)
+        }
+    }
+
+    private func pill(_ title: String, note: String, action: @escaping () -> Void) -> some View {
+        Button { withAnimation { action() } } label: {
+            VStack(spacing: 2) {
+                Text(title).font(QFont.text(15, weight: .bold))
+                Text(note).font(QFont.text(11)).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .foregroundStyle(QColor.sheet)
+            .background(QColor.ink, in: RoundedRectangle(cornerRadius: QRadius.card))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Активный режим (макет ExploreActive): джойстик слева, «Удар» и способности справа.
@@ -956,6 +1026,8 @@ struct ExploreSummaryView: View {
                     row("Побед", session.wins)
                     row("Уговорено", session.persuaded)
                     if !session.recruitedLegends.isEmpty { row("Легенды-спутники", session.recruitedLegends.count) }
+                    if session.shipReady { row("Улучшений корабля", session.upgrades.count) }
+                    if session.serpentDefeated { row("Морской змей повержен", 1) }
                     row("Убежал", session.escapes)
                     row("Поражений", session.defeats)
                     row("Костров зажжено", session.litCampfires.count)
@@ -1592,8 +1664,9 @@ struct MerchantView: View {
             VStack(alignment: .leading, spacing: QSpacing.m) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Торговец").font(QFont.title(20))
-                        Text("город «\(session.island.cities.first { $0.id == merchant.cityId }?.name ?? "")»").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        Text(merchant.id < 0 ? "Встречный корабль" : "Торговец").font(QFont.title(20))
+                        Text(merchant.id < 0 ? "команда — люди из встреч соседней главы"
+                             : "город «\(session.island.cities.first { $0.id == merchant.cityId }?.name ?? "")»").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                     }
                     Spacer()
                     Button(action: close) {
@@ -1665,7 +1738,7 @@ struct MerchantView: View {
                 Button("Положить") { session.deposit(item) }
                     .disabled(count(item) == 0 || session.storageCount >= ExploreRules.storageCap)
                 Button("Забрать") { session.withdraw(item) }
-                    .disabled((session.storage[item] ?? 0) == 0 || session.bagCount >= ExploreRules.bagCap)
+                    .disabled((session.storage[item] ?? 0) == 0 || session.bagCount >= session.bagCap)
             }
             .font(QFont.text(12, weight: .semibold))
             .buttonStyle(.bordered)
@@ -1791,5 +1864,121 @@ struct TalkView: View {
             .overlay(RoundedRectangle(cornerRadius: QRadius.control).strokeBorder(QColor.ink, lineWidth: filled ? 0 : 1.5))
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+/// Верфь (15E.2, макет ExploreShipyard): улучшения корабля за доски — до конца прогулки.
+struct ShipyardView: View {
+    let session: ExploreSession
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { session.shipyardOpen = false }
+            VStack(alignment: .leading, spacing: QSpacing.s) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Верфь").font(QFont.title(20))
+                    Spacer()
+                    Text("🪵 Доски: \(session.planks)").font(QFont.text(14, weight: .bold))
+                }
+                Text("Улучшения — до конца прогулки; каждое видно на корабле.").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                ForEach(ShipUpgrade.allCases, id: \.self) { upgrade in
+                    HStack(spacing: QSpacing.m) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(upgrade.title).font(QFont.text(14, weight: .bold))
+                            Text(upgrade.summary).font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                        }
+                        Spacer()
+                        if session.upgrades.contains(upgrade) {
+                            Text("установлено").font(QFont.text(12, weight: .bold)).foregroundStyle(QColor.forest)
+                        } else {
+                            Button("🪵 \(upgrade.planks)") { withAnimation { session.buy(upgrade) } }
+                                .font(QFont.text(13, weight: .bold))
+                                .padding(.horizontal, 12).padding(.vertical, 7)
+                                .foregroundStyle(QColor.sheet)
+                                .background(QColor.ink.opacity(session.planks >= upgrade.planks ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 10))
+                                .disabled(session.planks < upgrade.planks)
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(QSpacing.m)
+                    .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+                }
+                Button("Закрыть") { session.shipyardOpen = false }
+                    .font(QFont.text(15, weight: .bold)).foregroundStyle(QColor.ink)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .padding(QSpacing.l)
+            .frame(maxWidth: 380)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.screen)
+        }
+    }
+}
+
+/// Экипаж корабля (15E, макет ExploreShipCrew): до 2 человек; назначить спутника или поменять местами.
+struct CrewView: View {
+    let session: ExploreSession
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture { session.crewOpen = false }
+            VStack(alignment: .leading, spacing: QSpacing.s) {
+                Text("Экипаж · \(session.crew.count)/\(ExploreRules.crewCap)").font(QFont.title(20))
+                ForEach(Array(session.crew.enumerated()), id: \.element.id) { index, member in
+                    HStack {
+                        person(member)
+                        Spacer()
+                        if session.companion != nil {
+                            Button("Поменять") { withAnimation { session.swapCrew(index) } }
+                                .font(QFont.text(13, weight: .bold)).foregroundStyle(QColor.ink)
+                                .padding(.horizontal, 10).padding(.vertical, 6)
+                                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(QColor.ink, lineWidth: 1.5))
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(QSpacing.m)
+                    .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.control))
+                }
+                if session.crew.count < ExploreRules.crewCap {
+                    Text("Свободно мест: \(ExploreRules.crewCap - session.crew.count)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+                Text("СПУТНИК").font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+                if let companion = session.companion {
+                    HStack {
+                        person(companion)
+                        Spacer()
+                        if session.crew.count < ExploreRules.crewCap {
+                            Button("В экипаж") { withAnimation { session.assignCrew() } }
+                                .font(QFont.text(13, weight: .bold)).foregroundStyle(QColor.sheet)
+                                .padding(.horizontal, 10).padding(.vertical, 6)
+                                .background(QColor.ink, in: RoundedRectangle(cornerRadius: 10))
+                                .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(QSpacing.m)
+                    .background(QColor.track, in: RoundedRectangle(cornerRadius: QRadius.control))
+                } else {
+                    Text("Спутника нет — уговори человека или легенду в диалоге и приведи к кораблю.")
+                        .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                }
+                Text("Экипаж на палубе не виден — значки с умениями у корабля; умения работают. Бьёт в бою только спутник.")
+                    .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                Button("Закрыть") { session.crewOpen = false }
+                    .font(QFont.text(15, weight: .bold)).foregroundStyle(QColor.ink)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .padding(QSpacing.l)
+            .frame(maxWidth: 380)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.screen)
+        }
+    }
+
+    private func person(_ npc: IslandNPC) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(npc.title).font(QFont.text(14, weight: .bold))
+            Text(CompanionSkill.of(npc).summary).font(QFont.text(12, weight: .semibold)).foregroundStyle(QColor.forest)
+        }
     }
 }
