@@ -1,4 +1,5 @@
 import CoreGraphics
+import UIKit
 import Foundation
 import Domain
 
@@ -593,6 +594,24 @@ nonisolated enum ExploreSprites {
         for (x, y) in [(40, 26), (41, 26), (42, 26), (39, 27), (43, 27), (40, 28), (42, 28), (41, 29)] { c.set(x, y, 0xF4EFE4) }
     }
 
+    /// Причал (17.12): дощатый настил на сваях, тумба для каната.
+    static func pier() -> RGBACanvas {
+        var c = RGBACanvas(width: 28, height: 18, fill: nil)
+        // Настил — ромб изометрии из досок.
+        for row in 0..<7 {
+            for k in 0..<16 {
+                let x = 4 + k + row, y = 9 - k / 2 + row / 2 + row / 2
+                c.set(x, y, row % 2 == 0 ? 0x8A5A34 : 0x9C6A40)
+                c.set(x, y + 1, 0x6B4A2E)
+            }
+        }
+        // Сваи.
+        for (x, y) in [(5, 10), (19, 3), (11, 14), (25, 7)] { for d in 0..<4 { c.set(x, y + d, 0x3B2414) } }
+        // Тумба.
+        for y in 4...6 { c.set(22, y, 0x2A2320); c.set(23, y, 0x2A2320) }
+        return c
+    }
+
     /// Обломки в море: доски и бочка (15E.1).
     static func wreck() -> RGBACanvas {
         var c = RGBACanvas(width: 24, height: 14, fill: nil)
@@ -624,6 +643,26 @@ nonisolated enum ExploreSprites {
         c.set(44, 6, 0xE5482B)
         for x in stride(from: 40, to: 47, by: 2) { c.set(x, 3, 0xA8432F) }
         return c
+    }
+
+    // MARK: 17.4: монстры из набора 0x72 Dungeon Tileset II (CC0, Design/ASSETS.md)
+
+    /// 4 кадра бега монстра из ресурсов приложения (`Questlyn/Explore/Monsters`); нет файлов — свой рисунок 15H.
+    @MainActor static func monsterFrames(_ kind: MonsterKind) -> [CGImage] {
+        let name: String = switch kind {
+        case .wolf: "ice_zombie_anim"
+        case .bear: "ogre_run_anim"
+        case .boar: "goblin_run_anim"
+        case .jackal: "masked_orc_run_anim"
+        case .scorpion: "skelet_run_anim"
+        case .deadline: "necromancer_anim"
+        case .sloth: "slug_anim"
+        case .lure: "imp_run_anim"
+        }
+        let frames = (0..<4).compactMap { UIImage(named: "\(name)_f\($0)")?.cgImage }
+        if frames.count == 4 { return frames }
+        let own = (0..<2).compactMap { monster(kind, frame: $0).image }
+        return own + own
     }
 
     // MARK: 15H: монстры — звери зон и «долги» (макет ExploreMonsters)

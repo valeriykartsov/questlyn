@@ -294,8 +294,9 @@ final class ExploreSession {
     let shipyardCities: Set<Int>
 
     var bagCap: Int { ExploreRules.bagCap + (upgrades.contains(.hold) ? ExploreRules.holdBagBonus : 0) }
-    /// Умения спутника и экипажа вместе; одинаковые не складываются.
-    var skills: [CompanionSkill] { ([companion] + crew.map(Optional.some)).compactMap { $0.map(CompanionSkill.of) } }
+    /// Умения спутника и (на корабле) экипажа вместе; одинаковые не складываются.
+    /// 17.11: умения экипажа работают только на корабле; умение спутника — везде.
+    var skills: [CompanionSkill] { ([companion] + (sailing != nil ? crew.map(Optional.some) : [])).compactMap { $0.map(CompanionSkill.of) } }
     func has(_ skill: CompanionSkill) -> Bool { skills.contains(skill) }
 
     var inStorm: Bool { sailing != nil && island.storms.contains { $0.contains(heroTile) } }
@@ -353,7 +354,10 @@ final class ExploreSession {
 
     /// Победа над монстром стартового острова — шаг квеста «Корабль».
     func registerWin(_ npcId: Int?) {
-        if let npcId, island.npcs.first(where: { $0.id == npcId })?.monster != nil { monsterWins += 1 }
+        if let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.monster != nil {
+            monsterWins += 1
+            gainXP(npc.level)
+        }
         guard hasShipQuest, !shipReady, let npcId, let npc = island.npcs.first(where: { $0.id == npcId }), npc.monster != nil,
               island.regions.first?.contains(npc.home) == true else { return }
         shipQuestKills += 1
@@ -433,19 +437,44 @@ final class ExploreSession {
     }
 
     /// Мастер-легенда: HP и MP героя +10%.
-    var maxHP: Double { hero.maxHP * (has(.legend(.master)) ? ExploreRules.masterVitalsFactor : 1) }
+    var maxHP: Double { hero.maxHP * (has(.legend(.master)) ? ExploreRules.masterVitalsFactor : 1) * walkStrikeFactor }
     var maxMP: Double { hero.maxMP * (has(.legend(.master)) ? ExploreRules.masterVitalsFactor : 1) }
 
     /// Бой с монстром: имя, ночь, умения легенды-спутника.
     private func prepare(_ fight: inout Encounter, _ npc: IslandNPC) {
-        fight.opponentName = npc.title
-        fight.heroDamageFactor = has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1
+        fight.opponentName = npc.monster != nil ? "\(npc.title) · ур. \(npc.level)" : npc.title
+        fight.heroDamageFactor = (has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1) * walkStrikeFactor
         fight.firstStrikeFactor = has(.legend(.assassin)) ? ExploreRules.assassinFirstStrike : 1
+        if npc.monster != nil { fight.apply(level: npc.level) }
     }
     private func prepare(_ fight: inout ActiveFight, _ npc: IslandNPC) {
-        fight.opponentName = npc.title
-        fight.heroDamageFactor = has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1
+        fight.opponentName = npc.monster != nil ? "\(npc.title) · ур. \(npc.level)" : npc.title
+        fight.heroDamageFactor = (has(.legend(.warrior)) ? ExploreRules.warriorDamageFactor : 1) * walkStrikeFactor
         fight.firstStrikeFactor = has(.legend(.assassin)) ? ExploreRules.assassinFirstStrike : 1
+        if npc.monster != nil { fight.apply(level: npc.level) }
+    }
+
+    // MARK: 17 (18.11.2026): уровень героя в прогулке
+
+    /// Опыт за победы: уровень монстра, пираты — 3. Только в этой прогулке.
+    var walkXP = 0
+    var walkLevel: Int { ExploreRules.walkLevel(xp: walkXP) }
+    var walkRank: String { ExploreRules.walkRank(level: walkLevel) }
+    var walkAura: Int { ExploreRules.walkAura(level: walkLevel) }
+    var walkStrikeFactor: Double { 1 + ExploreRules.walkLevelStep * Double(walkLevel - 1) }
+    /// Опыт до следующего уровня: набрано / нужно.
+    var walkProgress: (done: Int, total: Int) {
+        let from = ExploreRules.walkXP(level: walkLevel), to = ExploreRules.walkXP(level: walkLevel + 1)
+        return (walkXP - from, to - from)
+    }
+
+    func gainXP(_ value: Int) {
+        let before = walkLevel
+        walkXP += value
+        if walkLevel > before {
+            hp = min(maxHP, hp + maxHP * ExploreRules.walkLevelStep)
+            toast = "⬆ Уровень \(walkLevel) · ранг \(walkRank) · удар и HP +\(Int((ExploreRules.walkLevelStep * 100 * Double(walkLevel - 1)).rounded()))%"
+        }
     }
     /// Ночью монстры сильнее (правило 15D.3 перешло на монстров).
     func nightFight(_ npc: IslandNPC) -> Bool { isNight && npc.monster != nil }
@@ -898,6 +927,7 @@ final class ExploreSession {
             nightReward(encounterNPC)
             registerWin(encounterNPC)
             if encounterPirate != nil {
+                gainXP(ExploreRules.piratesXP)
                 planks += ExploreRules.piratePlanks
                 var text = "🏴‍☠️ Пираты отбиты · +\(ExploreRules.piratePlanks) доски"
                 if pirateRandom.unit() < ExploreRules.pirateItemChance {

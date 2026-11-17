@@ -65,14 +65,14 @@ struct ExploreStage15HTests {
         data.harmDays = [last, last.adding(days: -1)]
         let island = IslandGenerator.generate(data, seed: 2)
         let kinds = island.npcs.compactMap(\.monster)
-        #expect(kinds.filter { $0 == .deadline }.count == 2)
+        #expect(kinds.filter { $0 == .deadline }.count == 2 * ExploreRules.debtMonsters)
         #expect(island.npcs.contains { $0.monster == .deadline && $0.tier == .regular })
         // «Лень» — одна на 3 пропуска, не больше 8 на остров.
         for region in island.regions {
             let sloths = island.npcs.filter { $0.monster == .sloth && region.contains($0.home) }.count
             #expect(sloths <= ExploreRules.monsterCap && sloths >= min(ExploreRules.monsterCap, region.days / ExploreRules.slothMisses) - 1)
         }
-        #expect(kinds.filter { $0 == .lure }.count == 2)
+        #expect(kinds.filter { $0 == .lure }.count == 2 * ExploreRules.debtMonsters)
         // Звери — по климату места.
         for npc in island.npcs where npc.monster?.isBeast == true {
             #expect(npc.monster == .beast(island.zone(at: npc.home)))
@@ -125,6 +125,6 @@ struct ExploreStage15HTests {
         plain.perform(.fight)
         boosted.perform(.fight)
         #expect(boosted.npcHP < plain.npcHP)
-        #expect(boosted.opponentTitle == "Медведь")
+        #expect(boosted.opponentTitle == "Огр")
     }
 }
