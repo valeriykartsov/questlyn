@@ -71,22 +71,27 @@ public struct ActiveFight: Sendable {
     public var damageTakenFactor = 1.0
     public var cooldownFactor = 1.0
 
+    public let isNight: Bool
+
     public init(tier: NPCTier, hero: ExploreHero, heroHP: Double, heroMP: Double, seed: UInt64,
-                guardian: Encounter.Guardian? = nil, companion: NPCTier? = nil) {
+                guardian: Encounter.Guardian? = nil, companion: NPCTier? = nil, night: Bool = false) {
+        self.isNight = night
         self.tier = tier
         self.hero = hero
         self.guardian = guardian
         self.companion = companion
         self.heroHP = heroHP
         self.heroMP = heroMP
-        self.npcHP = guardian?.hp ?? tier.hp
+        self.npcHP = guardian?.hp ?? tier.hp * (night ? ExploreRules.nightHPFactor : 1)
         self.random = ExploreRandom(seed)
     }
 
-    public var npcMaxHP: Double { guardian?.hp ?? tier.hp }
+    public var npcMaxHP: Double { guardian?.hp ?? tier.hp * (isNight ? ExploreRules.nightHPFactor : 1) }
     public var opponentTitle: String { guardian == nil ? tier.title : "Страж башни" }
     /// Отойти дальше — сбежать: радиус погони NPC или поводок стража.
-    public var escapeDistance: Double { guardian == nil ? tier.chaseRadius : ExploreRules.guardianLeash }
+    public var escapeDistance: Double {
+        guardian == nil ? tier.chaseRadius + (isNight ? ExploreRules.nightChaseBonus : 0) : ExploreRules.guardianLeash
+    }
     public func cost(_ ability: ExploreAbility) -> Double { (ability.mpShare * hero.maxMP).rounded() }
     /// Перезарядка способности: ходы × 1,2 с.
     public var abilityCooldown: Double { Double(hero.cooldown) * ExploreRules.activeTurnSeconds * cooldownFactor }
@@ -122,6 +127,7 @@ public struct ActiveFight: Sendable {
         guard distance <= ExploreRules.activeRange else { return }
         var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if focusLeft > 0 { damage *= 0.5 }
+        if isNight { damage *= ExploreRules.nightDamageFactor }
         damage = (damage * damageTakenFactor).rounded()
         heroHP = max(0, heroHP - damage)
         events.append(.heroDamaged(Int(damage)))

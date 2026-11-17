@@ -74,7 +74,8 @@ final class CaveScene: SKScene {
         addChild(exitNode)
 
         if let appearance = session.appearance {
-            heroFrames = ExploreCharacters.frames(ExploreCharacters.pixels(appearance, accent: session.accent), outline: false).compactMap { texture($0) }
+            heroFrames = ExploreCharacters.frames(ExploreCharacters.pixels(appearance, accent: session.accent), outline: false,
+                                                  weapon: HeroComposer.weaponLayers(appearance, accent: session.accent)).compactMap { texture($0) }
             heroNode.texture = heroFrames.first
             heroNode.size = CGSize(width: ExploreCharacters.frameSize.width, height: ExploreCharacters.frameSize.height)
             heroNode.anchorPoint = CGPoint(x: 0.5, y: CGFloat(ExploreCharacters.feetFromBottom) / CGFloat(ExploreCharacters.frameSize.height))

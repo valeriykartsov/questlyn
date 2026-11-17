@@ -66,6 +66,22 @@ public struct HeroAppearance: Hashable, Codable, Sendable {
         public static var all: [Bottom] { Outfit.allCases.map(Bottom.outfit) + [.plateSkirt] }
     }
 
+    /// Оружие героя — только вид, на атрибуты, прогресс и бой не влияет.
+    public enum Weapon: String, CaseIterable, Codable, Sendable {
+        case katana, axe, spear, hammer, daggers, crossbow
+
+        public var title: String {
+            switch self {
+            case .katana: "Катана"
+            case .axe: "Топор"
+            case .spear: "Копьё"
+            case .hammer: "Молот"
+            case .daggers: "Парные кинжалы"
+            case .crossbow: "Арбалет"
+            }
+        }
+    }
+
     /// Детали героя (10.1): каждая — из одного из девяти образов; головной убор необязателен.
     public struct Parts: Hashable, Codable, Sendable {
         public var hair: Outfit
@@ -74,14 +90,17 @@ public struct HeroAppearance: Hashable, Codable, Sendable {
         public var bottom: Bottom
         public var shoes: Outfit
         public var item: Outfit
+        /// Оружие в руке (17.11.2026, макет HeroWeapons): только вид. Если выбрано — руки опущены, предмет образа не рисуется.
+        public var weapon: Weapon?
 
-        public init(hair: Outfit, hat: Outfit? = nil, top: Outfit, bottom: Bottom, shoes: Outfit, item: Outfit) {
+        public init(hair: Outfit, hat: Outfit? = nil, top: Outfit, bottom: Bottom, shoes: Outfit, item: Outfit, weapon: Weapon? = nil) {
             self.hair = hair
             self.hat = hat
             self.top = top
             self.bottom = bottom
             self.shoes = shoes
             self.item = item
+            self.weapon = weapon
         }
 
         /// Готовый набор — все детали одного образа.

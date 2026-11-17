@@ -87,6 +87,11 @@ struct ExploreFlowView: View {
             }
             // `cave` — у входа в пещеру; `treasure` — все обрывки найдены, герой у клада; `lookout` — у площадки (15C).
             if demo.contains("cave"), let cave = session.island.caves.first { session.heroTile = cave.entrance }
+            // `merchant` — у торговца с вещами в сумке (15D).
+            if demo.contains("merchant"), let merchant = session.island.merchants.first {
+                session.heroTile = merchant.position
+                for item in ExploreItem.allCases { _ = session.addItem(item) }
+            }
             if demo.contains("lookout"), let lookout = session.island.lookouts.first,
                let spot = [(2, 0), (0, 2), (-2, 0), (0, -2)].map({ TilePoint(lookout.position.x + $0.0, lookout.position.y + $0.1) }).first(where: { session.island.isWalkable($0) }) {
                 session.heroTile = spot
@@ -394,6 +399,10 @@ struct ExploreGameView: View {
                     if session.mode == .active { activeControls(wide: wide) }
                 }
                 .padding(.horizontal, QSpacing.l)
+                if let merchant = session.merchantOpen {
+                    MerchantView(session: session, merchant: merchant) { withAnimation { session.merchantOpen = nil } }
+                        .transition(.opacity)
+                }
                 if session.showsAtlas {
                     AtlasView(session: session) { session.showsAtlas = false }
                         .transition(.opacity)
@@ -513,8 +522,14 @@ struct ExploreGameView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Задания: выполнено \(session.doneTasks.count) из \(session.takenTasks.count) взятых")
                 }
-                if session.companion != nil {
-                    Image(systemName: "heart.fill").foregroundStyle(QColor.forest).accessibilityLabel("Спутник с героем")
+                if let skill = session.companionSkill {
+                    // Умение спутника (15D.4).
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart.fill").foregroundStyle(QColor.forest)
+                        Text("\(skill.title) · \(skill.summary)").lineLimit(1).fixedSize()
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Спутник: \(skill.title), \(skill.summary)")
                 }
             }
             .font(QFont.text(11, weight: .semibold))
@@ -621,6 +636,19 @@ struct ExploreGameView: View {
     }
 
     @ViewBuilder private var shipBar: some View {
+        if let merchant = session.nearbyMerchant {
+            Button { withAnimation { session.merchantOpen = merchant } } label: {
+                VStack(spacing: 2) {
+                    Text("Торговец").font(QFont.text(15, weight: .bold))
+                    Text("обмен 2 → 1 · хранилище").font(QFont.text(11))
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(QColor.ink)
+                .background(Color(hex: 0xE2A04A), in: RoundedRectangle(cornerRadius: QRadius.card))
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, QSpacing.s)
+        }
         if session.enterableCave != nil {
             Button { enterCave(size: scene?.size ?? CGSize(width: 390, height: 844)) } label: {
                 VStack(spacing: 2) {
@@ -1505,5 +1533,117 @@ struct AtlasView: View {
             .padding(QSpacing.xl)
         }
         .accessibilityAddTraits(.isModal)
+    }
+}
+
+// MARK: - Торговец (15D.2, макет ExploreMerchant)
+
+/// Обмен 2 предметов на 1 и хранилище на прогулку. Игра на паузе, пока окно открыто.
+struct MerchantView: View {
+    let session: ExploreSession
+    let merchant: IslandMerchant
+    let close: () -> Void
+    @State private var tab = 0
+    @State private var give: [ExploreItem] = []
+    @State private var get: ExploreItem?
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: close)
+            VStack(alignment: .leading, spacing: QSpacing.m) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Торговец").font(QFont.title(20))
+                        Text("город «\(session.island.cities.first { $0.id == merchant.cityId }?.name ?? "")»").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                    }
+                    Spacer()
+                    Button(action: close) {
+                        Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).frame(width: 40, height: 40)
+                            .background(QColor.sheet, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Закрыть")
+                }
+                Picker("Раздел", selection: $tab) {
+                    Text("Обмен").tag(0)
+                    Text("Хранилище · \(session.storageCount)").tag(1)
+                }
+                .pickerStyle(.segmented)
+                if tab == 0 { trade } else { storage }
+            }
+            .foregroundStyle(QColor.ink)
+            .padding(QSpacing.xl)
+            .frame(maxWidth: 420)
+            .background(QColor.paper, in: RoundedRectangle(cornerRadius: QRadius.card))
+            .padding(QSpacing.xl)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+
+    private func count(_ item: ExploreItem) -> Int { session.bag[item] ?? 0 }
+
+    @ViewBuilder private var trade: some View {
+        Text("ОТДАТЬ 2 ИЗ СУМКИ").font(QFont.text(11, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+        HStack(spacing: QSpacing.s) {
+            ForEach(ExploreItem.allCases, id: \.self) { item in
+                let chosen = give.filter { $0 == item }.count
+                Button {
+                    if chosen < count(item) && give.count < ExploreRules.tradeGive { give.append(item) }
+                    else if let index = give.firstIndex(of: item) { give.remove(at: index) }
+                } label: {
+                    tile(item, note: "×\(count(item))", mark: chosen > 0 ? "−\(chosen)" : nil, color: QColor.hp, on: chosen > 0)
+                }
+                .buttonStyle(.plain)
+                .disabled(count(item) == 0)
+            }
+        }
+        Text("ПОЛУЧИТЬ 1").font(QFont.text(11, weight: .semibold)).foregroundStyle(QColor.inkSecondary)
+        HStack(spacing: QSpacing.s) {
+            ForEach(ExploreItem.allCases, id: \.self) { item in
+                Button { get = item } label: { tile(item, note: item.note, mark: get == item ? "+1" : nil, color: QColor.forest, on: get == item) }
+                    .buttonStyle(.plain)
+            }
+        }
+        Button {
+            if let get, session.trade(give: give, get: get) { give = []; self.get = nil }
+        } label: {
+            Text(give.count == ExploreRules.tradeGive && get != nil
+                 ? "Обменять: \(give.map(\.title).joined(separator: " + ")) → \(get!.title)" : "Выберите 2 предмета и 1 взамен")
+                .lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(give.count != ExploreRules.tradeGive || get == nil)
+    }
+
+    @ViewBuilder private var storage: some View {
+        Text("Положить — освободить сумку; забрать — у любого торговца этой прогулки. Хранилище: \(session.storageCount)/\(ExploreRules.storageCap).")
+            .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+        ForEach(ExploreItem.allCases, id: \.self) { item in
+            HStack {
+                Text(item.title).font(QFont.text(14, weight: .semibold))
+                Spacer()
+                Text("сумка \(count(item)) · хранилище \(session.storage[item] ?? 0)").font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
+                Button("Положить") { session.deposit(item) }
+                    .disabled(count(item) == 0 || session.storageCount >= ExploreRules.storageCap)
+                Button("Забрать") { session.withdraw(item) }
+                    .disabled((session.storage[item] ?? 0) == 0 || session.bagCount >= ExploreRules.bagCap)
+            }
+            .font(QFont.text(12, weight: .semibold))
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private func tile(_ item: ExploreItem, note: String, mark: String?, color: Color, on: Bool) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: ExploreGameView.symbol(item)).font(.system(size: 16, weight: .semibold))
+            Text(item.title).font(QFont.text(10, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(note).font(QFont.text(9)).foregroundStyle(QColor.inkSecondary).lineLimit(1).minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, minHeight: 64)
+        .background(QColor.sheet, in: RoundedRectangle(cornerRadius: QRadius.small))
+        .overlay(RoundedRectangle(cornerRadius: QRadius.small).strokeBorder(on ? color : QColor.line, lineWidth: on ? 2 : 1))
+        .overlay(alignment: .topTrailing) {
+            if let mark { Text(mark).font(QFont.text(10, weight: .bold)).foregroundStyle(color).padding(4) }
+        }
     }
 }

@@ -268,6 +268,16 @@ final class ExploreScene: SKScene {
                 addLabel("Пещера", at: end, lift: 30, dark: true)
             }
         }
+        // 15D.2: шатры торговцев.
+        for merchant in island.merchants {
+            let node = sprite(ExploreSprites.merchantTent().image)
+            node.anchorPoint = CGPoint(x: 0.5, y: 0.04)
+            node.setScale(0.55)
+            node.position = point(Double(merchant.position.x), Double(merchant.position.y))
+            node.zPosition = depth(Double(merchant.position.x), Double(merchant.position.y))
+            addChild(node)
+            addLabel("Торговец", at: merchant.position, lift: 46, dark: false)
+        }
         treasureNode.anchorPoint = CGPoint(x: 0.5, y: 0.2)
         treasureNode.isHidden = true
         addChild(treasureNode)
@@ -282,8 +292,8 @@ final class ExploreScene: SKScene {
         let feet = CGFloat(ExploreCharacters.feetFromBottom) / CGFloat(ExploreCharacters.frameSize.height)
         for npc in island.npcs {
             let zone = island.zone(at: npc.home), variant = npc.id % 4
-            let key = "\(npc.tier.rawValue)-\(zone.rawValue)-\(variant)"
-            let frames = framesCache[key] ?? ExploreCharacters.npc(tier: npc.tier, zone: zone, variant: variant).compactMap { texture($0) }
+            let key = "\(npc.tier.rawValue)-\(zone.rawValue)-\(variant)-\(npc.isNight)"
+            let frames = framesCache[key] ?? ExploreCharacters.npc(tier: npc.tier, zone: zone, variant: variant, night: npc.isNight).compactMap { texture($0) }
             framesCache[key] = frames
             npcFrames.append(frames)
             let node = SKSpriteNode(texture: frames.first)
@@ -311,7 +321,8 @@ final class ExploreScene: SKScene {
         }
         // Герой (15A.7): полный рисунок образа E 32×56 в том же размере на экране, тень и 4 кадра шага.
         if let appearance = session.appearance {
-            heroFrames = ExploreCharacters.frames(ExploreCharacters.pixels(appearance, accent: session.accent), outline: false).compactMap { texture($0) }
+            heroFrames = ExploreCharacters.frames(ExploreCharacters.pixels(appearance, accent: session.accent), outline: false,
+                                                  weapon: HeroComposer.weaponLayers(appearance, accent: session.accent)).compactMap { texture($0) }
             heroNode.texture = heroFrames.first
             heroNode.size = CGSize(width: ExploreCharacters.frameSize.width, height: ExploreCharacters.frameSize.height)
             heroNode.anchorPoint = CGPoint(x: 0.5, y: feet)
@@ -872,9 +883,24 @@ final class ExploreScene: SKScene {
         heroGlow.position = point(heroPosition.x, heroPosition.y, lift: 6)
     }
 
+    /// Цель «Проводника» (15D.4): ближайшая цель взятого незавершённого задания.
+    private func guideTargets() -> [TilePoint] {
+        let island = session.island
+        return session.takenTasks.compactMap { id in island.tasks.first { $0.id == id } }.filter { !session.doneTasks.contains($0.id) }.flatMap { task -> [TilePoint] in
+            switch task.kind {
+            case let .reachVillage(village): island.villages.filter { $0.id == village }.map(\.center)
+            case .openChests: island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position)
+            case .lightCampfire: island.campfires.filter { !session.litCampfires.contains($0.id) }.map(\.position)
+            }
+        }
+    }
+
     private func updateCompass() {
-        guard (session.compassUntil ?? .distantPast) > .now else { compassNode.isHidden = true; return }
-        let goals = session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position)
+        let compass = (session.compassUntil ?? .distantPast) > .now
+        let guide = session.companionSkill == .guide && session.sailing == nil
+        guard compass || guide else { compassNode.isHidden = true; return }
+        compassNode.fillColor = compass ? UIColor(red: 0.18, green: 0.42, blue: 0.31, alpha: 1) : UIColor(red: 0.89, green: 0.63, blue: 0.29, alpha: 1)
+        let goals = compass ? session.island.chests.filter { !session.openedChests.contains($0.id) }.map(\.position) : guideTargets()
         guard let goal = goals.min(by: { hypot(Double($0.x) - heroPosition.x, Double($0.y) - heroPosition.y) < hypot(Double($1.x) - heroPosition.x, Double($1.y) - heroPosition.y) }) else {
             compassNode.isHidden = true; return
         }
@@ -926,6 +952,12 @@ final class ExploreScene: SKScene {
                 continue
             }
             let toHero = hypot(heroPosition.x - state.x, heroPosition.y - state.y)
+            // Ночные NPC (15D.3) выходят с 21:00 до 6:00.
+            if npc.isNight && !session.isNight && session.activeNPC != npc.id {
+                state.chasing = false
+                npcs[index] = state
+                continue
+            }
             // Активный бой: противник держится вплотную к герою, остальные NPC ждут.
             if session.mode == .active {
                 if session.activeNPC == npc.id, session.activeFight != nil {
@@ -936,7 +968,7 @@ final class ExploreScene: SKScene {
                 }
                 if session.activeFight != nil { state.chasing = false; npcs[index] = state; continue }
             }
-            state.chasing = !state.peaceful && now >= state.calmUntil && !heroSafe && toHero <= npc.tier.chaseRadius
+            state.chasing = !state.peaceful && now >= state.calmUntil && !heroSafe && toHero <= npc.chaseRadius
             if state.chasing {
                 step(&state, toward: heroPosition, speed: NPCTier.chaseSpeed * dt)
                 if session.mode == .active, toHero <= ExploreRules.activeRange {
@@ -1043,7 +1075,9 @@ final class ExploreScene: SKScene {
                 flash(treasureNode)
             }
         }
-        let water = session.buff(.water), vegetables = session.buff(.vegetables)
+        // Спутник-лекарь (15D.4): +0,2% HP в секунду вне боя.
+        let healer = session.companionSkill == .healer && session.activeFight == nil ? ExploreRules.healerHPPerSecond : 0
+        let water = session.buff(.water) + healer, vegetables = session.buff(.vegetables)
         let swampDamage = island.isSwamp(tile) ? ExploreRules.swampHPPerSecond : 0
         if water > 0 || vegetables > 0 || swampDamage > 0 {
             session.hp = max(1, min(session.hero.maxHP, session.hp + session.hero.maxHP * (water - swampDamage) * dt))
@@ -1078,8 +1112,9 @@ final class ExploreScene: SKScene {
             // В городе +10% в секунду (09, раздел 5); обновляем модель не чаще раза в 0,25 с.
             restAccumulator += dt
             if restAccumulator >= 0.25 {
-                session.hp = min(session.hero.maxHP, session.hp + session.hero.maxHP * ExploreRules.cityRestorePerSecond * restAccumulator)
-                session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * ExploreRules.cityRestorePerSecond * restAccumulator)
+                let rate = ExploreRules.cityRestorePerSecond * (session.companionSkill == .healer ? ExploreRules.healerRestoreFactor : 1)
+                session.hp = min(session.hero.maxHP, session.hp + session.hero.maxHP * rate * restAccumulator)
+                session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * rate * restAccumulator)
                 restAccumulator = 0
             }
         }
@@ -1094,7 +1129,7 @@ final class ExploreScene: SKScene {
             session.litCampfires.insert(fire.id)
             fireNodes[fire.id]?.texture = texture(ExploreRenderer.campfire(lit: true))
             if let node = fireNodes[fire.id] { flash(node) }
-            let share = ExploreRules.campfireShare * fire.quality
+            let share = ExploreRules.campfireShare * fire.quality * (session.companionSkill == .healer ? ExploreRules.healerRestoreFactor : 1)
             session.hp = min(session.hero.maxHP, session.hp + session.hero.maxHP * share)
             session.mp = min(session.hero.maxMP, session.mp + session.hero.maxMP * share)
             session.toast = "Костёр: +\(Int((share * 100).rounded()))% HP и MP"
@@ -1156,6 +1191,7 @@ final class ExploreScene: SKScene {
                 npcNodes[index].texture = npcFrames[index][moved ? Int(now * 6 + Double(index)) % 4 : 0]
             }
             let lunge = session.island.npcs[index].id == session.companion?.id && now - companionLunge < 0.3
+            npcNodes[index].isHidden = session.island.npcs[index].isNight && !session.isNight && session.activeNPC != index && session.encounterNPC != index
             npcNodes[index].position = point(state.x, state.y, lift: lunge ? sin((now - companionLunge) / 0.3 * .pi) * 4 : 0)
             npcNodes[index].position += lungeOffset(npcNodes[index])
             npcNodes[index].zPosition = depth(state.x, state.y) + 0.4

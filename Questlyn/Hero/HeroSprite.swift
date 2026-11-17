@@ -21,8 +21,27 @@ struct HeroSprite: View {
             }
         }
         .frame(width: CGFloat(Self.size.width) * scale, height: CGFloat(Self.size.height) * scale)
+        // Оружие (17.11.2026) может выходить за рисунок: слои шире на поле с каждой стороны и не меняют размер спрайта.
+        .background { weaponLayer(\.behind) }
+        .overlay { weaponLayer(\.front) }
         .accessibilityElement()
-        .accessibilityLabel("Герой: \(appearance.outfit.title)")
+        .accessibilityLabel("Герой: \(appearance.outfit.title)" + (appearance.resolvedParts.weapon.map { ", \($0.title)" } ?? ""))
+    }
+
+    @ViewBuilder
+    private func weaponLayer(_ part: KeyPath<(behind: [WeaponArt.Pixel], front: [WeaponArt.Pixel]), [WeaponArt.Pixel]>) -> some View {
+        let pixels = HeroComposer.weaponLayers(appearance, accent: accent)[keyPath: part]
+        if !pixels.isEmpty {
+            let pad = CGFloat(WeaponArt.pad)
+            Canvas { context, _ in
+                for pixel in pixels {
+                    let rect = CGRect(x: (CGFloat(pixel.x) + pad) * scale, y: CGFloat(pixel.y) * scale, width: scale, height: scale)
+                    context.fill(Path(rect.insetBy(dx: -0.2, dy: -0.2)), with: .color(Color(hex: pixel.color)))
+                }
+            }
+            .frame(width: (CGFloat(Self.size.width) + 2 * pad) * scale, height: CGFloat(Self.size.height) * scale)
+            .allowsHitTesting(false)
+        }
     }
 
     private struct Run { let x: Int; let y: Int; let length: Int; let color: UInt32 }
@@ -332,7 +351,10 @@ struct AppearanceEditorView: View {
         case .top: return outfits.map { o in (o.title, with { $0.top = o }) }
         case .bottom: return HeroAppearance.Bottom.all.map { b in (b.title, with { $0.bottom = b }) }
         case .shoes: return outfits.map { o in (o.title, with { $0.shoes = o }) }
-        case .item: return outfits.map { o in (o.title, with { $0.item = o }) }
+        case .item:
+            // Предметы образов и оружие (17.11.2026): выбор предмета снимает оружие.
+            return outfits.map { o in (o.title, with { $0.item = o; $0.weapon = nil }) }
+                + HeroAppearance.Weapon.allCases.map { w in (w.title, with { $0.weapon = w }) }
         }
     }
 
