@@ -86,13 +86,33 @@ public struct ActiveFight: Sendable {
         self.random = ExploreRandom(seed)
     }
 
-    public var npcMaxHP: Double { guardian?.hp ?? tier.hp * (isNight ? ExploreRules.nightHPFactor : 1) }
+    public var npcMaxHP: Double { guardian?.hp ?? tier.hp * (isNight ? ExploreRules.nightHPFactor : 1) * levelHPFactor }
     public var opponentTitle: String { opponentName ?? (guardian == nil ? tier.title : "Страж башни") }
     /// 15H: имя противника (монстр) и бонусы спутника-легенды: урон героя и первый удар.
     public var opponentName: String?
     public var heroDamageFactor = 1.0
     public var firstStrikeFactor = 1.0
     private var struckOnce = false
+    public var npcDamageFactor = 1.0
+    private var levelHPFactor = 1.0
+
+    /// 17.1: противник уровня L — HP ×(1 + 0,25·(L−1)), урон ×(1 + 0,15·(L−1)).
+    public mutating func apply(level: Int) {
+        let step = Double(max(0, level - 1))
+        let hp = (1 + ExploreRules.levelHPStep * step) * ExploreRules.monsterHPFactor
+        npcHP *= hp
+        levelHPFactor = hp
+        npcDamageFactor = (1 + ExploreRules.levelDamageStep * step) * ExploreRules.monsterDamageFactor
+    }
+
+    /// 17.5: удар другого монстра стаи — по герою, мимо таймера противника.
+    public mutating func externalHit(_ damage: Double) {
+        guard outcome == nil else { return }
+        let value = (damage * damageTakenFactor).rounded()
+        heroHP = max(0, heroHP - value)
+        events.append(.heroDamaged(Int(value)))
+        if heroHP <= 0 { outcome = .lost }
+    }
     /// Отойти дальше — сбежать: радиус погони NPC или поводок стража.
     public var escapeDistance: Double {
         guardian == nil ? tier.chaseRadius + (isNight ? ExploreRules.nightChaseBonus : 0) : ExploreRules.guardianLeash
@@ -133,7 +153,7 @@ public struct ActiveFight: Sendable {
         var damage = (guardian?.damageShare ?? tier.damageShare) * hero.maxHP * random.spread(ExploreRules.hitSpread)
         if focusLeft > 0 { damage *= 0.5 }
         if isNight { damage *= ExploreRules.nightDamageFactor }
-        damage = (damage * damageTakenFactor).rounded()
+        damage = (damage * damageTakenFactor * npcDamageFactor).rounded()
         heroHP = max(0, heroHP - damage)
         events.append(.heroDamaged(Int(damage)))
         if heroHP <= 0 { outcome = .lost; events.append(.note("Вы без сил — очнётесь в городе")) }

@@ -105,6 +105,8 @@ struct ExploreFlowView: View {
         if let demo = UserDefaults.standard.string(forKey: "QuestlynExploreDemo"), let session {
             if demo.contains("night") { session.clockHour = 22 }
             if demo.contains("map") { session.isWorldMapOpen = true }
+            // `pier` (17.12) — герой у первой пристани крупного города.
+            if demo.contains("pier"), let pier = session.island.piers.first { session.heroTile = pier.landing }
             // `ship` / `sea` (15E) — корабль готов, 14 досок, лучший спутник в экипаже; `sea` — сразу на корабле.
             if demo.contains("ship") || demo.contains("sea") {
                 session.shipReady = true
@@ -587,7 +589,7 @@ struct ExploreGameView: View {
                 Text("\(session.isNight ? "☾" : "☀") \(session.clockText)").monospacedDigit().lineLimit(1).fixedSize()
                 // 15F.2: текущий шаг главного квеста.
                 if let current = session.mainCurrent, !(current.title == "Корабль") {
-                    Text("★ \(current.title): \(current.detail)").lineLimit(1).fixedSize()
+                    Text("★ \(current.title): \(current.detail)").lineLimit(1).truncationMode(.tail)
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Color(hex: 0xF2D9A8), in: Capsule())
                 }
@@ -615,7 +617,7 @@ struct ExploreGameView: View {
                     // Умение спутника (15D.4).
                     HStack(spacing: 3) {
                         Image(systemName: "heart.fill").foregroundStyle(QColor.forest)
-                        Text("\(skill.title) · \(skill.summary)").lineLimit(1).fixedSize()
+                        Text("\(skill.title) · \(skill.summary)").lineLimit(1).truncationMode(.tail)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Спутник: \(skill.title), \(skill.summary)")
@@ -1922,7 +1924,7 @@ struct WrapRow: Layout {
         for row in arrange(width: bounds.width, subviews: subviews) {
             var x = bounds.minX
             for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = Self.size(subviews[index], width: bounds.width)
                 subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
                 x += size.width + spacing
             }
@@ -1930,11 +1932,18 @@ struct WrapRow: Layout {
         }
     }
 
+    /// Размер элемента: по своему тексту, но не шире строки — длинный текст обрезается многоточием (17.8).
+    private static func size(_ subview: LayoutSubview, width: CGFloat) -> CGSize {
+        let ideal = subview.sizeThatFits(.unspecified)
+        guard width.isFinite, ideal.width > width else { return ideal }
+        return subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+
     private func arrange(width: CGFloat, subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
         var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
         var current: (indices: [Int], width: CGFloat, height: CGFloat) = ([], 0, 0)
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = Self.size(subviews[index], width: width)
             let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
             if needed > width, !current.indices.isEmpty {
                 rows.append(current)
@@ -2105,7 +2114,7 @@ struct CrewView: View {
                     Text("Спутника нет — уговори человека или легенду в диалоге и приведи к кораблю.")
                         .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                 }
-                Text("Экипаж на палубе не виден — значки с умениями у корабля; умения работают. Бьёт в бою только спутник.")
+                Text("Экипаж на палубе не виден — значки с умениями у корабля; умения экипажа работают, пока ты на корабле. Бьёт в бою только спутник.")
                     .font(QFont.text(12)).foregroundStyle(QColor.inkSecondary)
                 Button("Закрыть") { session.crewOpen = false }
                     .font(QFont.text(15, weight: .bold)).foregroundStyle(QColor.ink)
